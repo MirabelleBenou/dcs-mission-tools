@@ -37,7 +37,7 @@ Edit radio frequencies for all Client slots in a `.miz` without opening the Miss
 
 ## Usage
 
-1. Download the HTML file for the tool you need (see [Releases](../../releases))
+1. Download the HTML file for the tool you need (Directly from the repo)
 2. Open it in Chrome or Firefox — no web server required
 3. Drag & drop your `.miz` file onto the drop zone
 4. Edit, then click **Save** — a new `.miz` is downloaded, the original is never overwritten
