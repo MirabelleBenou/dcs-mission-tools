@@ -18,8 +18,6 @@ Bulk-edit ground unit types and skills in a `.miz` file without touching the Mis
 - Surgical patch — only modified values are rewritten; scripts (CTLD, MOOSE…) are untouched
 - Export/import edits as JSON for reuse across missions
 
-**Accent color:** Olive `#9CAE5A`
-
 ---
 
 ### [Comm Plan Editor](./dcs_comm_plan_editor_v1_0_0.html) `v1.0.0`
@@ -30,8 +28,6 @@ Edit radio frequencies for all Client slots in a `.miz` without opening the Miss
 - Edit frequencies inline, chain multiple save cycles without reloading
 - Export/import frequency templates (`dcs-comm-plan-template-v1`) to standardize comms across missions
 - Retokenize safety check — a corrupt `.miz` is never written to disk
-
-**Accent color:** Amber `#FFB000`
 
 ---
 
