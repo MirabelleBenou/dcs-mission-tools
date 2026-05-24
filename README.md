@@ -70,7 +70,3 @@ DCS World versions tested: **2.9.x** — any version that produces standard `.mi
 ## License
 
 MIT — see [LICENSE](./LICENSE)
-
----
-
-*Built by [4th VEAW](https://github.com/MirabelleBenou) — 4th VEAW / KHR-26 / Mi-24P*
