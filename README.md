@@ -65,16 +65,6 @@ DCS World versions tested: **2.9.x** — any version that produces standard `.mi
 
 ---
 
-## Roadmap
-
-This suite is actively developed. Planned tools include:
-
-- **Mission Planner** — loadout preparation + flight plans + `.miz` injection
-- **Kneeboard Builder** — modular kneeboard pages embedded directly into the `.miz`
-- **Frequency Conflict Detector** — analyze a `.miz` for radio frequency conflicts
-
----
-
 ## Related
 
 - **[DCS World Briefing Generator](https://github.com/MirabelleBenou/dcs-briefing-generator)** — military-style mission briefing documents (separate repo)
@@ -87,4 +77,4 @@ MIT — see [LICENSE](./LICENSE)
 
 ---
 
-*Built by [4th VEAW](https://github.com/MirabelleBenou) — KHR-26 / Mi-24P*
+*Built by [4th VEAW](https://github.com/MirabelleBenou) — 4th VEAW / KHR-26 / Mi-24P*
