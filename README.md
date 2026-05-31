@@ -1,72 +1,62 @@
 # DCS Mission Tools
 
-A collection of single-file HTML tools for **DCS World** mission preparation — built for squadron leaders and mission designers who want to get more done before engine start.
+A web-based toolset to prepare and edit **DCS World** missions (`.miz` files), built for the **4th VEAW** virtual air wing.
 
-> **Offline-first. No install. No server. Open the file, work, save.**
-
----
-
-## Tools
-
-### [Ground Unit Swapper](./dcs_ground_unit_swapper_v1_3_0.html) `v1.3.0`
-
-Bulk-edit ground unit types and skills in a `.miz` file without touching the Mission Editor.
-
-- Load a `.miz` → see every ground vehicle in a filterable table
-- Filter by coalition, family, group, unit, or free text
-- Multi-select rows → replace type and/or skill in one click
-- Surgical patch — only modified values are rewritten; scripts (CTLD, MOOSE…) are untouched
-- Export/import edits as JSON for reuse across missions
+**Version: 1.2.0** · License: MIT
 
 ---
 
-### [Comm Plan Editor](./dcs_comm_plan_editor_v1_0_0.html) `v1.0.0`
+## What it is
 
-Edit radio frequencies for all Client slots in a `.miz` without opening the Mission Editor.
+A **single HTML file** (`dcs_mission_tools.html`) hosting three mission editors. Everything runs **in the browser, locally**: no server, no file upload, no connection required. Open the page, drop a `.miz`, edit, save — the `.miz` never leaves your machine.
 
-- Full visibility of every frequency, radio, and channel per aircraft type
-- Edit frequencies inline, chain multiple save cycles without reloading
-- Export/import frequency templates (`dcs-comm-plan-template-v1`) to standardize comms across missions
-- Retokenize safety check — a corrupt `.miz` is never written to disk
+### The three tools
+
+| Tool | Purpose |
+|---|---|
+| **Comm Plan Editor** (`C·P`) | Edit the communications plan (radio frequencies / presets). |
+| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, with filters by coalition / group / type / family (Armor, Artillery, AirDef, Radar/EWR, Unarmed, Infantry). |
+| **Weather Editor** (`W·X`) | Edit weather: date/time, wind (3 layers), clouds and precipitation, 34 presets. |
+
+### Highlights
+
+- **100% local & offline** — JSZip is bundled in; nothing is uploaded.
+- **Shared working file** — the same `.miz` flows from one tool to the next; edits accumulate until you save.
+- **Strict preservation** — critical data left intact (groups/units are read-only so CTLD/MOOSE scripts don't break; the `.miz`'s companion files are kept).
+- **Bilingual EN / FR** — toggle via a flag, choice is remembered.
+- **Surgical patching** — the `.miz` is edited in place, without a full rewrite.
 
 ---
 
 ## Usage
 
-1. Download the HTML file for the tool you need (Directly from the repo)
-2. Open it in Chrome or Firefox — no web server required
-3. Drag & drop your `.miz` file onto the drop zone
-4. Edit, then click **Save** — a new `.miz` is downloaded, the original is never overwritten
+1. Download `dcs_mission_tools.html`.
+2. Open it in a recent browser (Chrome, Edge, Firefox, Brave…).
+3. Pick a tool, drop a `.miz` file, edit.
+4. **Save**: a new `.miz` is downloaded (your original is left untouched).
 
-Both tools work fully offline after the first load (CDN dependency: JSZip via cdnjs).
-
----
-
-## Design
-
-All tools share a common visual language: dark cockpit background, monospace accents, per-tool identification color. Details in [`DESIGN_DCS_Mission_Suite.md`](./DESIGN_DCS_Mission_Suite.md) (for contributors and future tool authors).
+> Tip: always keep a backup of your missions before editing.
 
 ---
 
-## Compatibility
+## For developers (build)
 
-| Browser | Status |
-|---------|--------|
-| Chrome / Chromium | ✅ Recommended |
-| Firefox | ✅ Supported |
-| Edge | ✅ Supported |
-| Safari | ⚠️ Not tested |
+The page is **built**, not hand-written: `build_mission_tools.py` reads the module sources and tiles, base64-encodes them, and produces the single file.
 
-DCS World versions tested: **2.9.x** — any version that produces standard `.miz` (ZIP + Lua) files should work.
+```
+mission-tools-edition/
+  build_mission_tools.py     # shell + bundler
+  modules/  dcs_comm_plan_editor.html  dcs_ground_unit_swapper.html  dcs_weather_editor.html
+  tiles/    cp.webp  gu.webp  wx.webp
+  dist/     dcs_mission_tools.html
+```
 
----
-
-## Related
-
-- **[DCS World Briefing Generator](https://github.com/MirabelleBenou/dcs-briefing-generator)** — military-style mission briefing documents (separate repo)
+Rules: the **source of truth** is the standalone module (never the built file); filenames carry **no version** (versioning lives in GitHub tags/releases).
 
 ---
 
-## License
+## About
 
-MIT — see [LICENSE](./LICENSE)
+Made by and for the **4th VEAW** community (veaw4.fr). A companion to the **DCS Briefing Generator** (mission briefing generation).
+
+Feedback and suggestions are welcome via GitHub issues.
