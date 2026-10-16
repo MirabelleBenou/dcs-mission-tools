@@ -703,7 +703,7 @@
 <header id="app-header">
   <div class="header-logo">C·P</div>
   <div class="header-title">DCS Comm Plan Editor</div>
-  <div class="header-version">v1.2.0</div>
+  <div class="header-version">v1.2.1</div>
   <div class="header-miz empty" id="header-miz" data-i18n="header.noFile">Aucun fichier chargé</div>
   <button class="header-lang-btn" id="btn-lang" title="Switch language / Changer de langue"></button>
 </header>
@@ -831,10 +831,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 </script>
 <script>
 // ════════════════════════════════════════════════════════════════════════════
-// DCS Comm Plan Editor v1.2.0 — Pipeline parser + extracteur + UI
+// DCS Comm Plan Editor v1.2.1 — Pipeline parser + extracteur + UI
 // ════════════════════════════════════════════════════════════════════════════
 'use strict';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 
 // ════════════════════════════════════════════════════════════════════════════
 // I18N — Internationalisation FR/EN
@@ -956,6 +956,15 @@ function t(key, fallback) {
 }
 
 const KEY_LANG = 'cpe_lang_v1';
+const LANG_KEYS = ['lang_v1', 'cpe_lang_v1', 'gus_lang_v1', 'wx_lang_v1'];
+
+// Une seule langue pour toute la suite : chaque setLang écrit les quatre clés,
+// et ce document applique un changement venu d'un autre (évènement storage).
+function persistLang(lang) {
+  LANG_KEYS.forEach(function(k) {
+    try { localStorage.setItem(k, lang); } catch(e) {}
+  });
+}
 
 function initLang() {
   let stored = null;
@@ -969,11 +978,11 @@ function initLang() {
   document.documentElement.lang = CURRENT_LANG;
 }
 
-function setLang(lang) {
+function setLang(lang, fromStorage) {
   if (lang !== 'fr' && lang !== 'en') return;
   if (lang === CURRENT_LANG) return;
   CURRENT_LANG = lang;
-  try { localStorage.setItem(KEY_LANG, CURRENT_LANG); } catch(e) {}
+  if (!fromStorage) persistLang(lang);
   document.documentElement.lang = CURRENT_LANG;
   updateFlagButton();
   updateDocTitle();
@@ -983,8 +992,17 @@ function setLang(lang) {
   try { updateVisibleCount(); } catch(e) { console.warn('[i18n] updateVisibleCount:', e); }
 }
 
+window.addEventListener('storage', function(e) {
+  if (LANG_KEYS.indexOf(e.key) === -1) return;
+  if (e.newValue === 'fr' || e.newValue === 'en') setLang(e.newValue, true);
+});
+
 function applyI18nStatic() {
-  document.querySelectorAll('[data-i18n]').forEach(function(el) { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n]').forEach(function(el) {
+    // Le nom du fichier chargé n'est pas un libellé : seul l'état vide suit la langue.
+    if (el.id === 'header-miz' && !el.classList.contains('empty')) return;
+    el.textContent = t(el.dataset.i18n);
+  });
   document.querySelectorAll('[data-i18n-title]').forEach(function(el) { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el) { el.placeholder = t(el.dataset.i18nPlaceholder); });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(function(el) { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });

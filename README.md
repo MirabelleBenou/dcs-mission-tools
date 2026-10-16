@@ -127,10 +127,12 @@ The page is **built**, not hand-written: `build_mission_tools.py` reads the modu
 ### Build
 
 ```
-python3 build_mission_tools.py        # → dcs_mission_tools.html
+python3 build_mission_tools.py        # → dist/dcs_mission_tools.html
 ```
 
-The output `dcs_mission_tools.html` is the distributable (and the file published on Releases).
+The module sources are read from `modules/` and the output is written to `dist/dcs_mission_tools.html`, the distributable (and the file published on Releases). The version shown on each tool's card is read from the tool's own `APP_VERSION` at build time.
+
+`docs/index.html` (the hosted page) is a byte-for-byte copy of `dist/dcs_mission_tools.html`, made at each milestone.
 
 ### Project structure
 

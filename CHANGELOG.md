@@ -2,6 +2,16 @@
 
 All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
 
+## [1.2.1] — 2026-10-16
+
+### Fixed
+- **One language across the suite**: switching language on the board or inside any tool now switches the whole suite, open tools included.
+- Switching language no longer replaces the loaded file name with "No file loaded".
+- Each tool card on the board shows the tool's actual version, read from the tool at build time.
+
+### Changed
+- The build script reads `modules/` and writes `dist/dcs_mission_tools.html`, matching the repository layout.
+
 ## [1.2.0] — 2026-05-30
 
 First **unified** release of the suite: the three tools and the shell are aligned on a single version.

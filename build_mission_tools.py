@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 build_mission_tools.py — DCS Mission Tools v1.0.0
-Produit dcs_mission_tools_final.html (fichier autonome, single-file).
+Produit dcs_mission_tools.html (fichier autonome, single-file).
 
 Usage : python3 build_mission_tools.py
-Sorties : ./dist/dcs_mission_tools_final.html
+Sorties : ./dist/dcs_mission_tools.html
 
-Sources modules (à placer à côté de ce script) :
-  dcs_comm_plan_editor_b.html
-  dcs_ground_unit_swapper_g.html
-  dcs_weather_editor_b.html
+Sources modules (dans ./modules/) :
+  modules/dcs_comm_plan_editor.html
+  modules/dcs_ground_unit_swapper.html
+  modules/dcs_weather_editor.html
 
 Sources images (à placer dans ./tiles/) :
   tiles/cp.webp  tiles/gu.webp  tiles/wx.webp
@@ -17,16 +17,17 @@ Sources images (à placer dans ./tiles/) :
 
 import base64
 import os
+import re
 import sys
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-APP_VERSION = '1.2.0'
-OUT_FILE    = 'dist/dcs_mission_tools_final.html'
+APP_VERSION = '1.2.1'
+OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [
-    {'id': 'cp', 'src': 'dcs_comm_plan_editor_b.html',   'tile': 'tiles/cp.webp'},
-    {'id': 'gu', 'src': 'dcs_ground_unit_swapper_g.html', 'tile': 'tiles/gu.webp'},
-    {'id': 'wx', 'src': 'dcs_weather_editor_b.html',      'tile': 'tiles/wx.webp'},
+    {'id': 'cp', 'src': 'modules/dcs_comm_plan_editor.html',   'tile': 'tiles/cp.webp'},
+    {'id': 'gu', 'src': 'modules/dcs_ground_unit_swapper.html', 'tile': 'tiles/gu.webp'},
+    {'id': 'wx', 'src': 'modules/dcs_weather_editor.html',      'tile': 'tiles/wx.webp'},
 ]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -47,6 +48,37 @@ def encode_module_b64(path):
     with open(abs_path, 'r', encoding='utf-8') as fh:
         html = fh.read()
     return base64.b64encode(html.encode('utf-8')).decode('ascii')
+
+
+# APP_VERSION déclarée dans le script du module : const APP_VERSION = '1.2.1';
+_APP_VERSION_RE = re.compile(
+    r"""^[ \t]*(?:const|let|var)[ \t]+APP_VERSION[ \t]*=[ \t]*(['"])([0-9A-Za-z][0-9A-Za-z.+\-]*)\1""",
+    re.MULTILINE,
+)
+
+
+def read_module_versions(modules):
+    """Lit la version de chaque module dans l'APP_VERSION de sa source.
+
+    Une source absente, illisible ou sans APP_VERSION lisible arrête le build
+    (message sur stderr, code de sortie 1) avant toute écriture.
+    """
+    versions = {}
+    for mod in modules:
+        abs_path = os.path.join(SCRIPT_DIR, mod['src'])
+        try:
+            with open(abs_path, 'r', encoding='utf-8') as fh:
+                html = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Source illisible : {mod["src"]} ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        match = _APP_VERSION_RE.search(html)
+        if not match:
+            print(f'  [ERREUR] APP_VERSION introuvable dans {mod["src"]} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        versions[mod['id']] = match.group(2)
+        print(f'  [OK] Version {mod["id"]} — v{versions[mod["id"]]} (lue dans {mod["src"]})')
+    return versions
 
 
 def build_module_html_js(modules):
@@ -76,11 +108,15 @@ def build_tile_uris(modules):
     return uris
 
 
-def build_html(module_html_js, tile_uris):
+def build_html(module_html_js, tile_uris, versions):
 
     tile_cp = tile_uris.get('cp', '')
     tile_gu = tile_uris.get('gu', '')
     tile_wx = tile_uris.get('wx', '')
+
+    ver_cp = versions.get('cp', '')
+    ver_gu = versions.get('gu', '')
+    ver_wx = versions.get('wx', '')
 
     return f'''<!DOCTYPE html>
 <html lang="fr">
@@ -699,7 +735,17 @@ def build_html(module_html_js, tile_uris):
     }};
 
     const KEY_LANG = 'lang_v1';
+    /* Une seule langue pour toute la suite : le shell et les trois modules écrivent
+       ces quatre clés à chaque changement et se suivent par l\'évènement storage
+       (les iframes srcdoc partagent l\'origine du shell). */
+    const LANG_KEYS = ['lang_v1', 'cpe_lang_v1', 'gus_lang_v1', 'wx_lang_v1'];
     let CURRENT_LANG = 'fr';
+
+    function persistLang(lang) {{
+      LANG_KEYS.forEach(function(k) {{
+        try {{ localStorage.setItem(k, lang); }} catch(e) {{}}
+      }});
+    }}
 
     function t(key) {{
       const d = I18N[CURRENT_LANG] || I18N.fr;
@@ -743,14 +789,23 @@ def build_html(module_html_js, tile_uris):
       updateWfBar();
     }}
 
-    function setLang(lang) {{
+    /* fromStorage : changement venu d\'un autre document, déjà écrit dans les
+       quatre clés — on l\'applique sans le réécrire (pas d\'écho, pas de boucle). */
+    function setLang(lang, fromStorage) {{
+      if (lang !== 'fr' && lang !== 'en') return;
+      if (lang === CURRENT_LANG) return;
       CURRENT_LANG = lang;
-      try {{ localStorage.setItem(KEY_LANG, lang); }} catch(e) {{}}
+      if (!fromStorage) persistLang(lang);
       applyI18nStatic();
       updateFlagButton();
       renderCards();
       renderGhosts();
     }}
+
+    window.addEventListener('storage', function(e) {{
+      if (LANG_KEYS.indexOf(e.key) === -1) return;
+      if (e.newValue === 'fr' || e.newValue === 'en') setLang(e.newValue, true);
+    }});
 
     function toggleLang() {{
       setLang(CURRENT_LANG === 'fr' ? 'en' : 'fr');
@@ -762,7 +817,7 @@ def build_html(module_html_js, tile_uris):
         id:         'cp',
         logo:       'C·P',
         name:       'Comm Plan Editor',
-        version:    'v1.1.0',
+        version:    'v{ver_cp}',
         accent:     '#FFB000',
         accentDim:  'rgba(255,176,0,0.15)',
         accentGlow: 'rgba(255,176,0,0.25)',
@@ -773,7 +828,7 @@ def build_html(module_html_js, tile_uris):
         id:         'gu',
         logo:       'G·U',
         name:       'Ground Unit Swapper',
-        version:    'v1.3.1',
+        version:    'v{ver_gu}',
         accent:     '#9CAE5A',
         accentDim:  'rgba(156,174,90,0.15)',
         accentGlow: 'rgba(156,174,90,0.25)',
@@ -784,7 +839,7 @@ def build_html(module_html_js, tile_uris):
         id:         'wx',
         logo:       'W·X',
         name:       'Weather Editor',
-        version:    'v1.1.0',
+        version:    'v{ver_wx}',
         accent:     '#5AB8C9',
         accentDim:  'rgba(90,184,201,0.15)',
         accentGlow: 'rgba(90,184,201,0.25)',
@@ -1022,6 +1077,9 @@ def build_html(module_html_js, tile_uris):
         loading.classList.remove('hidden');
         loading.textContent = t('loading') + ' ' + mod.name.toUpperCase() + '…';
 
+        /* Le module lit sa propre clé à son démarrage : l\'aligner sur la langue de la suite. */
+        persistLang(CURRENT_LANG);
+
         const iframe = document.createElement('iframe');
         iframe.id = 'iframe-' + id;
         iframe.title = mod.name;
@@ -1075,15 +1133,10 @@ def build_html(module_html_js, tile_uris):
       /* Réafficher wf-bar au retour landing */
       document.getElementById('wf-bar').classList.remove('in-module');
       activeModule = null;
+      /* Filet : si un évènement storage a été manqué, la landing se réaligne au retour. */
       try {{
         var storedLang = localStorage.getItem(KEY_LANG);
-        if (storedLang && storedLang !== CURRENT_LANG && (storedLang === 'fr' || storedLang === 'en')) {{
-          CURRENT_LANG = storedLang;
-          applyI18nStatic();
-          updateFlagButton();
-          renderCards();
-          renderGhosts();
-        }}
+        if (storedLang === 'fr' || storedLang === 'en') setLang(storedLang, true);
       }} catch(e) {{}}
     }}
 
@@ -1106,17 +1159,19 @@ def build_html(module_html_js, tile_uris):
 def main():
     print(f'=== build_mission_tools.py — DCS Mission Tools v{APP_VERSION} ===')
 
-    os.makedirs(os.path.join(SCRIPT_DIR, 'dist'), exist_ok=True)
+    print('\n[1/4] Lecture des versions des modules…')
+    versions = read_module_versions(MODULES)
 
-    print('\n[1/3] Encodage modules HTML…')
+    print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
 
-    print('\n[2/3] Encodage images tuiles…')
+    print('\n[3/4] Encodage images tuiles…')
     tile_uris = build_tile_uris(MODULES)
 
-    print(f'\n[3/3] Génération {OUT_FILE}…')
-    html = build_html(module_html_js, tile_uris)
+    print(f'\n[4/4] Génération {OUT_FILE}…')
+    html = build_html(module_html_js, tile_uris, versions)
 
+    os.makedirs(os.path.dirname(os.path.join(SCRIPT_DIR, OUT_FILE)), exist_ok=True)
     out_path = os.path.join(SCRIPT_DIR, OUT_FILE)
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
