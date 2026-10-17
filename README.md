@@ -39,9 +39,9 @@ The landing page presents each editor as a tile. Active tools open in place; upc
 
 | Tool                            | What it does                                                                                                                | Status      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.2.0` |
-| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.2.0` |
-| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.2.0` |
+| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.2.1` |
+| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.2.1` |
+| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.2.1` |
 | **Foothold Configurator** (`F·C`)| Tune Foothold-style mission parameters                                                                                      | ⏳ Planned  |
 | **Loadout Editor** (`L·E`)      | Edit aircraft loadouts and payloads                                                                                         | ⏳ Planned  |
 
@@ -156,7 +156,7 @@ The module sources are read from `modules/` and the output is written to `dist/d
 
 - ⏳ **Foothold Configurator** (`F·C`) — tune Foothold-style mission parameters
 - ⏳ **Loadout Editor** (`L·E`) — edit aircraft loadouts and payloads
-- ⏳ **UI polish** and shared language toggle across shell and tools
+- ⏳ **UI polish** across shell and tools
 
 ## 🤝 Contributing
 
