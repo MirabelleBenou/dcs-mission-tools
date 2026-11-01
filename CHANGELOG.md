@@ -2,6 +2,10 @@
 
 All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+Nothing yet.
+
 ## [1.2.1] — 2026-10-16
 
 ### Fixed
