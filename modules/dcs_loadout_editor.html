@@ -367,6 +367,8 @@
     }
     .set-field input:focus { outline: none; border-color: var(--accent); }
     .set-hint { font-size: 11px; color: var(--text-dim); }
+    .set-note { display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; color: var(--text-dim); }
+    .set-note .set-cur { color: var(--text); }
     .set-actions { display: flex; align-items: center; gap: 10px; }
 
     /* ── Footer sticky modifications ──────────────────────────────────────── */
@@ -610,10 +612,10 @@
         <summary data-i18n="panel.settings">Réglages</summary>
         <div class="sec-body">
           <div class="set-grid">
-            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"></div>
-            <div class="set-field"><label for="set-flare" data-i18n="panel.flares">Leurres</label><input type="number" id="set-flare" min="0" step="1" inputmode="numeric"></div>
-            <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"></div>
-            <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"></div>
+            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-note"><span class="set-cur" id="cur-fuel"></span><span id="max-fuel"></span></div></div>
+            <div class="set-field"><label for="set-flare" data-i18n="panel.flares">Leurres</label><input type="number" id="set-flare" min="0" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-flare"></span><span id="max-flare"></span></div></div>
+            <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-chaff"></span><span id="max-chaff"></span></div></div>
+            <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-gun"></span><span id="max-gun"></span></div></div>
           </div>
           <div class="set-hint" data-i18n="panel.settings.hint">Un champ vide ne change rien.</div>
           <div class="set-actions"><button class="btn-apply" id="btn-apply-settings" data-i18n="panel.apply">Appliquer à la sélection</button></div>
@@ -727,6 +729,12 @@ const I18N = {
     'panel.chaff':                 'Paillettes',
     'panel.gun':                   'Canon',
     'panel.settings.hint':         'Un champ vide ne change rien.',
+    'set.current':                 'Actuel : {v}',
+    'set.fuelMax':                 'max {n} kg',
+    'set.gunRange':                '0 – 100 %',
+    'set.charge':                  'leurres{fs} + paillettes{cs} ≤ {n}',
+    'toast.overFuel':              '❌ Au-delà du maximum : carburant {v} kg, limite {max} kg',
+    'toast.overCharge':            '❌ Au-delà du maximum : leurres{fs} + paillettes{cs} ≤ {n} ({used} demandé pour {unit})',
     'panel.sel.same':              'Sélection de ce type : {n}',
     'panel.sel.other':             '{n} d\'un autre type (ignoré(s))',
     'panel.noLoadouts':            'Aucun emport lisible pour ce type.',
@@ -829,6 +837,12 @@ const I18N = {
     'panel.chaff':                 'Chaff',
     'panel.gun':                   'Gun',
     'panel.settings.hint':         'An empty field changes nothing.',
+    'set.current':                 'Current: {v}',
+    'set.fuelMax':                 'max {n} kg',
+    'set.gunRange':                '0 – 100 %',
+    'set.charge':                  'flares{fs} + chaff{cs} ≤ {n}',
+    'toast.overFuel':              '❌ Above the maximum: fuel {v} kg, limit {max} kg',
+    'toast.overCharge':            '❌ Above the maximum: flares{fs} + chaff{cs} ≤ {n} ({used} requested for {unit})',
     'panel.sel.same':              'Selected of this type: {n}',
     'panel.sel.other':             '{n} of another type (ignored)',
     'panel.noLoadouts':            'No readable loadout for this type.',
@@ -3112,6 +3126,185 @@ const WEAPON_NAMES = {
 /* WEAPON_NAMES:END */
 
 // ═══════════════════════════════════════════════════════════════
+// LIMITES DES APPAREILS — type DCS → fuel_max, flare, chaff, charge_total, tailles de charge, tirées de pydcs 1.0.0
+// (LGPL-3.0-or-later), data/aircraft_limits.json du dépôt. Copie en ligne : même garde de build que les noms d'armes.
+// ═══════════════════════════════════════════════════════════════
+/* AIRCRAFT_LIMITS:BEGIN */
+const AIRCRAFT_LIMITS = {
+ "A-10A": {"fuel_max":5029,"flare":120,"chaff":240,"charge_total":480,"flare_charge_size":2,"chaff_charge_size":1},
+ "A-10C": {"fuel_max":5029,"flare":120,"chaff":240,"charge_total":480,"flare_charge_size":2,"chaff_charge_size":1},
+ "A-10C_2": {"fuel_max":5029,"flare":240,"chaff":240,"charge_total":480,"flare_charge_size":1,"chaff_charge_size":1},
+ "A-20G": {"fuel_max":1500,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "A-50": {"fuel_max":70000,"flare":192,"chaff":192,"charge_total":384,"flare_charge_size":1,"chaff_charge_size":1},
+ "A6E": {"fuel_max":7229.8,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "AH-1W": {"fuel_max":1250.0,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "AH-64A": {"fuel_max":1157,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "AH-64D": {"fuel_max":1157,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "AH-64D_BLK_II": {"fuel_max":1140,"flare":60,"chaff":30,"charge_total":90,"flare_charge_size":1,"chaff_charge_size":1},
+ "AJS37": {"fuel_max":4476,"flare":72,"chaff":1080,"charge_total":1152,"flare_charge_size":1,"chaff_charge_size":1},
+ "AV8BNA": {"fuel_max":3519.423,"flare":120,"chaff":60,"charge_total":180,"flare_charge_size":1,"chaff_charge_size":1},
+ "An-26B": {"fuel_max":5500,"flare":384,"chaff":384,"charge_total":768,"flare_charge_size":1,"chaff_charge_size":1},
+ "An-30M": {"fuel_max":8300,"flare":192,"chaff":192,"charge_total":384,"flare_charge_size":1,"chaff_charge_size":1},
+ "B-17G": {"fuel_max":7600,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "B-1B": {"fuel_max":88450,"flare":48,"chaff":480,"charge_total":960,"flare_charge_size":10,"chaff_charge_size":1},
+ "B-52H": {"fuel_max":141135,"flare":192,"chaff":1125,"charge_total":1317,"flare_charge_size":1,"chaff_charge_size":1},
+ "Bf-109K-4": {"fuel_max":296,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "C-101CC": {"fuel_max":1796,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "C-101EB": {"fuel_max":1796,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "C-130": {"fuel_max":20830,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "C-130J-30": {"fuel_max":19692,"flare":200,"chaff":220,"charge_total":420,"flare_charge_size":1,"chaff_charge_size":1},
+ "C-17A": {"fuel_max":132405,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "C-47": {"fuel_max":1470,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "CH-47D": {"fuel_max":3600,"flare":120,"chaff":120,"charge_total":240,"flare_charge_size":1,"chaff_charge_size":1},
+ "CH-47Fbl1": {"fuel_max":3054.592,"flare":120,"chaff":120,"charge_total":240,"flare_charge_size":1,"chaff_charge_size":1},
+ "CH-53E": {"fuel_max":2880,"flare":60,"chaff":60,"charge_total":120,"flare_charge_size":1,"chaff_charge_size":1},
+ "CHAP_TigerUHT": {"fuel_max":1420,"flare":48,"chaff":16,"charge_total":64,"flare_charge_size":1,"chaff_charge_size":1},
+ "Christen Eagle II": {"fuel_max":71,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "E-2C": {"fuel_max":5624,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "E-3A": {"fuel_max":65000,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-100D": {"fuel_max":3505.4,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "F-117A": {"fuel_max":8255,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "F-14A": {"fuel_max":7348,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-14A-135-GR": {"fuel_max":7348,"flare":60,"chaff":140,"charge_total":200,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-14A-135-GR-Early": {"fuel_max":7348,"flare":60,"chaff":140,"charge_total":200,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-14A-95-GR": {"fuel_max":7348,"flare":60,"chaff":140,"charge_total":200,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-14B": {"fuel_max":7348,"flare":60,"chaff":140,"charge_total":200,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-14BU": {"fuel_max":7348,"flare":60,"chaff":140,"charge_total":200,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-15C": {"fuel_max":6103,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-15E": {"fuel_max":10246,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-15ESE": {"fuel_max":10245.529841878,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-16A": {"fuel_max":3104,"flare":30,"chaff":60,"charge_total":120,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-16A MLU": {"fuel_max":3104,"flare":30,"chaff":60,"charge_total":120,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-16C bl.50": {"fuel_max":3104,"flare":45,"chaff":90,"charge_total":180,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-16C bl.52d": {"fuel_max":3104,"flare":45,"chaff":90,"charge_total":180,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-16C_50": {"fuel_max":3249,"flare":60,"chaff":60,"charge_total":120,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-4E": {"fuel_max":4864,"flare":30,"chaff":60,"charge_total":120,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-4E-45MC": {"fuel_max":5510.5,"flare":30,"chaff":120,"charge_total":150,"flare_charge_size":1,"chaff_charge_size":1},
+ "F-5E": {"fuel_max":1996,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "F-5E-3": {"fuel_max":2046,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-5E-3_FC": {"fuel_max":2046,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "F-86F Sabre": {"fuel_max":1282,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "F-86F_FC": {"fuel_max":1282,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "F/A-18A": {"fuel_max":4930,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "F/A-18C": {"fuel_max":4900,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "F4U-1D": {"fuel_max":662,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "F4U-1D_CW": {"fuel_max":662,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "FA-18C_hornet": {"fuel_max":4900,"flare":60,"chaff":60,"charge_total":120,"flare_charge_size":1,"chaff_charge_size":1},
+ "FW-190A8": {"fuel_max":409,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "FW-190D9": {"fuel_max":388,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Falcon_Gyrocopter": {"fuel_max":54,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "H-6J": {"fuel_max":25000,"flare":120,"chaff":120,"charge_total":240,"flare_charge_size":1,"chaff_charge_size":1},
+ "Hawk": {"fuel_max":1272,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "I-16": {"fuel_max":191,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "IL-76MD": {"fuel_max":87584,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "IL-78M": {"fuel_max":112000,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "J-11A": {"fuel_max":9400,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "JF-17": {"fuel_max":2325,"flare":32,"chaff":36,"charge_total":68,"flare_charge_size":1,"chaff_charge_size":1},
+ "Ju-88A4": {"fuel_max":2120,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "KC-135": {"fuel_max":90700,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "KC130": {"fuel_max":30000,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "KC135MPRS": {"fuel_max":90700,"flare":60,"chaff":120,"charge_total":240,"flare_charge_size":2,"chaff_charge_size":1},
+ "KJ-2000": {"fuel_max":70000,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Ka-27": {"fuel_max":2616,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Ka-50": {"fuel_max":1450,"flare":128,"chaff":0,"charge_total":128,"flare_charge_size":1,"chaff_charge_size":0},
+ "Ka-50_3": {"fuel_max":1450,"flare":128,"chaff":0,"charge_total":128,"flare_charge_size":1,"chaff_charge_size":0},
+ "L-39C": {"fuel_max":980,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "L-39ZA": {"fuel_max":980,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "La-7": {"fuel_max":333,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "M-2000C": {"fuel_max":3165,"flare":64,"chaff":234,"charge_total":3024,"flare_charge_size":18,"chaff_charge_size":8},
+ "MB-339A": {"fuel_max":626,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "MB-339APAN": {"fuel_max":626,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "MQ-9 Reaper": {"fuel_max":1300,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Mi-24P": {"fuel_max":1701,"flare":192,"chaff":0,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "Mi-24V": {"fuel_max":1704,"flare":192,"chaff":0,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":0},
+ "Mi-26": {"fuel_max":9600,"flare":192,"chaff":0,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":0},
+ "Mi-28N": {"fuel_max":1500,"flare":128,"chaff":64,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "Mi-8MT": {"fuel_max":1929,"flare":128,"chaff":0,"charge_total":128,"flare_charge_size":1,"chaff_charge_size":0},
+ "MiG-15bis": {"fuel_max":1172,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "MiG-15bis_FC": {"fuel_max":1172,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "MiG-19P": {"fuel_max":1800,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "MiG-21Bis": {"fuel_max":2280,"flare":40,"chaff":18,"charge_total":58,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-23MLD": {"fuel_max":3800,"flare":60,"chaff":60,"charge_total":120,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-25PD": {"fuel_max":15245,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "MiG-25RBT": {"fuel_max":15245,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "MiG-27K": {"fuel_max":4500,"flare":60,"chaff":60,"charge_total":120,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-29 Fulcrum": {"fuel_max":3376,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-29A": {"fuel_max":3376,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-29G": {"fuel_max":3376,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-29S": {"fuel_max":3493,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "MiG-31": {"fuel_max":15500,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Mirage 2000-5": {"fuel_max":3160,"flare":16,"chaff":112,"charge_total":128,"flare_charge_size":1,"chaff_charge_size":1},
+ "Mirage-F1AD": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1AZ": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1B": {"fuel_max":3045,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1BD": {"fuel_max":3045,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1BE": {"fuel_max":3045,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1BQ": {"fuel_max":3045,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1C": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1C-200": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1CE": {"fuel_max":3356,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1CG": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1CH": {"fuel_max":3356,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1CJ": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1CK": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1CR": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1CT": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1CZ": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1DDA": {"fuel_max":3045,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1ED": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1EDA": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1EE": {"fuel_max":3246,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1EH": {"fuel_max":3356,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1EQ": {"fuel_max":3356,"flare":0,"chaff":0,"charge_total":0,"flare_charge_size":0,"chaff_charge_size":0},
+ "Mirage-F1JA": {"fuel_max":3356,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1M-CE": {"fuel_max":3356,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "Mirage-F1M-EE": {"fuel_max":3246,"flare":15,"chaff":30,"charge_total":60,"flare_charge_size":2,"chaff_charge_size":1},
+ "MosquitoFBMkVI": {"fuel_max":1483.1,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "OH-58D": {"fuel_max":454,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "OH58D": {"fuel_max":333.69,"flare":30,"chaff":0,"charge_total":30,"flare_charge_size":1,"chaff_charge_size":1},
+ "P-47D-30": {"fuel_max":1007,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "P-47D-30bl1": {"fuel_max":1007,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "P-47D-40": {"fuel_max":1007,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "P-51D": {"fuel_max":732,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "P-51D-30-NA": {"fuel_max":732,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "QF-4E": {"fuel_max":5510.5,"flare":30,"chaff":120,"charge_total":150,"flare_charge_size":1,"chaff_charge_size":1},
+ "RQ-1A Predator": {"fuel_max":200,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "S-3B": {"fuel_max":5962,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "S-3B Tanker": {"fuel_max":6887,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "SA342L": {"fuel_max":416.33,"flare":32,"chaff":0,"charge_total":32,"flare_charge_size":1,"chaff_charge_size":0},
+ "SA342M": {"fuel_max":416.33,"flare":32,"chaff":0,"charge_total":32,"flare_charge_size":1,"chaff_charge_size":0},
+ "SA342Minigun": {"fuel_max":416.33,"flare":32,"chaff":0,"charge_total":32,"flare_charge_size":1,"chaff_charge_size":0},
+ "SA342Mistral": {"fuel_max":416.33,"flare":32,"chaff":0,"charge_total":32,"flare_charge_size":1,"chaff_charge_size":0},
+ "SH-3W": {"fuel_max":2132,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "SH-60B": {"fuel_max":1100,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "SpitfireLFMkIX": {"fuel_max":277.59853044,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "SpitfireLFMkIXCW": {"fuel_max":277.59853044,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Su-17M4": {"fuel_max":3770,"flare":64,"chaff":64,"charge_total":128,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-24M": {"fuel_max":11700,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-24MR": {"fuel_max":11700,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-25": {"fuel_max":2835,"flare":128,"chaff":128,"charge_total":256,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-25T": {"fuel_max":3790,"flare":128,"chaff":128,"charge_total":256,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-25TM": {"fuel_max":3790,"flare":128,"chaff":128,"charge_total":256,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-27": {"fuel_max":9400,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-30": {"fuel_max":9400,"flare":96,"chaff":96,"charge_total":192,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-33": {"fuel_max":9500,"flare":48,"chaff":48,"charge_total":96,"flare_charge_size":1,"chaff_charge_size":1},
+ "Su-34": {"fuel_max":9800,"flare":64,"chaff":64,"charge_total":128,"flare_charge_size":1,"chaff_charge_size":1},
+ "TF-51D": {"fuel_max":501,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Tornado GR4": {"fuel_max":4663,"flare":45,"chaff":90,"charge_total":180,"flare_charge_size":2,"chaff_charge_size":1},
+ "Tornado IDS": {"fuel_max":4663,"flare":45,"chaff":90,"charge_total":180,"flare_charge_size":2,"chaff_charge_size":1},
+ "Tu-142": {"fuel_max":87000,"flare":48,"chaff":48,"charge_total":96,"flare_charge_size":1,"chaff_charge_size":1},
+ "Tu-160": {"fuel_max":157000,"flare":72,"chaff":72,"charge_total":144,"flare_charge_size":1,"chaff_charge_size":1},
+ "Tu-22M3": {"fuel_max":50000,"flare":48,"chaff":48,"charge_total":96,"flare_charge_size":1,"chaff_charge_size":1},
+ "Tu-95MS": {"fuel_max":87000,"flare":48,"chaff":48,"charge_total":96,"flare_charge_size":1,"chaff_charge_size":1},
+ "UH-1H": {"fuel_max":631,"flare":60,"chaff":0,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":0},
+ "UH-60A": {"fuel_max":1100,"flare":30,"chaff":30,"charge_total":60,"flare_charge_size":1,"chaff_charge_size":1},
+ "WingLoong-I": {"fuel_max":400,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Yak-40": {"fuel_max":3080,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null},
+ "Yak-52": {"fuel_max":87.84,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null}
+};
+/* AIRCRAFT_LIMITS:END */
+
+// ═══════════════════════════════════════════════════════════════
 // MOTEUR .MIZ
 // ═══════════════════════════════════════════════════════════════
 
@@ -4204,6 +4397,80 @@ function applyLoadoutToSelection(letter) {
   resultToast(modified, ignored);
 }
 
+// Limites d'un type (null : type absent de la table, aucun maximum affiché ni contrôlé)
+function limitsFor(type) {
+  return Object.prototype.hasOwnProperty.call(AIRCRAFT_LIMITS, type) ? AIRCRAFT_LIMITS[type] : null;
+}
+
+// Plafond de leurres + paillettes : { total, fs, cs } ou null quand la table ne le donne pas
+function chargeLimit(lim) {
+  if (!lim || typeof lim.charge_total !== 'number' || typeof lim.flare_charge_size !== 'number' || typeof lim.chaff_charge_size !== 'number') return null;
+  return { total: lim.charge_total, fs: lim.flare_charge_size, cs: lim.chaff_charge_size };
+}
+
+// « leurres + paillettes ≤ 192 » ; quand une charge pèse plus d'une unité : « leurres × 2 + paillettes ≤ 180 »
+function chargeRule(cl) {
+  const w = k => k === 1 ? '' : ' × ' + k;
+  return t('set.charge').replace('{fs}', w(cl.fs)).replace('{cs}', w(cl.cs)).replace('{n}', cl.total);
+}
+
+function fmtNum(n) { return String(Math.round(n * 100) / 100); }
+
+// Valeurs actuelles d'un réglage sur les appareils cochés, visibles, du type : « 1701 », « 1200 – 1701 » ou « — »
+function currentSettingText(type, key) {
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  let lo = Infinity, hi = -Infinity;
+  for (const u of UI_STATE.aircraft) {
+    if (!UI_STATE.selected.has(u.unitId) || skipReason(u, type, visSet, 'payload')) continue;
+    const v = Number(curPayload(u)[key]);
+    if (curPayload(u)[key] === undefined || !isFinite(v)) continue;
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  const v = lo === Infinity ? '—' : (lo === hi ? fmtNum(lo) : fmtNum(lo) + ' – ' + fmtNum(hi));
+  return t('set.current').replace('{v}', v);
+}
+
+// Sous chaque champ des Réglages : la valeur actuelle et le maximum du type
+function renderSettingsInfo(type) {
+  const lim = limitsFor(type);
+  const cl = chargeLimit(lim);
+  const fuelMax = lim && typeof lim.fuel_max === 'number' ? t('set.fuelMax').replace('{n}', fmtNum(lim.fuel_max)) : '';
+  const charge = cl ? chargeRule(cl) : '';
+  const info = { fuel: fuelMax, flare: charge, chaff: charge, gun: t('set.gunRange') };
+  for (const key of ['fuel', 'flare', 'chaff', 'gun']) {
+    document.getElementById('cur-' + key).textContent = currentSettingText(type, key);
+    document.getElementById('max-' + key).textContent = info[key];
+  }
+}
+
+// Refus au-delà du maximum : carburant au-dessus de fuel_max, ou leurres × taille + paillettes × taille
+// au-dessus de charge_total pour un appareil visé (un champ vide compte pour la valeur actuelle de l'appareil).
+// Renvoie le message du refus, ou null.
+function settingsOverLimit(type, settings, targets) {
+  const lim = limitsFor(type);
+  if (!lim) return null;
+  if (settings.fuel !== undefined && typeof lim.fuel_max === 'number' && settings.fuel > lim.fuel_max) {
+    return t('toast.overFuel').replace('{v}', fmtNum(settings.fuel)).replace('{max}', fmtNum(lim.fuel_max));
+  }
+  const cl = chargeLimit(lim);
+  if (cl && (settings.flare !== undefined || settings.chaff !== undefined)) {
+    for (const u of targets) {
+      const cur = curPayload(u);
+      const num = k => { const n = Number(cur[k]); return isFinite(n) ? n : 0; };
+      const f = settings.flare !== undefined ? settings.flare : num('flare');
+      const c = settings.chaff !== undefined ? settings.chaff : num('chaff');
+      const used = f * cl.fs + c * cl.cs;
+      if (used > cl.total) {
+        const w = k => k === 1 ? '' : ' × ' + k;
+        return t('toast.overCharge').replace('{fs}', w(cl.fs)).replace('{cs}', w(cl.cs)).replace('{n}', cl.total)
+          .replace('{used}', fmtNum(used)).replace('{unit}', u.name);
+      }
+    }
+  }
+  return null;
+}
+
 function readSettings() {
   const defs = [
     { id: 'set-fuel',  key: 'fuel',  label: t('panel.fuel'),   int: false, max: Infinity },
@@ -4236,9 +4503,12 @@ function applySettingsToSelection() {
   if (type === null) return;
   const settings = readSettings();
   if (!settings) return;
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  const targets = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, 'payload'));
+  const over = settingsOverLimit(type, settings, targets);
+  if (over) { showToast(over, 'error'); return; }   // rien ne s'applique
   let modified = 0;
   const ignored = {};
-  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
   for (const u of UI_STATE.aircraft) {
     if (!UI_STATE.selected.has(u.unitId)) continue;
     const why = skipReason(u, type, visSet, 'payload');
@@ -4540,6 +4810,7 @@ function renderPanel() {
   });
   document.getElementById('panel-liveries').innerHTML = lhtml || '<div class="none">' + escHtml(t('panel.noLiveries')) + '</div>';
   renderActionBar(type);
+  renderSettingsInfo(type);
   // Désactivé tant qu'aucune case de ce type n'est cochée
   document.getElementById('btn-apply-settings').disabled = !canApply;
 }

@@ -85,31 +85,43 @@ def read_module_versions(modules):
 
 WEAPON_NAMES_JSON = 'data/weapon_names.json'
 WEAPON_NAMES_MODULE = 'modules/dcs_loadout_editor.html'
-_WN_RE = re.compile(
-    r'/\* WEAPON_NAMES:BEGIN \*/\nconst WEAPON_NAMES = (.*?);\n/\* WEAPON_NAMES:END \*/',
-    re.DOTALL,
+AIRCRAFT_LIMITS_JSON = 'data/aircraft_limits.json'
+
+# Tables de données copiées en ligne dans le Loadout Editor : (libellé, fichier de référence, constante, marqueur)
+INLINE_TABLES = (
+    ('table des armes', WEAPON_NAMES_JSON, 'WEAPON_NAMES', 'WEAPON_NAMES'),
+    ('table des limites des appareils', AIRCRAFT_LIMITS_JSON, 'AIRCRAFT_LIMITS', 'AIRCRAFT_LIMITS'),
 )
 
 
-def check_weapon_names():
-    """Garde d'identité : la table des armes en ligne dans le Loadout Editor (entre les marqueurs
-    WEAPON_NAMES:BEGIN / END) doit être identique à data/weapon_names.json. Sinon le build s'arrête."""
+def check_inline_tables():
+    """Garde d'identité : chaque table en ligne dans le Loadout Editor (entre ses marqueurs BEGIN / END)
+    doit être identique à son fichier de data/. Sinon le build s'arrête."""
     try:
-        with open(os.path.join(SCRIPT_DIR, WEAPON_NAMES_JSON), 'r', encoding='utf-8') as fh:
-            ref = fh.read().rstrip('\n')
         with open(os.path.join(SCRIPT_DIR, WEAPON_NAMES_MODULE), 'r', encoding='utf-8') as fh:
             html = fh.read()
     except OSError as exc:
-        print(f'  [ERREUR] Table des armes illisible ({exc}) — build arrêté', file=sys.stderr)
+        print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
         sys.exit(1)
-    m = _WN_RE.search(html)
-    if not m:
-        print(f'  [ERREUR] Marqueurs WEAPON_NAMES introuvables dans {WEAPON_NAMES_MODULE} — build arrêté', file=sys.stderr)
-        sys.exit(1)
-    if m.group(1) != ref:
-        print(f'  [ERREUR] La table des armes de {WEAPON_NAMES_MODULE} diffère de {WEAPON_NAMES_JSON} — build arrêté', file=sys.stderr)
-        sys.exit(1)
-    print(f'  [OK] Table des armes identique à {WEAPON_NAMES_JSON}')
+    for label, json_path, const, marker in INLINE_TABLES:
+        try:
+            with open(os.path.join(SCRIPT_DIR, json_path), 'r', encoding='utf-8') as fh:
+                ref = fh.read().rstrip('\n')
+        except OSError as exc:
+            print(f'  [ERREUR] La {label} est illisible ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        rx = re.compile(
+            r'/\* ' + marker + r':BEGIN \*/\nconst ' + const + r' = (.*?);\n/\* ' + marker + r':END \*/',
+            re.DOTALL,
+        )
+        m = rx.search(html)
+        if not m:
+            print(f'  [ERREUR] Marqueurs {marker} introuvables dans {WEAPON_NAMES_MODULE} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if m.group(1) != ref:
+            print(f'  [ERREUR] La {label} de {WEAPON_NAMES_MODULE} diffère de {json_path} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        print(f'  [OK] {label[0].upper() + label[1:]} identique à {json_path}')
 
 
 def build_module_html_js(modules):
@@ -1207,7 +1219,7 @@ def main():
 
     print('\n[1/4] Lecture des versions des modules…')
     versions = read_module_versions(MODULES)
-    check_weapon_names()
+    check_inline_tables()
 
     print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
