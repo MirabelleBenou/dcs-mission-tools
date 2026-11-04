@@ -79,7 +79,8 @@ The Weather Editor gives you full control over **mission weather**, from a quick
 
 The Loadout Editor **applies a loadout that already exists in the mission** — and a livery — to many aircraft at once, players and AI alike. Handy when a large mission holds hundreds of aircraft and the Mission Editor only sets them one by one.
 
-- **Copy an existing loadout** to every selected aircraft of the same type (players and AI)
+- **Copy an existing loadout** to every selected aircraft of the same type (players and AI) — a loadout is its pylons, shown by weapon name, lettered A, B, C… when the file is opened
+- **Pick, then apply** — click a loadout or a livery card, check the bar at the bottom of the panel (it says how many aircraft change and what they carry now), then press *Apply*
 - **Fuel, flares, chaff and gun in bulk** — an empty field changes nothing
 - **Liveries** applied within the same type and country
 - **Written back safely** — each payload is replaced whole, then re-read and verified before the download is offered
@@ -154,6 +155,8 @@ The module sources are read from `modules/` and the output is written to `dist/d
 │   ├── dcs_weather_editor.html
 │   └── dcs_loadout_editor.html
 ├── tiles/                     # landing tiles (512² WebP): cp, gu, wx, le
+├── data/                      # weapon names (from pydcs, LGPL-3.0-or-later) and their licence
+├── tools/                     # gen_weapon_names.py — regenerates data/weapon_names.json
 ├── dist/                      # built output: dcs_mission_tools.html
 ├── CHANGELOG.md
 ├── README.md
@@ -185,6 +188,7 @@ For code contributions: fork, branch, study the build script to understand the a
 ## 🙏 Acknowledgments
 
 - Built for the DCS World virtual aviation community
+- Weapon names in the Loadout Editor come from **[pydcs](https://github.com/pydcs/dcs)** 1.0.0 (LGPL-3.0-or-later) — the table and its licence are in [`data/`](data/)
 - Initial version developed for the **4th VEAW** virtual wing — distributed as generic, public tools
 - A companion to **[DCS Mission Plan](https://github.com/MirabelleBenou/dcs-mission-plan)** (briefings, recon, HQ)
 

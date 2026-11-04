@@ -763,6 +763,8 @@ const I18N = {
     'bar.loadout':                 'Appliquer l\'emport {l} à {n} — actuellement {cur}',
     'bar.loadout0':                'Appliquer l\'emport {l} à {n}',
     'bar.livery':                  'Appliquer la livrée « {name} » à {n}',
+    'bar.loadoutSame':             'Les appareils cochés portent déjà l\'emport {l}',
+    'bar.liverySame':              'Les appareils cochés portent déjà la livrée « {name} »',
     'bar.apply':                   'Appliquer',
     'toast.noSettings':            '⚠️ Renseignez au moins un réglage',
     'toast.badValue':              '❌ Valeur invalide : {field}',
@@ -863,6 +865,8 @@ const I18N = {
     'bar.loadout':                 'Apply loadout {l} to {n} — currently {cur}',
     'bar.loadout0':                'Apply loadout {l} to {n}',
     'bar.livery':                  'Apply livery “{name}” to {n}',
+    'bar.loadoutSame':             'The selected aircraft already carry loadout {l}',
+    'bar.liverySame':              'The selected aircraft already carry livery “{name}”',
     'bar.apply':                   'Apply',
     'toast.noSettings':            '⚠️ Fill in at least one setting',
     'toast.badValue':              '❌ Invalid value: {field}',
@@ -4135,6 +4139,14 @@ function skipReason(u, type, visSet, kind, country) {
   return null;
 }
 
+// Un appareil a déjà cet emport quand l'application ne changerait rien de ce qui s'écrit :
+// mêmes pylônes, et mêmes ammo_type / restricted quand la source les porte.
+function hasLoadout(u, def) {
+  const cur = curPayload(u);
+  if (loadoutSig(cur) !== def.sig) return false;
+  return deepEqValues(cur, payloadWithLoadout(cur, def));
+}
+
 // Appareils que « Appliquer l'emport » modifierait : cochés, visibles, du même type, qui n'ont pas déjà cet emport.
 function loadoutTargets(type, def) {
   const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
@@ -4142,7 +4154,7 @@ function loadoutTargets(type, def) {
   for (const u of UI_STATE.aircraft) {
     if (!UI_STATE.selected.has(u.unitId)) continue;
     if (skipReason(u, type, visSet, 'payload')) continue;
-    if (loadoutSig(curPayload(u)) === def.sig) continue;
+    if (hasLoadout(u, def)) continue;
     out.push(u);
   }
   return out;
@@ -4184,7 +4196,7 @@ function applyLoadoutToSelection(letter) {
     if (!UI_STATE.selected.has(u.unitId)) continue;
     const why = skipReason(u, type, visSet, 'payload');
     if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
-    if (loadoutSig(curPayload(u)) === def.sig) continue;   // déjà cet emport : ni modifié ni ignoré
+    if (hasLoadout(u, def)) continue;   // déjà cet emport : ni modifié ni ignoré
     setPayload(u, payloadWithLoadout(curPayload(u), def));
     modified++;
   }
@@ -4539,6 +4551,16 @@ function lettersSummary(units, info) {
   return info.list.filter(d => n.has(d.letter)).map(d => d.letter + ' ×' + n.get(d.letter)).join(', ');
 }
 
+// Appareils cochés qui pourraient prendre la modification (visibles, du type, du pays), changée ou non
+function eligibleChecked(type, kind, country) {
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  let n = 0;
+  for (const u of UI_STATE.aircraft) {
+    if (UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, kind, country)) n++;
+  }
+  return n;
+}
+
 // La barre d'action : dit ce qui va se passer, un bouton « Appliquer » par choix
 function renderActionBar(type) {
   const bar = document.getElementById('action-bar');
@@ -4549,14 +4571,16 @@ function renderActionBar(type) {
   if (def) {
     const targets = loadoutTargets(type, def);
     const cur = lettersSummary(targets, info);
-    const txt = t(targets.length > 0 && cur ? 'bar.loadout' : 'bar.loadout0')
+    const same = targets.length === 0 && eligibleChecked(type, 'payload') > 0;
+    const txt = same ? t('bar.loadoutSame').replace('{l}', def.letter) : t(targets.length > 0 && cur ? 'bar.loadout' : 'bar.loadout0')
       .replace('{l}', def.letter).replace('{n}', tn('panel.count', targets.length)).replace('{cur}', cur);
     rows.push({ act: 'loadout', txt, disabled: targets.length === 0 });
   }
   const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
   if (lv) {
     const targets = liveryTargets(type, lv);
-    rows.push({ act: 'livery', txt: t('bar.livery').replace('{n}', tn('panel.count', targets.length)).replace('{name}', lv.livery), disabled: targets.length === 0 });
+    const same = targets.length === 0 && eligibleChecked(type, 'livery', lv.country) > 0;
+    rows.push({ act: 'livery', txt: (same ? t('bar.liverySame') : t('bar.livery').replace('{n}', tn('panel.count', targets.length))).replace('{name}', lv.livery), disabled: targets.length === 0 });
   }
   if (rows.length === 0) rows.push({ act: 'none', txt: t('bar.none'), disabled: true });
   bar.innerHTML = rows.map(r =>
@@ -4682,6 +4706,7 @@ function onFilterChange() {
   UI_STATE.filters.role = document.getElementById('filter-role').value;
   UI_STATE.filters.search = document.getElementById('filter-search').value;
   renderTable();
+  renderPanel();   // le compte de la barre d'action ne retient que les appareils visibles
   renderBars();
 }
 ['filter-coalition', 'filter-type', 'filter-role'].forEach(id => document.getElementById(id).addEventListener('change', onFilterChange));

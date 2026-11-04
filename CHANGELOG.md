@@ -5,7 +5,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 ## [Unreleased]
 
 ### Added
-- **Loadout Editor**: copy a loadout already in the mission to every selected aircraft of the same type — players and AI alike — and set fuel, flares, chaff and gun in bulk; apply a livery within the same type and country. Each payload is rewritten whole and verified before the file is offered for download.
+- **Loadout Editor**: pick a loadout already in the mission — shown by weapon name — and apply it to every selected aircraft of the same type, players and AI alike; set fuel, flares, chaff and gun in bulk; apply a livery within the same type and country. Each payload is rewritten whole and verified before the file is offered for download. Weapon names come from pydcs (LGPL-3.0-or-later).
 
 ### Removed
 - **Foothold Configurator** is no longer planned: its *Coming soon* tile is gone from the board and from the README.
