@@ -496,7 +496,8 @@ def build_html(module_html_js, tile_uris, versions):
     }}
     #ghost-grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      /* même pistes que #cards-grid : une carte fantôme garde la largeur d'une carte active */
+      grid-template-columns: repeat(auto-fill, minmax(max(300px, calc((100% - 40px) / 3 - 0.5px)), 1fr));
       justify-content: center;
       gap: 20px;
       perspective: 1500px;
@@ -705,7 +706,6 @@ def build_html(module_html_js, tile_uris, versions):
         'desc.cp': 'Éditeur de plan de communication — import/export .miz DCS.',
         'desc.gu': 'Remplacement de véhicules terrestres dans les missions .miz DCS.',
         'desc.wx': 'Édition des conditions météo dans les missions .miz DCS.',
-        'desc.fc': "Configuration d\'un fichier config Foothold via template custom.",
         'desc.le': "Édition des loadouts et livrées d\'appareils (IA ou joueurs).",
         /* Fichier de travail */
         'wf.label': 'Fichier de travail',
@@ -724,7 +724,6 @@ def build_html(module_html_js, tile_uris, versions):
         'desc.cp': 'Communication plan editor — .miz import/export for DCS.',
         'desc.gu': 'Ground vehicle replacement in DCS .miz missions.',
         'desc.wx': 'Weather conditions editor for DCS .miz missions.',
-        'desc.fc': 'Foothold config file setup via a custom template.',
         'desc.le': 'Edit aircraft loadouts and liveries (AI or player).',
         /* Working file */
         'wf.label': 'Working file',
@@ -849,7 +848,6 @@ def build_html(module_html_js, tile_uris, versions):
     ];
 
     const COMING_SOON = [
-      {{ id:'fc', logo:'F·C', name:'Foothold Configurator', descKey:'desc.fc' }},
       {{ id:'le', logo:'L·E', name:'Loadout Editor',        descKey:'desc.le' }},
     ];
 

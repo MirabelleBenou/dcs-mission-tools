@@ -4,7 +4,11 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ## [Unreleased]
 
-Nothing yet.
+### Removed
+- **Foothold Configurator** is no longer planned: its *Coming soon* tile is gone from the board and from the README.
+
+### Changed
+- A *Coming soon* tile now keeps the width of a tool tile instead of stretching across the board.
 
 ## [1.2.1] — 2026-10-16
 

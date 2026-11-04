@@ -42,7 +42,6 @@ The landing page presents each editor as a tile. Active tools open in place; upc
 | **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.2.1` |
 | **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.2.1` |
 | **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.2.1` |
-| **Foothold Configurator** (`F·C`)| Tune Foothold-style mission parameters                                                                                      | ⏳ Planned  |
 | **Loadout Editor** (`L·E`)      | Edit aircraft loadouts and payloads                                                                                         | ⏳ Planned  |
 
 > Each tool is a standalone HTML editor; the page bundles the live tools and shares a single working `.miz` between them.
@@ -154,7 +153,6 @@ The module sources are read from `modules/` and the output is written to `dist/d
 
 ## 🗺️ Roadmap
 
-- ⏳ **Foothold Configurator** (`F·C`) — tune Foothold-style mission parameters
 - ⏳ **Loadout Editor** (`L·E`) — edit aircraft loadouts and payloads
 - ⏳ **UI polish** across shell and tools
 
