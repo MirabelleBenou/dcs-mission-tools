@@ -83,6 +83,35 @@ def read_module_versions(modules):
     return versions
 
 
+WEAPON_NAMES_JSON = 'data/weapon_names.json'
+WEAPON_NAMES_MODULE = 'modules/dcs_loadout_editor.html'
+_WN_RE = re.compile(
+    r'/\* WEAPON_NAMES:BEGIN \*/\nconst WEAPON_NAMES = (.*?);\n/\* WEAPON_NAMES:END \*/',
+    re.DOTALL,
+)
+
+
+def check_weapon_names():
+    """Garde d'identité : la table des armes en ligne dans le Loadout Editor (entre les marqueurs
+    WEAPON_NAMES:BEGIN / END) doit être identique à data/weapon_names.json. Sinon le build s'arrête."""
+    try:
+        with open(os.path.join(SCRIPT_DIR, WEAPON_NAMES_JSON), 'r', encoding='utf-8') as fh:
+            ref = fh.read().rstrip('\n')
+        with open(os.path.join(SCRIPT_DIR, WEAPON_NAMES_MODULE), 'r', encoding='utf-8') as fh:
+            html = fh.read()
+    except OSError as exc:
+        print(f'  [ERREUR] Table des armes illisible ({exc}) — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    m = _WN_RE.search(html)
+    if not m:
+        print(f'  [ERREUR] Marqueurs WEAPON_NAMES introuvables dans {WEAPON_NAMES_MODULE} — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    if m.group(1) != ref:
+        print(f'  [ERREUR] La table des armes de {WEAPON_NAMES_MODULE} diffère de {WEAPON_NAMES_JSON} — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    print(f'  [OK] Table des armes identique à {WEAPON_NAMES_JSON}')
+
+
 def build_module_html_js(modules):
     lines = ['const MODULE_HTML = {']
     for i, mod in enumerate(modules):
@@ -1178,6 +1207,7 @@ def main():
 
     print('\n[1/4] Lecture des versions des modules…')
     versions = read_module_versions(MODULES)
+    check_weapon_names()
 
     print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
