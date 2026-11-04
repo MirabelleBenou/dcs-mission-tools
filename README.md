@@ -2,9 +2,9 @@
 
 ![Intro-image](docs/screenshots/landing.jpg)
 
-> Edit your DCS World mission files surgically — three editors in one offline page. **Download a single file, drop a `.miz`, edit, save.**
+> Edit your DCS World mission files surgically — four editors in one offline page. **Download a single file, drop a `.miz`, edit, save.**
 
-![License](https://img.shields.io/badge/license-MIT-blue) ![Platform](https://img.shields.io/badge/platform-Web-green) ![Offline](https://img.shields.io/badge/offline-yes-success) ![Tablet & mobile](https://img.shields.io/badge/tablet%20%26%20mobile-ready-orange) ![Tools](https://img.shields.io/badge/tools-3%20live%20%C2%B7%202%20planned-brown)
+![License](https://img.shields.io/badge/license-MIT-blue) ![Platform](https://img.shields.io/badge/platform-Web-green) ![Offline](https://img.shields.io/badge/offline-yes-success) ![Tablet & mobile](https://img.shields.io/badge/tablet%20%26%20mobile-ready-orange) ![Tools](https://img.shields.io/badge/tools-4%20live-brown)
 
 🌐 **[Use it online »](https://mirabellebenou.github.io/dcs-mission-tools/)** · 💾 **[Download the offline file »](https://github.com/MirabelleBenou/dcs-mission-tools/releases)**
 
@@ -42,7 +42,7 @@ The landing page presents each editor as a tile. Active tools open in place; upc
 | **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.2.1` |
 | **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.2.1` |
 | **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.2.1` |
-| **Loadout Editor** (`L·E`)      | Edit aircraft loadouts and payloads                                                                                         | ⏳ Planned  |
+| **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.2.1` |
 
 > Each tool is a standalone HTML editor; the page bundles the live tools and shares a single working `.miz` between them.
 
@@ -75,10 +75,20 @@ The Weather Editor gives you full control over **mission weather**, from a quick
 - **Read-only context** for derived values (QNH, temperature, visibility…) so nothing inconsistent is written
 - **Bilingual FR / EN**, choice remembered
 
+### 🎯 Loadout Editor — in detail
+
+The Loadout Editor **applies a loadout that already exists in the mission** — and a livery — to many aircraft at once, players and AI alike. Handy when a wing mission holds hundreds of aircraft and the Mission Editor only sets them one by one.
+
+- **Copy an existing loadout** to every selected aircraft of the same type (players and AI)
+- **Fuel, flares, chaff and gun in bulk** — an empty field changes nothing
+- **Liveries** applied within the same type and country
+- **Written back safely** — each payload is replaced whole, then re-read and verified before the download is offered
+- **Bilingual FR / EN**, choice remembered
+
 ## ✨ Features
 
 - **Fully offline** — one HTML file, no install, no server, no internet
-- **One page, three editors** — bundled tiles, a single working `.miz` shared between tools
+- **One page, four editors** — bundled tiles, a single working `.miz` shared between tools
 - **Shared working file** — the same `.miz` flows from one tool to the next; edits accumulate until you save
 - **Surgical, non-destructive** — patched in place; a new `.miz` is downloaded, the original is untouched
 - **Strict preservation** — read-only groups/units, kept companion files
@@ -141,8 +151,9 @@ The module sources are read from `modules/` and the output is written to `dist/d
 ├── modules/                   # standalone editors (source of truth)
 │   ├── dcs_comm_plan_editor.html
 │   ├── dcs_ground_unit_swapper.html
-│   └── dcs_weather_editor.html
-├── tiles/                     # landing tiles (512² WebP): cp, gu, wx
+│   ├── dcs_weather_editor.html
+│   └── dcs_loadout_editor.html
+├── tiles/                     # landing tiles (512² WebP): cp, gu, wx, le
 ├── dist/                      # built output: dcs_mission_tools.html
 ├── CHANGELOG.md
 ├── README.md
@@ -153,7 +164,6 @@ The module sources are read from `modules/` and the output is written to `dist/d
 
 ## 🗺️ Roadmap
 
-- ⏳ **Loadout Editor** (`L·E`) — edit aircraft loadouts and payloads
 - ⏳ **UI polish** across shell and tools
 
 ## 🤝 Contributing

@@ -845,7 +845,7 @@ let CURRENT_LANG = 'fr';
 const KEY_LANG = 'wx_lang_v1';
 const LANG_KEYS = ['lang_v1', 'cpe_lang_v1', 'gus_lang_v1', 'wx_lang_v1', 'le_lang_v1'];
 
-// Une seule langue pour toute la suite : chaque setLang écrit les quatre clés,
+// Une seule langue pour toute la suite : chaque setLang écrit les cinq clés,
 // et ce document applique un changement venu d'un autre (évènement storage).
 function persistLang(lang) {
   LANG_KEYS.forEach(function(k) {

@@ -337,11 +337,11 @@
     .ld-stats b { color: var(--text); font-weight: 600; font-family: var(--font-mono); }
 
     .btn-apply {
-      background: var(--accent); color: #1A1A1A; font-weight: 700; font-size: 12px;
-      padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer;
-      transition: background 0.15s; white-space: nowrap; min-height: 28px;
+      background: transparent; color: var(--accent); font-weight: 700; font-size: 12px;
+      padding: 5px 12px; border: 1px solid var(--accent); border-radius: 4px; cursor: pointer;
+      transition: background 0.15s, color 0.15s; white-space: nowrap; min-height: 28px;
     }
-    .btn-apply:hover:not(:disabled) { background: #e07f63; }
+    .btn-apply:hover:not(:disabled), .btn-apply:focus-visible:not(:disabled) { background: var(--accent); color: #1A1A1A; outline: none; }
     .btn-apply:disabled { opacity: 0.35; cursor: default; }
 
     .set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -440,13 +440,30 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner-msg { color: var(--text-dim); font-size: 13px; }
 
+    /* ── Onglets (téléphone) ─────────────────────────────────────────────── */
+    #le-tabs {
+      display: none; position: sticky; top: 0; z-index: 20; flex-shrink: 0;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .le-tab {
+      flex: 1; background: transparent; border: none; border-bottom: 2px solid transparent;
+      color: var(--text-dim); font-family: var(--font-ui); font-size: 13px; font-weight: 600;
+      padding: 10px 8px; min-height: 44px; cursor: pointer;
+    }
+    .le-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .le-tab:disabled { opacity: 0.35; cursor: default; }
+    .le-tab:focus-visible { outline: 1px solid var(--accent); outline-offset: -3px; }
+
     /* ── Tablette / téléphone ────────────────────────────────────────────── */
-    @media (max-width: 900px) {
-      #le-body { flex: none; flex-direction: column-reverse; }
+    @media (max-width: 768px) {
+      #le-tabs { display: flex; }
+      #le-body { flex: none; flex-direction: column; }
       #list-pane { flex: none; }
       #table-container { flex: none; overflow-x: auto; overflow-y: visible; }
       thead { position: static; }
-      #type-panel { width: auto; border-left: none; border-bottom: 1px solid var(--border); overflow: visible; }
+      #type-panel { width: auto; border-left: none; overflow: visible; }
+      #le-body[data-tab="list"] #type-panel { display: none; }
+      #le-body[data-tab="panel"] #list-pane { display: none; }
     }
     @media (max-width: 700px) {
       .c-role, .c-country { display: none; }
@@ -528,6 +545,12 @@
     </div>
   </div>
 
+  <!-- Onglets (visibles sous 768 px) -->
+  <div id="le-tabs" role="tablist">
+    <button class="le-tab active" id="tab-list" role="tab" data-tab="list" data-i18n="tab.aircraft">Appareils</button>
+    <button class="le-tab" id="tab-panel" role="tab" data-tab="panel" disabled data-i18n="tab.loadouts">Emports</button>
+  </div>
+
   <!-- Info tableau : compteurs + toggle -->
   <div id="table-info-bar">
     <div class="display-count" id="display-count"></div>
@@ -539,7 +562,7 @@
   </div>
 
   <!-- Corps : liste + panneau du type -->
-  <div id="le-body">
+  <div id="le-body" data-tab="list">
     <div id="list-pane">
       <div id="table-container">
         <table id="units-table">
@@ -654,6 +677,8 @@ const I18N = {
     'filter.role.ai':              'IA',
     'filter.search':               'Recherche libre',
     'filter.search.ph':            'Rechercher…',
+    'tab.aircraft':                'Appareils',
+    'tab.loadouts':                'Emports',
     'info.display':                'Affichage : {x} / {n} appareils',
     'info.selected':               '{n} coché(s)',
     'info.selectedHidden':         '{n} coché(s) dont {m} masqué(s) par les filtres',
@@ -740,6 +765,8 @@ const I18N = {
     'filter.role.ai':              'AI',
     'filter.search':               'Free search',
     'filter.search.ph':            'Search…',
+    'tab.aircraft':                'Aircraft',
+    'tab.loadouts':                'Loadouts',
     'info.display':                'Showing: {x} / {n} aircraft',
     'info.selected':               '{n} checked',
     'info.selectedHidden':         '{n} checked, {m} hidden by filters',
@@ -1677,6 +1704,7 @@ const UI_STATE = {
   collapsed:     new Set(),   // types repliés
   filters:       { coalition: '', type: '', role: '', search: '' },
   showModifiedOnly: false,
+  tab:           'list',      // onglet courant sous 768 px : 'list' | 'panel'
   rev:           0,           // incrémenté à chaque modification (invalide les caches)
   _cache:        new Map(),
 };
@@ -1955,6 +1983,7 @@ async function loadMiz(file) {
     console.log('[Load] Parse OK en', Math.round(performance.now() - t0), 'ms — appareils :', aircraft.length);
 
     _HQ_MIZ_CONTEXT = { otherFilesMap };
+    UI_STATE.tab = 'list';
     UI_STATE.edits = new Map();
     UI_STATE.selected = new Set();
     UI_STATE.collapsed = new Set();
@@ -2100,8 +2129,11 @@ function updateHeaderChk() {
 function renderPanel() {
   const panel = document.getElementById('type-panel');
   const type = panelType();
-  if (type === null) { panel.classList.add('hidden'); return; }
+  const tabPanel = document.getElementById('tab-panel');
+  tabPanel.disabled = (type === null);
+  if (type === null) { panel.classList.add('hidden'); if (UI_STATE.tab === 'panel') UI_STATE.tab = 'list'; showTab(); return; }
   panel.classList.remove('hidden');
+  showTab();
 
   const all = UI_STATE.byType.get(type) || [];
   document.getElementById('panel-type').textContent = type + ' · ' + tn('panel.count', all.length);
@@ -2111,6 +2143,7 @@ function renderPanel() {
     if (!u) continue;
     if (u.type === type) same++; else other++;
   }
+  const canApply = same > 0;
   document.getElementById('panel-sel').innerHTML = escHtml(t('panel.sel.same').replace('{n}', same)) +
     (other > 0 ? ' · <span class="warn">' + escHtml(t('panel.sel.other').replace('{n}', other)) + '</span>' : '');
 
@@ -2144,6 +2177,15 @@ function renderPanel() {
       '<button class="btn-apply btn-apply-livery" data-index="' + i + '">' + escHtml(t('panel.apply')) + '</button></div></div>';
   });
   document.getElementById('panel-liveries').innerHTML = lhtml || '<div class="none">' + escHtml(t('panel.noLiveries')) + '</div>';
+  // Désactivés tant qu'aucune case de ce type n'est cochée
+  panel.querySelectorAll('.btn-apply').forEach(b => { b.disabled = !canApply; });
+}
+
+// Applique l'onglet courant (sans effet au-dessus de 768 px : la feuille de style ne s'en sert pas)
+function showTab() {
+  document.getElementById('le-body').dataset.tab = UI_STATE.tab;
+  document.getElementById('tab-list').classList.toggle('active', UI_STATE.tab === 'list');
+  document.getElementById('tab-panel').classList.toggle('active', UI_STATE.tab === 'panel');
 }
 
 function renderBars() {
@@ -2252,6 +2294,14 @@ document.getElementById('toggle-modified').addEventListener('change', function()
   UI_STATE.showModifiedOnly = this.checked;
   renderTable();
   renderBars();
+});
+
+// Onglets
+document.getElementById('le-tabs').addEventListener('click', function(e) {
+  const b = e.target.closest('.le-tab');
+  if (!b || b.disabled) return;
+  UI_STATE.tab = b.dataset.tab;
+  showTab();
 });
 
 // Panneau du type
