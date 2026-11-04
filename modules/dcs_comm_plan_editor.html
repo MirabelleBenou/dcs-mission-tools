@@ -866,6 +866,7 @@ const I18N = {
     'card.groupFreqRO':        'FRÉQUENCE GROUPE (LECTURE SEULE)',
     'card.groupFreqNoSync':    'FRÉQUENCE GROUPE (NON SYNCHRONISÉE AVEC UN CANAL)',
     'table.ch':                'Ch',
+    'table.chMiz':             'Canal {n} dans le .miz',
     'table.freq':              'Fréq (MHz)',
     'card.noRadioBody':        'Ce slot Client n\'a pas de bloc Radio dans le .miz. Aucune édition n\'est possible.',
     'card.groupFreqROInline':  'Fréquence groupe (lecture seule) :',
@@ -917,6 +918,7 @@ const I18N = {
     'card.groupFreqRO':        'GROUP FREQUENCY (READ-ONLY)',
     'card.groupFreqNoSync':    'GROUP FREQUENCY (NOT SYNCED TO A CHANNEL)',
     'table.ch':                'Ch',
+    'table.chMiz':             'Channel {n} in the .miz',
     'table.freq':              'Freq (MHz)',
     'card.noRadioBody':        'This Client slot has no Radio block in the .miz. No editing is possible.',
     'card.groupFreqROInline':  'Group frequency (read-only):',
@@ -1879,12 +1881,9 @@ async function handleSave() {
   }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// CATALOGUE DES NOMS COMMERCIAUX DE RADIOS
-// Clé = unit.type (sensible à la casse). Source : briefs DCS manuels officiels.
-// Graceful degradation si type absent → "Radio {index}".
-// ════════════════════════════════════════════════════════════════════════════
-const ACFT_RADIO_MAP = {
+/* ===== POSTES RADIO (COMME AU COCKPIT) ===== */
+// Noms des postes par type d'appareil : table du Comm Plan Editor de Mission Tools (clé = unit.type, sensible à la casse).
+const RADIO_POSTES = {
   // ─── Soviétiques / Russes ─────────────────────────────────────────────
   "Mi-24P":      { 1: "R-863 (VHF/UHF)",   2: "R-828 (VHF FM)",      3: "Jadro-1I (HF)" },
   "Mi-8MT":      { 1: "R-863 (VHF/UHF)",   2: "R-828 (VHF FM)",      3: "Jadro-1A (HF)" },
@@ -1941,6 +1940,26 @@ const ACFT_RADIO_MAP = {
   "C-130J-30":   { 1: "AN/ARC-210 (V/UHF - COMM 1)", 2: "AN/ARC-210 (V/UHF - COMM 2)" },
   "Hercules":    { 1: "AN/ARC-164 (UHF)", 2: "AN/ARC-186 (VHF)" },
 };
+
+// Premier numéro de canal du cockpit, par type et par poste. Tout type ou poste absent : 1 (le numéro du .miz).
+const RADIO_FIRST_CHANNEL = { "Mi-24P": { 1: 0, 2: 0 }, "Mi-8MT": { 1: 1, 2: 1 } };
+
+// Nom du poste pour un type et un numéro de poste ; '' si le type ou le poste est inconnu.
+function radioPosteName(type, radioIndex) {
+  const map = Object.prototype.hasOwnProperty.call(RADIO_POSTES, type) ? RADIO_POSTES[type] : null;
+  return map && Object.prototype.hasOwnProperty.call(map, radioIndex) ? map[radioIndex] : '';
+}
+
+// Numéro de canal tel que le cockpit le montre, depuis le numéro du .miz ; une entrée qui n'est pas un entier >= 1 est rendue telle quelle.
+function radioCockpitChannel(type, radioIndex, mizChannel) {
+  const s = String(mizChannel);
+  const n = Number(s);
+  if (!/^\s*\d+\s*$/.test(s) || !(n >= 1)) return s;
+  const fm = Object.prototype.hasOwnProperty.call(RADIO_FIRST_CHANNEL, type) ? RADIO_FIRST_CHANNEL[type] : null;
+  const first = fm && Object.prototype.hasOwnProperty.call(fm, radioIndex) ? fm[radioIndex] : 1;
+  return String(n - 1 + first);
+}
+/* ===== FIN DES POSTES RADIO ===== */
 
 // ════════════════════════════════════════════════════════════════════════════
 // UI STATE
@@ -2385,8 +2404,8 @@ function slotId(slot) {
 
 // Nom commercial d'une radio pour un type d'appareil
 function radioLabel(type, radioIndex) {
-  const map = ACFT_RADIO_MAP[type];
-  return map && map[radioIndex] ? `Radio ${radioIndex} — ${map[radioIndex]}` : `Radio ${radioIndex}`;
+  const name = radioPosteName(type, radioIndex);
+  return name ? `Radio ${radioIndex} — ${name}` : `Radio ${radioIndex}`;
 }
 
 // Valeur de modulation pour un canal — déduite depuis group.modulation si pas de bloc mods
@@ -2501,10 +2520,13 @@ function renderRadioTable(radio, type, groupModulation, isReadOnly, divergentCel
     const origFreq = ch.frequency;
     const cellKey  = `R${radio.index}/C${chNum}/frequency`;
     const isDivergent = divergentCells && divergentCells.has(cellKey);
+    // Affichage : numéro du cockpit ; le .miz garde son numéro (data-ch, editKey, exports)
+    const chShown = radioCockpitChannel(type, radio.index, chNum);
+    const chTitle = String(chShown) !== String(chNum) ? ` title="${esc(t('table.chMiz').replace('{n}', chNum))}"` : '';
 
     if (isReadOnly) {
       rows += `<tr>
-        <td>${chNum}</td>
+        <td${chTitle}>${chShown}</td>
         <td style="text-align:right;padding-right:16px">${esc(Number(origFreq).toFixed(3))}</td>
       </tr>`;
     } else {
@@ -2520,7 +2542,7 @@ function renderRadioTable(radio, type, groupModulation, isReadOnly, divergentCel
       const undoDisplay = isModified ? 'inline-flex' : 'none';
 
       rows += `<tr>
-        <td>${chNum}</td>
+        <td${chTitle}>${chShown}</td>
         <td>
           <div class="freq-cell" style="position:relative;display:flex;align-items:center;gap:6px;justify-content:flex-end">
             <input class="freq-input${modCls}" type="number" step="0.001" min="0" max="999.999"

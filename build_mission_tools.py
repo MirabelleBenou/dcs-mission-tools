@@ -21,6 +21,8 @@ import os
 import re
 import sys
 
+from radio_block import build_block
+
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '1.2.1'
 OUT_FILE    = 'dist/dcs_mission_tools.html'
@@ -122,6 +124,25 @@ def check_inline_tables():
             print(f'  [ERREUR] La {label} de {WEAPON_NAMES_MODULE} diffère de {json_path} — build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] {label[0].upper() + label[1:]} identique à {json_path}')
+
+
+RADIO_BLOCK_MODULE = 'modules/dcs_comm_plan_editor.html'
+
+
+def check_radio_block():
+    """Garde d'identité : le bloc des postes radio (radio_block.build_block()) doit figurer exactement une fois,
+    tel quel, dans le Comm Plan Editor. Sinon le build s'arrête avant toute écriture."""
+    try:
+        with open(os.path.join(SCRIPT_DIR, RADIO_BLOCK_MODULE), 'r', encoding='utf-8') as fh:
+            html = fh.read()
+    except OSError as exc:
+        print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    if html.count(build_block()) != 1:
+        print(f'  [ERREUR] Le bloc des postes radio de {RADIO_BLOCK_MODULE} diffère de radio_block.py '
+              f'(attendu : une fois, à l\'identique) — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    print(f'  [OK] Bloc des postes radio identique à radio_block.py ({RADIO_BLOCK_MODULE})')
 
 
 def build_module_html_js(modules):
@@ -1220,6 +1241,7 @@ def main():
     print('\n[1/4] Lecture des versions des modules…')
     versions = read_module_versions(MODULES)
     check_inline_tables()
+    check_radio_block()
 
     print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
