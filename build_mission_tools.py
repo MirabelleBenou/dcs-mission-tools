@@ -10,9 +10,10 @@ Sources modules (dans ./modules/) :
   modules/dcs_comm_plan_editor.html
   modules/dcs_ground_unit_swapper.html
   modules/dcs_weather_editor.html
+  modules/dcs_loadout_editor.html
 
 Sources images (à placer dans ./tiles/) :
-  tiles/cp.webp  tiles/gu.webp  tiles/wx.webp
+  tiles/cp.webp  tiles/gu.webp  tiles/wx.webp  tiles/le.webp
 """
 
 import base64
@@ -28,6 +29,7 @@ MODULES = [
     {'id': 'cp', 'src': 'modules/dcs_comm_plan_editor.html',   'tile': 'tiles/cp.webp'},
     {'id': 'gu', 'src': 'modules/dcs_ground_unit_swapper.html', 'tile': 'tiles/gu.webp'},
     {'id': 'wx', 'src': 'modules/dcs_weather_editor.html',      'tile': 'tiles/wx.webp'},
+    {'id': 'le', 'src': 'modules/dcs_loadout_editor.html',     'tile': 'tiles/le.webp'},
 ]
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -113,10 +115,12 @@ def build_html(module_html_js, tile_uris, versions):
     tile_cp = tile_uris.get('cp', '')
     tile_gu = tile_uris.get('gu', '')
     tile_wx = tile_uris.get('wx', '')
+    tile_le = tile_uris.get('le', '')
 
     ver_cp = versions.get('cp', '')
     ver_gu = versions.get('gu', '')
     ver_wx = versions.get('wx', '')
+    ver_le = versions.get('le', '')
 
     return f'''<!DOCTYPE html>
 <html lang="fr">
@@ -334,7 +338,7 @@ def build_html(module_html_js, tile_uris, versions):
     /* ── Grille cartes ── */
     #cards-grid {{
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       justify-content: center;
       gap: 20px;
       perspective: 1500px;
@@ -652,10 +656,12 @@ def build_html(module_html_js, tile_uris, versions):
         </div>
         <div id="cards-grid"></div>
 
-        <div>
-          <div class="section-title" data-i18n="sectionRoadmap">Roadmap</div>
+        <div id="roadmap-section">
+          <div>
+            <div class="section-title" data-i18n="sectionRoadmap">Roadmap</div>
+          </div>
+          <div id="ghost-grid"></div>
         </div>
-        <div id="ghost-grid"></div>
       </div>
     </div>
 
@@ -706,7 +712,7 @@ def build_html(module_html_js, tile_uris, versions):
         'desc.cp': 'Éditeur de plan de communication — import/export .miz DCS.',
         'desc.gu': 'Remplacement de véhicules terrestres dans les missions .miz DCS.',
         'desc.wx': 'Édition des conditions météo dans les missions .miz DCS.',
-        'desc.le': "Édition des loadouts et livrées d\'appareils (IA ou joueurs).",
+        'desc.le': "Application en masse des emports et livrées d\'appareils (IA ou joueurs).",
         /* Fichier de travail */
         'wf.label': 'Fichier de travail',
         'wf.none':  'Aucun fichier chargé',
@@ -724,7 +730,7 @@ def build_html(module_html_js, tile_uris, versions):
         'desc.cp': 'Communication plan editor — .miz import/export for DCS.',
         'desc.gu': 'Ground vehicle replacement in DCS .miz missions.',
         'desc.wx': 'Weather conditions editor for DCS .miz missions.',
-        'desc.le': 'Edit aircraft loadouts and liveries (AI or player).',
+        'desc.le': 'Bulk-apply aircraft loadouts and liveries (AI or player).',
         /* Working file */
         'wf.label': 'Working file',
         'wf.none':  'No file loaded',
@@ -735,9 +741,9 @@ def build_html(module_html_js, tile_uris, versions):
 
     const KEY_LANG = 'lang_v1';
     /* Une seule langue pour toute la suite : le shell et les trois modules écrivent
-       ces quatre clés à chaque changement et se suivent par l\'évènement storage
+       ces cinq clés à chaque changement et se suivent par l\'évènement storage
        (les iframes srcdoc partagent l\'origine du shell). */
-    const LANG_KEYS = ['lang_v1', 'cpe_lang_v1', 'gus_lang_v1', 'wx_lang_v1'];
+    const LANG_KEYS = ['lang_v1', 'cpe_lang_v1', 'gus_lang_v1', 'wx_lang_v1', 'le_lang_v1'];
     let CURRENT_LANG = 'fr';
 
     function persistLang(lang) {{
@@ -789,7 +795,7 @@ def build_html(module_html_js, tile_uris, versions):
     }}
 
     /* fromStorage : changement venu d\'un autre document, déjà écrit dans les
-       quatre clés — on l\'applique sans le réécrire (pas d\'écho, pas de boucle). */
+       cinq clés — on l\'applique sans le réécrire (pas d\'écho, pas de boucle). */
     function setLang(lang, fromStorage) {{
       if (lang !== 'fr' && lang !== 'en') return;
       if (lang === CURRENT_LANG) return;
@@ -845,11 +851,21 @@ def build_html(module_html_js, tile_uris, versions):
         descKey:    'desc.wx',
         tile:       '{tile_wx}',
       }},
+      {{
+        id:         'le',
+        logo:       'L·E',
+        name:       'Loadout Editor',
+        version:    'v{ver_le}',
+        accent:     '#D46A4C',
+        accentDim:  'rgba(212,106,76,0.15)',
+        accentGlow: 'rgba(212,106,76,0.25)',
+        descKey:    'desc.le',
+        tile:       '{tile_le}',
+      }},
     ];
 
-    const COMING_SOON = [
-      {{ id:'le', logo:'L·E', name:'Loadout Editor',        descKey:'desc.le' }},
-    ];
+    /* Outils annoncés (carte fantôme). Vide : la section Roadmap n\'est pas affichée. */
+    const COMING_SOON = [];
 
     /* ── State ───────────────────────────────────────────── */
     const iframes = {{}};
@@ -1014,6 +1030,9 @@ def build_html(module_html_js, tile_uris, versions):
     }}
 
     function renderGhosts() {{
+      const section = document.getElementById('roadmap-section');
+      if (!section) return;
+      if (COMING_SOON.length === 0) {{ section.remove(); return; }}
       const grid = document.getElementById('ghost-grid');
       grid.innerHTML = '';
 
