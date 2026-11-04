@@ -288,6 +288,7 @@
       border: 1px solid var(--border); border-radius: 3px; color: var(--text);
       background: var(--surface-2);
     }
+    .ld-badge.warn { border-color: var(--warn); color: var(--warn); }
     .ld-badge.changed { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
     td.cell-livery.changed { color: var(--accent); }
     .none { color: var(--text-dim); font-style: italic; }
@@ -406,6 +407,7 @@
       pointer-events: none;
       z-index: 1000;
       max-width: 420px;
+      white-space: pre-line;
     }
     #toast.show { opacity: 1; transform: translateY(0); }
     #toast.toast-success { border-color: var(--accent); }
@@ -602,6 +604,7 @@
             <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"></div>
           </div>
           <div class="set-hint" data-i18n="panel.settings.hint">Un champ vide ne change rien.</div>
+          <div class="set-hint" data-i18n="panel.settings.order">Un emport appliqué remplace aussi carburant, leurres, paillettes et canon : appliquez l'emport d'abord.</div>
           <div class="set-actions"><button class="btn-apply" id="btn-apply-settings" data-i18n="panel.apply">Appliquer à la sélection</button></div>
         </div>
       </details>
@@ -737,6 +740,14 @@ const I18N = {
     'reason.country':              'autre pays',
     'reason.noLivery':             'sans livrée',
     'reason.noPayload':            'sans emport',
+    'reason.notRepro':             'emport non reproductible',
+    'reason.hidden':               'masqué par les filtres',
+    'reason.duplicate':            'identifiant en double',
+    'toast.sep':                   ' : ',
+    'toast.duplicates':            '\u26a0\ufe0f {n} appareil(s) à identifiant en double : non modifiables',
+    'toast.savedReopen':           'Fichier enregistré ; rouvrez-le pour continuer',
+    'table.notRepro':              'Emport non reproductible : ni emport ni réglage possible',
+    'panel.settings.order':        'Un emport appliqué remplace aussi carburant, leurres, paillettes et canon : appliquez l\'emport d\'abord.',
     'toast.noSettings':            '⚠️ Renseignez au moins un réglage',
     'toast.badValue':              '❌ Valeur invalide : {field}',
     'toast.saved':                 '💾 {file} sauvegardé ({n} appareil(s) modifié(s))',
@@ -825,6 +836,14 @@ const I18N = {
     'reason.country':              'other country',
     'reason.noLivery':             'no livery',
     'reason.noPayload':            'no loadout',
+    'reason.notRepro':             'payload not reproducible',
+    'reason.hidden':               'hidden by filters',
+    'reason.duplicate':            'duplicate unit id',
+    'toast.sep':                   ': ',
+    'toast.duplicates':            '\u26a0\ufe0f {n} aircraft with a duplicate unit id: cannot be modified',
+    'toast.savedReopen':           'File saved; reopen it to continue',
+    'table.notRepro':              'Payload not reproducible: no loadout or setting can be applied',
+    'panel.settings.order':        'Applying a loadout also replaces fuel, flares, chaff and gun: apply the loadout first.',
     'toast.noSettings':            '⚠️ Fill in at least one setting',
     'toast.badValue':              '❌ Invalid value: {field}',
     'toast.saved':                 '💾 {file} saved ({n} aircraft modified)',
@@ -1591,6 +1610,35 @@ function serializeLua(val, indent) {
   return out;
 }
 
+// luaTableReproducible : true si serializeLua(astToValue(node)) redonne la même table, en valeur.
+// Faux dès qu'à une profondeur quelconque : une entrée sans clé, une clé texte faite uniquement de chiffres,
+// une clé ni texte ni nombre (ou un nombre qui n'est pas un entier ≥ 0), une clé en double, ou une valeur
+// que astToValue ne sait pas rendre (identifiant nu, nil).
+function luaTableReproducible(node) {
+  if (!node) return false;
+  if (node.kind === 'table') {
+    const seen = new Set();
+    for (const e of node.entries) {
+      if (!e.key) return false;
+      let ks;
+      if (e.key.kind === 'string') {
+        ks = String(e.key.value);
+        if (/^\d+$/.test(ks) || ks === '__proto__') return false;
+      } else if (e.key.kind === 'int') {
+        ks = String(e.key.value);
+        if (typeof e.key.value !== 'number' || !/^\d+$/.test(ks)) return false;
+      } else {
+        return false;
+      }
+      if (seen.has(ks)) return false;
+      seen.add(ks);
+      if (!luaTableReproducible(e.value)) return false;
+    }
+    return true;
+  }
+  return node.kind === 'number' || node.kind === 'string' || node.kind === 'bool';
+}
+
 function deepEqValues(a, b) {
   if (a === null && b === null) return true;
   if (typeof a !== typeof b) return false;
@@ -1682,6 +1730,8 @@ function lxWalkAircraft(ast) {
               liveryPos:  (liveryNode && liveryNode.kind === 'string') ? liveryNode.pos : null,
               payload:    payloadNode ? astToValue(payloadNode) : undefined,
               payloadPos: payloadNode ? payloadNode.pos : null,
+              payloadTable: !!(payloadNode && payloadNode.kind === 'table'),
+              reproducible: !!(payloadNode && payloadNode.kind === 'table' && luaTableReproducible(payloadNode)),
             });
           }
         }
@@ -1704,6 +1754,7 @@ const UI_STATE = {
   collapsed:     new Set(),   // types repliés
   filters:       { coalition: '', type: '', role: '', search: '' },
   showModifiedOnly: false,
+  dupIds:        new Set(),   // unitId portés par plusieurs appareils (ou absents) : aucune modification
   tab:           'list',      // onglet courant sous 768 px : 'list' | 'panel'
   rev:           0,           // incrémenté à chaque modification (invalide les caches)
   _cache:        new Map(),
@@ -1777,6 +1828,7 @@ function getLoadouts(type) {
     const list = [];
     const letterOf = new Map();
     for (const u of (UI_STATE.byType.get(type) || [])) {
+      if (!u.reproducible) continue;   // payload non reproductible : hors des emports du type
       const p = curPayload(u);
       if (p === undefined) continue;
       let entry = list.find(x => deepEqValues(x.payload, p));
@@ -1839,13 +1891,29 @@ function resultToast(modified, ignored) {
     const why = reasons.length === 1
       ? t('reason.' + reasons[0][0])
       : reasons.map(([k, n]) => t('reason.' + k) + ' (' + n + ')').join(', ');
-    msg += ', ' + tn('toast.ignored', total) + ' : ' + why;
+    msg += ', ' + tn('toast.ignored', total) + t('toast.sep') + why;
   }
   showToast(msg, modified > 0 ? 'success' : 'warn');
 }
 
 function afterEdit() {
   renderAll();
+}
+
+// Motif pour lequel un appareil coché ne prend pas une modification (null : il la prend).
+// kind : 'payload' (emport, réglages) ou 'livery'.
+function skipReason(u, type, visSet, kind, country) {
+  if (u.type !== type) return 'type';
+  if (!visSet.has(u.unitId)) return 'hidden';
+  if (UI_STATE.dupIds.has(u.unitId)) return 'duplicate';
+  if (kind === 'payload') {
+    if (u.payloadPos === null || !u.payloadTable) return 'noPayload';
+    if (!u.reproducible) return 'notRepro';
+  } else {
+    if (u.country !== country) return 'country';
+    if (u.liveryPos === null) return 'noLivery';
+  }
+  return null;
 }
 
 function applyLoadoutToSelection(letter) {
@@ -1855,12 +1923,12 @@ function applyLoadoutToSelection(letter) {
   if (!entry) return;
   const src = entry.payload;
   let modified = 0;
-  const ignored = { type: 0, noPayload: 0 };
-  for (const id of [...UI_STATE.selected]) {
-    const u = UI_STATE.byId.get(id);
-    if (!u) continue;
-    if (u.type !== type) { ignored.type++; continue; }
-    if (u.payloadPos === null) { ignored.noPayload++; continue; }
+  const ignored = {};
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  for (const u of UI_STATE.aircraft) {
+    if (!UI_STATE.selected.has(u.unitId)) continue;
+    const why = skipReason(u, type, visSet, 'payload');
+    if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
     if (deepEqValues(curPayload(u), src)) continue;   // déjà identique : ni modifié ni ignoré
     setPayload(u, lxClone(src));
     modified++;
@@ -1878,7 +1946,12 @@ function readSettings() {
   ];
   const out = {};
   for (const d of defs) {
-    const raw = document.getElementById(d.id).value.trim();
+    const el = document.getElementById(d.id);
+    if (el.validity && el.validity.badInput) {   // saisie illisible : le champ « vide » n'est pas vide
+      showToast(t('toast.badValue').replace('{field}', d.label), 'error');
+      return null;
+    }
+    const raw = el.value.trim();
     if (raw === '') continue;
     const n = Number(raw);
     if (!isFinite(n) || n < 0 || n > d.max || (d.int && !Number.isInteger(n))) {
@@ -1897,12 +1970,12 @@ function applySettingsToSelection() {
   const settings = readSettings();
   if (!settings) return;
   let modified = 0;
-  const ignored = { type: 0, noPayload: 0 };
-  for (const id of [...UI_STATE.selected]) {
-    const u = UI_STATE.byId.get(id);
-    if (!u) continue;
-    if (u.type !== type) { ignored.type++; continue; }
-    if (u.payloadPos === null) { ignored.noPayload++; continue; }
+  const ignored = {};
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  for (const u of UI_STATE.aircraft) {
+    if (!UI_STATE.selected.has(u.unitId)) continue;
+    const why = skipReason(u, type, visSet, 'payload');
+    if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
     const next = lxClone(curPayload(u));
     for (const [k, v] of Object.entries(settings)) next[k] = v;
     if (deepEqValues(curPayload(u), next)) continue;
@@ -1917,13 +1990,12 @@ function applyLiveryToSelection(country, livery) {
   const type = panelType();
   if (type === null) return;
   let modified = 0;
-  const ignored = { type: 0, country: 0, noLivery: 0 };
-  for (const id of [...UI_STATE.selected]) {
-    const u = UI_STATE.byId.get(id);
-    if (!u) continue;
-    if (u.type !== type) { ignored.type++; continue; }
-    if (u.country !== country) { ignored.country++; continue; }
-    if (u.liveryPos === null) { ignored.noLivery++; continue; }
+  const ignored = {};
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  for (const u of UI_STATE.aircraft) {
+    if (!UI_STATE.selected.has(u.unitId)) continue;
+    const why = skipReason(u, type, visSet, 'livery', country);
+    if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
     if (curLivery(u) === livery) continue;
     setLivery(u, livery);
     modified++;
@@ -1982,7 +2054,15 @@ async function loadMiz(file) {
     }
     console.log('[Load] Parse OK en', Math.round(performance.now() - t0), 'ms — appareils :', aircraft.length);
 
+    // unitId en double (ou absent) : ces appareils ne prennent aucune modification
+    const idCount = new Map();
+    for (const u of aircraft) idCount.set(u.unitId, (idCount.get(u.unitId) || 0) + 1);
+    const dupIds = new Set();
+    for (const [id, n] of idCount) if (n > 1 || id === undefined) dupIds.add(id);
+    const dupUnits = aircraft.filter(u => dupIds.has(u.unitId)).length;
+
     _HQ_MIZ_CONTEXT = { otherFilesMap };
+    UI_STATE.dupIds = dupIds;
     UI_STATE.tab = 'list';
     UI_STATE.edits = new Map();
     UI_STATE.selected = new Set();
@@ -2001,7 +2081,9 @@ async function loadMiz(file) {
     hdrMiz.textContent = file.name;
     hdrMiz.classList.remove('empty');
 
-    showToast(t('toast.loaded').replace('{n}', aircraft.length).replace('{file}', file.name), 'success');
+    const loadedMsg = t('toast.loaded').replace('{n}', aircraft.length).replace('{file}', file.name);
+    if (dupUnits > 0) showToast(loadedMsg + '\n' + t('toast.duplicates').replace('{n}', dupUnits), 'warn');
+    else showToast(loadedMsg, 'success');
   } catch (err) {
     console.error('[Load] Erreur :', err);
     showToast(t('toast.loadError') + ' ' + err.message, 'error');
@@ -2015,6 +2097,7 @@ function resetFilterControls() {
   document.getElementById('filter-role').value = '';
   document.getElementById('filter-search').value = '';
   document.getElementById('toggle-modified').checked = false;
+  ['set-fuel', 'set-flare', 'set-chaff', 'set-gun'].forEach(id => { document.getElementById(id).value = ''; });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2055,7 +2138,9 @@ function filteredAircraft() {
 
 // Sous 700 px les colonnes Rôle et Pays disparaissent : la ligne de type couvre moins de colonnes.
 const narrowMQ = window.matchMedia('(max-width: 700px)');
-narrowMQ.addEventListener('change', () => { if (UI_STATE.model) renderTable(); });
+const onNarrowChange = () => { if (UI_STATE.model) renderTable(); };
+if (narrowMQ.addEventListener) narrowMQ.addEventListener('change', onNarrowChange);
+else if (narrowMQ.addListener) narrowMQ.addListener(onNarrowChange);   // Safari ancien
 
 function natCompare(a, b) {
   return String(a == null ? '' : a).localeCompare(String(b == null ? '' : b), undefined, { numeric: true, sensitivity: 'base' });
@@ -2104,7 +2189,11 @@ function renderTable() {
           '<span class="narrow-only">' + escHtml(roleTxt) + ' · ' + escHtml(u.country) + '</span></td>' +
         '<td class="c-role"><span class="role-badge role-' + u.role + '">' + escHtml(roleTxt) + '</span></td>' +
         '<td class="c-country"><span class="coal-dot ' + u.coalition + '"></span>' + escHtml(u.country) + '</td>' +
-        '<td class="td-ld cell-loadout"><span class="ld-badge' + (pChanged ? ' changed' : '') + '">' + escHtml(letterOf.get(u.unitId) || '—') + '</span>' +
+        '<td class="td-ld cell-loadout">' + (letterOf.has(u.unitId)
+          ? '<span class="ld-badge' + (pChanged ? ' changed' : '') + '">' + escHtml(letterOf.get(u.unitId)) + '</span>'
+          : (u.payloadTable && !u.reproducible
+              ? '<span class="ld-badge warn" title="' + escHtml(t('table.notRepro')) + '">!</span>'
+              : '<span class="ld-badge">—</span>')) +
           (ed ? '<button class="btn-undo-cell" data-id="' + u.unitId + '" title="' + escHtml(t('table.undo')) + '">↺</button>' : '') + '</td>' +
         '<td class="c-livery cell-livery' + (lChanged ? ' changed' : '') + '">' +
           (lv === undefined ? '<span class="none">' + escHtml(t('livery.none')) + '</span>' : escHtml(lv)) + '</td>' +
@@ -2371,10 +2460,11 @@ function verifyWrite(patchedSrc, wanted) {
   const ast = DCS_PARSER.parse(tokens);
   const re = lxWalkAircraft(ast);
   if (re.length !== UI_STATE.aircraft.length) return { error: 'appareils : ' + re.length + ' ≠ ' + UI_STATE.aircraft.length };
-  const byId2 = new Map(re.map(u => [u.unitId, u]));
-  for (const u of UI_STATE.aircraft) {
-    const u2 = byId2.get(u.unitId);
-    if (!u2) return { error: 'unitId ' + u.unitId + ' disparu' };
+  // Même ordre de parcours avant et après : on compare appareil par appareil (les unitId peuvent être en double)
+  for (let i = 0; i < UI_STATE.aircraft.length; i++) {
+    const u = UI_STATE.aircraft[i];
+    const u2 = re[i];
+    if (!u2 || u2.unitId !== u.unitId) return { error: 'unitId ' + u.unitId + ' disparu' };
     const wantP = wanted.payload.has(u.unitId) ? wanted.payload.get(u.unitId) : u.payload;
     const wantL = wanted.livery.has(u.unitId) ? wanted.livery.get(u.unitId) : u.livery;
     if (!deepEqValues(wantP, u2.payload)) return { error: 'payload ' + u.name + ' (' + u.unitId + ')' };
@@ -2441,7 +2531,16 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     // Le texte écrit devient la base : plus rien n'est « non sauvegardé »
     const nMod = UI_STATE.edits.size;
     const otherFilesMap = _HQ_MIZ_CONTEXT.otherFilesMap;
-    const extracted = DCS_EXTRACTOR.extract(verdict.ast, patchedSrc, UI_STATE.model.source.miz.filename, otherFilesMap, patchedSrc.split('\n'));
+    let extracted;
+    try {
+      extracted = DCS_EXTRACTOR.extract(verdict.ast, patchedSrc, UI_STATE.model.source.miz.filename, otherFilesMap, patchedSrc.split('\n'));
+    } catch (err2) {
+      // Le fichier est déjà téléchargé : aucune modification ne reste en attente, on repart d'un fichier neuf
+      console.error('[Save] Relecture après téléchargement :', err2);
+      returnToDropZone();
+      showToast(t('toast.savedReopen'), 'warn');
+      return;
+    }
     UI_STATE.edits = new Map();
     setModel({ source: extracted.source, aircraft: verdict.aircraft });
     renderAll();
@@ -2475,10 +2574,11 @@ document.getElementById('drop-box').addEventListener('click', () => {
 document.getElementById('file-input').addEventListener('change', e => {
   if (e.target.files[0]) handleFile(e.target.files[0]);
 });
-document.getElementById('btn-load-new').addEventListener('click', () => {
+function returnToDropZone() {
   UI_STATE.model = null;
   UI_STATE.edits = new Map();
   UI_STATE.selected = new Set();
+  UI_STATE.rev++;
   document.getElementById('main-ui').classList.add('hidden');
   document.getElementById('modifications-bar').classList.add('hidden');
   document.getElementById('drop-zone').classList.remove('hidden');
@@ -2486,7 +2586,8 @@ document.getElementById('btn-load-new').addEventListener('click', () => {
   hdr.textContent = t('header.noFile');
   hdr.classList.add('empty');
   document.getElementById('file-input').value = '';
-});
+}
+document.getElementById('btn-load-new').addEventListener('click', returnToDropZone);
 
 // Drag & drop
 const dropBox = document.getElementById('drop-box');

@@ -500,8 +500,8 @@ def build_html(module_html_js, tile_uris, versions):
     }}
     #ghost-grid {{
       display: grid;
-      /* même pistes que #cards-grid : une carte fantôme garde la largeur d'une carte active */
-      grid-template-columns: repeat(auto-fill, minmax(max(300px, calc((100% - 40px) / 3 - 0.5px)), 1fr));
+      /* mêmes pistes (280 px minimum) que #cards-grid, en auto-fill : une carte fantôme garde la largeur d'une carte active */
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       justify-content: center;
       gap: 20px;
       perspective: 1500px;

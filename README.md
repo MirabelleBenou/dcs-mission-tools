@@ -35,7 +35,7 @@ Mission Tools edits the **actual mission file**, with surgical precision and not
 
 ## 🧰 The suite
 
-The landing page presents each editor as a tile. Active tools open in place; upcoming ones are stamped *Coming soon*.
+The landing page presents each editor as a tile. Active tools open in place.
 
 | Tool                            | What it does                                                                                                                | Status      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
@@ -77,7 +77,7 @@ The Weather Editor gives you full control over **mission weather**, from a quick
 
 ### 🎯 Loadout Editor — in detail
 
-The Loadout Editor **applies a loadout that already exists in the mission** — and a livery — to many aircraft at once, players and AI alike. Handy when a wing mission holds hundreds of aircraft and the Mission Editor only sets them one by one.
+The Loadout Editor **applies a loadout that already exists in the mission** — and a livery — to many aircraft at once, players and AI alike. Handy when a large mission holds hundreds of aircraft and the Mission Editor only sets them one by one.
 
 - **Copy an existing loadout** to every selected aircraft of the same type (players and AI)
 - **Fuel, flares, chaff and gun in bulk** — an empty field changes nothing
