@@ -22,6 +22,7 @@ import re
 import sys
 
 from radio_block import build_block
+from listes_block import build_block as build_listes_block
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '1.2.1'
@@ -173,6 +174,24 @@ def check_radio_block():
               f'(attendu : une fois, à l\'identique) — build arrêté', file=sys.stderr)
         sys.exit(1)
     print(f'  [OK] Bloc des postes radio identique à radio_block.py ({RADIO_BLOCK_MODULE})')
+
+
+def check_listes_block():
+    """Garde d'identité : le bloc des listes déroulantes (listes_block.build_block()) doit figurer exactement une fois,
+    tel quel, dans chacun des quatre modules. Sinon le build s'arrête avant toute écriture."""
+    block = build_listes_block()
+    for mod in MODULES:
+        try:
+            with open(os.path.join(SCRIPT_DIR, mod['src']), 'r', encoding='utf-8') as fh:
+                html = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if html.count(block) != 1:
+            print(f'  [ERREUR] Le bloc des listes déroulantes de {mod["src"]} diffère de listes_block.py '
+                  f'(attendu : une fois, à l\'identique) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        print(f'  [OK] Bloc des listes déroulantes identique à listes_block.py ({mod["src"]})')
 
 
 def build_module_html_js(modules):
@@ -1272,6 +1291,7 @@ def main():
     versions = read_module_versions(MODULES)
     check_inline_tables()
     check_radio_block()
+    check_listes_block()
 
     print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
