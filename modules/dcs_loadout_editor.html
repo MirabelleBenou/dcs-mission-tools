@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <!--
-  Loadout Editor v1.2.1
+  Loadout Editor v1.3.0
   =====================
   Applique en masse un emport existant (et une livrée) à des appareils du même type,
   joueurs et IA, dans un fichier .miz DCS World. Composer un emport pylône par pylône
   n'est pas l'objet de cet outil.
 
-  Version    : 1.2.1
+  Version    : 1.3.0
   Licence    : MIT
   Dépendances: JSZip 3.10.1 — inliné (aucune dépendance externe)
   Usage      : Ouvrir dans Chrome/Firefox, charger un .miz, cocher des appareils, appliquer, sauvegarder.
@@ -24,7 +24,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loadout Editor v1.2.1</title>
+  <title>Loadout Editor v1.3.0</title>
   <style>
     /* ── Variables palette ─────────────────────────────────────────────────── */
     :root {
@@ -602,7 +602,7 @@
 <header id="app-header">
   <div class="header-logo">L·E</div>
   <div class="header-title" data-i18n="app.title">Loadout Editor</div>
-  <div class="header-version">v1.2.1</div>
+  <div class="header-version">v1.3.0</div>
   <div class="header-miz empty" id="header-miz" data-i18n="header.noFile">Aucun fichier chargé</div>
   <button class="header-lang-btn" id="btn-lang" title="Switch language / Changer de langue"></button>
 </header>
@@ -769,14 +769,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script>
 'use strict';
 
-const APP_VERSION = '1.2.1';
+const APP_VERSION = '1.3.0';
 
 // ═══════════════════════════════════════════════════════════════
 // I18N — Internationalisation FR/EN
 // ═══════════════════════════════════════════════════════════════
 const I18N = {
   fr: {
-    'doc.title':                   'Loadout Editor v1.2.1',
+    'doc.title':                   'Loadout Editor v1.3.0',
     'app.title':                   'Loadout Editor',
     'header.noFile':               'Aucun fichier chargé',
     'list.search':                 'Rechercher\u2026',
@@ -910,7 +910,7 @@ const I18N = {
     'spinner.rebuilding':          'Reconstruction du .miz…',
   },
   en: {
-    'doc.title':                   'Loadout Editor v1.2.1',
+    'doc.title':                   'Loadout Editor v1.3.0',
     'app.title':                   'Loadout Editor',
     'header.noFile':               'No file loaded',
     'list.search':                 'Search\u2026',

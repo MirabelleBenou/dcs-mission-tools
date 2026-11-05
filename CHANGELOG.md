@@ -4,6 +4,8 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-11-05
+
 ### Added
 - **Loadout Editor**: pick a loadout already in the mission — shown by weapon name — and apply it to every selected aircraft of the same type, players and AI alike; set fuel, flares, chaff and gun in bulk, with the current values and each type's limits shown; apply a livery within the same type and country. Each payload is rewritten whole and verified before the file is offered for download. Weapon names come from pydcs (LGPL-3.0-or-later).
 - **Loadout Editor**: compose a loadout station by station, from scratch or from a loadout of the mission, with the weapons each station accepts, mirrored stations and the total weight; a front view of the aircraft for the Mi-24P, Mi-8MTV2, F-4E and Mirage F1EE, the station list for every other type. Front-view drawings by Goldwolf (DCS Reference Guide), used with permission and not covered by the MIT licence; station data from pydcs (LGPL-3.0-or-later).

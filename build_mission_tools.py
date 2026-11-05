@@ -25,7 +25,7 @@ from radio_block import build_block
 from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-APP_VERSION = '1.2.1'
+APP_VERSION = '1.3.0'
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [
@@ -55,7 +55,7 @@ def encode_module_b64(path):
     return base64.b64encode(html.encode('utf-8')).decode('ascii')
 
 
-# APP_VERSION déclarée dans le script du module : const APP_VERSION = '1.2.1';
+# APP_VERSION déclarée dans le script du module : const APP_VERSION = '1.3.0';
 _APP_VERSION_RE = re.compile(
     r"""^[ \t]*(?:const|let|var)[ \t]+APP_VERSION[ \t]*=[ \t]*(['"])([0-9A-Za-z][0-9A-Za-z.+\-]*)\1""",
     re.MULTILINE,
