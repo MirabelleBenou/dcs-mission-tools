@@ -421,6 +421,10 @@ function tbmSetActive(m, k, reveal) {
   if (k === tbmFirst(m, 1) && !m.search) p.scrollTop = 0;
   else if (t - sh < p.scrollTop) p.scrollTop = Math.max(0, t - sh);
   else if (t + h > p.scrollTop + p.clientHeight) p.scrollTop = reveal === 'center' ? Math.max(0, t - (p.clientHeight - h) / 2) : t + h - p.clientHeight;
+  if (m.searchBox && p.scrollTop > 0) {   /* le champ collé couvre le haut : le choix ne passe jamais dessous (le remplissage de la liste y compte) */
+    const over = m.searchBox.getBoundingClientRect().bottom - li.getBoundingClientRect().top;
+    if (over > 0.5) p.scrollTop = Math.max(0, p.scrollTop - over);
+  }
 }
 
 function tbmStep(m, d) {
