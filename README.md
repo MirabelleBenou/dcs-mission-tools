@@ -189,6 +189,7 @@ For code contributions: fork, branch, study the build script to understand the a
 
 - Built for the DCS World virtual aviation community
 - Weapon names and aircraft limits in the Loadout Editor come from **[pydcs](https://github.com/pydcs/dcs)** 1.0.0 (LGPL-3.0-or-later) — the tables and their licence are in [`data/`](data/)
+- Front-view drawings in `data/views/`: Goldwolf, DCS Reference Guide — used with permission, not covered by the MIT licence.
 - Initial version developed for the **4th VEAW** virtual wing — distributed as generic, public tools
 - A companion to **[DCS Mission Plan](https://github.com/MirabelleBenou/dcs-mission-plan)** (briefings, recon, HQ)
 
