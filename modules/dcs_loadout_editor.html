@@ -199,6 +199,7 @@
       min-height: 26px;
     }
     .filter-group select:focus, .filter-group input:focus { outline: none; border-color: var(--accent); }
+    .filter-group .tbm-trigger:hover, .filter-group .tbm-trigger:focus-visible { outline: none; border-color: var(--tbm-accent); }
     .filter-group input[type="text"] { min-width: 200px; }
 
     /* ── Table info bar (compteurs + toggle) ─────────────────────────────── */
@@ -9836,6 +9837,7 @@ select[data-tbm-src] { display: none !important; }
 .tbm-opt.tbm-hide { display: none; }
 .tbm-none { padding: 10px 14px; color: var(--text-dim); font-family: var(--font-ui); font-size: 12px; text-align: center; list-style: none; }
 .tbm-none.tbm-hide { display: none; }
+@media (pointer: coarse) { .tbm-opt { min-height: 44px; } .tbm-search input { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .tbm-panel { animation: none; } }
 @media print { .tbm-panel { display: none; } }
 `;
@@ -9859,6 +9861,7 @@ function initListes(cfg) {
     window.addEventListener('resize', tbmResized);
     window.addEventListener('blur', () => tbmClose(false));
     window.addEventListener('scroll', tbmScrolled, true);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', tbmViewport);
   }
   tbmScan(document.body);
   if (TBM.mo) return;
@@ -9989,7 +9992,7 @@ function tbmSync(m) {
 
 /* Sans casse ni accents */
 function tbmNorm(s) {
-  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
 function tbmTexts() {
@@ -10007,13 +10010,15 @@ function tbmOpen(m) {
   ul.className = 'tbm-panel';
   ul.id = 'tbm-list-' + m.uid;
   ul.setAttribute('role', 'listbox');
-  ul.setAttribute('aria-label', name);
+  if (name) ul.setAttribute('aria-label', name);
   ul.tabIndex = -1;
-  const head = document.createElement('li');
-  head.className = 'tbm-head';
-  head.setAttribute('role', 'presentation');
-  head.textContent = name;
-  ul.appendChild(head);
+  if (name) {   /* jamais d'en-tête vide : sans intitulé, pas d'en-tête */
+    const head = document.createElement('li');
+    head.className = 'tbm-head';
+    head.setAttribute('role', 'presentation');
+    head.textContent = name;
+    ul.appendChild(head);
+  }
   const tx = tbmTexts();
   m.search = null;
   if (opts.length > 15) {
@@ -10074,6 +10079,10 @@ function tbmOpen(m) {
   ul.appendChild(none);
   m.none = none;
   ul.addEventListener('keydown', e => tbmKey(m, e));
+  /* Avec un champ de recherche, toucher un choix ne prend pas le focus : le clavier virtuel reste ouvert jusqu'au choix */
+  const keepFocus = e => { if (m.search && e.target.closest && e.target.closest('.tbm-opt')) e.preventDefault(); };
+  ul.addEventListener('mousedown', keepFocus);
+  ul.addEventListener('pointerdown', keepFocus);
   ul.addEventListener('click', e => {
     const li = e.target.closest ? e.target.closest('.tbm-opt') : null;
     if (!li || li.getAttribute('aria-disabled') === 'true') return;
@@ -10129,7 +10138,8 @@ function tbmPlace(m) {
 
 /* p : la liste (position: fixed), r : le rectangle de son bouton. Sert aussi aux listes à types du Ground Unit Swapper. */
 function tbmPlaceAt(p, r) {
-  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+  const vv = window.visualViewport, vw = document.documentElement.clientWidth;
+  const vh = vv ? Math.min(window.innerHeight, vv.offsetTop + vv.height) : window.innerHeight;
   const cap = Math.min(0.62 * vh, 440);
   const below = vh - (r.bottom + 4) - 12, above = (r.top - 4) - 12;
   p.style.minWidth = Math.min(Math.max(180, r.width), vw - 16) + 'px';
@@ -10265,6 +10275,12 @@ function tbmResized() {
   if (!m) return;
   if (m.search && window.innerWidth === m.w0) tbmPlace(m);
   else tbmClose(false);
+}
+
+/* Le clavier virtuel change la zone visible sans toujours changer window.innerHeight : la liste ouverte est replacée */
+function tbmViewport() {
+  const m = TBM.cur;
+  if (m && m.panel && window.innerWidth === m.w0) tbmPlace(m);
 }
 
 /* Le défilement de la page déplace le bouton : la liste se ferme */

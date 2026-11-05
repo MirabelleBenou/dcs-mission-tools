@@ -22,7 +22,7 @@ import re
 import sys
 
 from radio_block import build_block
-from listes_block import build_block as build_listes_block
+from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '1.2.1'
@@ -176,6 +176,13 @@ def check_radio_block():
     print(f'  [OK] Bloc des postes radio identique à radio_block.py ({RADIO_BLOCK_MODULE})')
 
 
+# Définitions interdites hors du bloc : function tbm…/initListes, const|let|var|class TBM…/tbm…, affectation à TBM…/tbm…/initListes
+LISTES_DEF_RE = re.compile(
+    r'\bfunction\s*\*?\s*(?:tbm\w*|initListes)\b'
+    r'|\b(?:const|let|var|class)\s+(?:TBM\w*|tbm\w*|initListes)\b'
+    r'|(?<![.\w])(?:window\.)?(?:TBM\w*|tbm[A-Z]\w*|initListes)\s*=(?![=>])')
+
+
 def check_listes_block():
     """Garde d'identité : le bloc des listes déroulantes (listes_block.build_block()) doit figurer exactement une fois,
     tel quel, dans chacun des quatre modules. Sinon le build s'arrête avant toute écriture."""
@@ -190,6 +197,17 @@ def check_listes_block():
         if html.count(block) != 1:
             print(f'  [ERREUR] Le bloc des listes déroulantes de {mod["src"]} diffère de listes_block.py '
                   f'(attendu : une fois, à l\'identique) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        # Hors des marqueurs : chaque marqueur n'apparaît qu'une fois, et rien du bloc n'est (re)défini
+        outside = html.replace(block, '', 1)
+        if html.count(LISTES_BEGIN) != 1 or html.count(LISTES_END) != 1:
+            print(f'  [ERREUR] Un marqueur du bloc des listes déroulantes figure plusieurs fois dans {mod["src"]} '
+                  f'— build arrêté', file=sys.stderr)
+            sys.exit(1)
+        redef = LISTES_DEF_RE.search(outside)
+        if redef:
+            print(f'  [ERREUR] {mod["src"]} définit « {redef.group(0).strip()} » hors des marqueurs du bloc des listes '
+                  f'déroulantes — build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] Bloc des listes déroulantes identique à listes_block.py ({mod["src"]})')
 

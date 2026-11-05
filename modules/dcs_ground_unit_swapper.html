@@ -222,6 +222,7 @@
       outline: none;
       border-color: var(--olive);
     }
+    .filter-group .tbm-trigger:hover, .filter-group .tbm-trigger:focus-visible { outline: none; border-color: var(--tbm-accent); }
     .filter-group input[type="text"] { min-width: 160px; }
     .filter-group .filter-wide.tbm-trigger { width: 200px; max-width: 200px; }
 
@@ -492,7 +493,8 @@
       min-width: 100px;
       max-width: 200px;
     }
-    .cell-select:focus { outline: none; border-color: var(--olive); }
+    .cell-select:not(.tbm-trigger):focus { outline: none; border-color: var(--olive); }
+    .cell-select.tbm-trigger:hover, .cell-select.tbm-trigger:focus-visible { outline: none; border-color: var(--tbm-accent); }
     .cell-select.changed {
       border-color: var(--amber);
       background: var(--amber-dim);
@@ -1665,6 +1667,23 @@ function getDisplayName(type) {
 
 // ═══════════════════════════════════════════════════════════════
 // COMBOBOX — Composant custom avec recherche et navigation clavier
+// Aides des listes à types (Combobox, SharedCombobox) : placement mémorisé, déplacement du bouton d'ancrage, choix visible sous le champ collé
+function placeTypePopup(popup, anchor) {
+  const r = anchor.getBoundingClientRect();
+  popup._ax = r.left; popup._ay = r.top;
+  tbmPlaceAt(popup, r);
+}
+function typePopupMoved(popup, anchor) {
+  if (!popup || !anchor || popup.hasAttribute('hidden')) return false;
+  const r = anchor.getBoundingClientRect();
+  return Math.abs(r.left - popup._ax) > 0.5 || Math.abs(r.top - popup._ay) > 0.5;
+}
+function revealInPopup(popup, li) {
+  const bar = popup.querySelector('.tbm-search');
+  const sh = bar ? bar.offsetHeight : 0, t = li.offsetTop, h = li.offsetHeight;
+  if (t - sh < popup.scrollTop) popup.scrollTop = Math.max(0, t - sh);
+  else if (t + h > popup.scrollTop + popup.clientHeight) popup.scrollTop = t + h - popup.clientHeight;
+}
 // Usage : new Combobox(rootElement, { options, value, placeholder, emptyLabel })
 // Émet 'change' avec detail.value sur rootElement.
 // ═══════════════════════════════════════════════════════════════
@@ -1779,7 +1798,13 @@ class Combobox {
     this._filtered = q ? all.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)) : all;
     this._hlIndex = -1;
     this._renderList();
-    if (this._open && !this._popup.hasAttribute('hidden')) tbmPlaceAt(this._popup, this._display.getBoundingClientRect());
+    if (this._open && !this._popup.hasAttribute('hidden')) placeTypePopup(this._popup, this._display);
+  }
+
+  _moved() { return this._open && typePopupMoved(this._popup, this._display); }
+
+  _replace() {
+    if (this._open && !this._popup.hasAttribute('hidden')) placeTypePopup(this._popup, this._display);
   }
 
   _renderList() {
@@ -1820,7 +1845,7 @@ class Combobox {
       li.classList.toggle('active', i === idx);
     });
     const active = this._list.querySelector('.highlighted');
-    if (active) active.scrollIntoView({ block: 'nearest' });
+    if (active) revealInPopup(this._popup, active);
     this._root.setAttribute('aria-activedescendant', active ? active.id || '' : '');
   }
 
@@ -1971,7 +1996,7 @@ const SharedCombobox = (() => {
       li.classList.toggle('active', i === idx);
     });
     const active = _list.querySelector('.highlighted');
-    if (active) active.scrollIntoView({ block: 'nearest' });
+    if (active) revealInPopup(_popup, active);
   }
 
   function _selectHL() {
@@ -1987,7 +2012,13 @@ const SharedCombobox = (() => {
   }
 
   function _position(cellEl) {
-    tbmPlaceAt(_popup, cellEl.getBoundingClientRect());
+    placeTypePopup(_popup, cellEl);
+  }
+
+  function moved() { return typePopupMoved(_popup, _activeCell); }
+
+  function reposition() {
+    if (_popup && _activeCell && !_popup.hasAttribute('hidden')) placeTypePopup(_popup, _activeCell);
   }
 
   function openOn(cellEl, { initialValue, onChange }) {
@@ -2017,7 +2048,7 @@ const SharedCombobox = (() => {
     if (_popup && !_popup.hasAttribute('hidden')) _filterList();
   }
 
-  return { openOn, setOptions, close: _close };
+  return { openOn, setOptions, close: _close, moved, reposition };
 })();
 
 // ═══════════════════════════════════════════════════════════════
@@ -3389,8 +3420,16 @@ let _typePopupsW = window.innerWidth;
 window.addEventListener('scroll', e => {
   const n = e.target;
   if (n && n.nodeType === 1 && n.closest('.combobox-popup, #shared-combobox-popup')) return;
-  closeTypePopups();
+  // seul un défilement qui déplace le bouton d'ancrage ferme la liste (le clavier virtuel fait défiler la page sans le déplacer)
+  ['bulkFromCombobox', 'bulkToCombobox'].forEach(k => { if (UI_STATE[k] && UI_STATE[k]._moved()) UI_STATE[k]._close(); });
+  if (SharedCombobox.moved()) SharedCombobox.close();
 }, true);
+// Le clavier virtuel change la zone visible : les listes à types ouvertes sont replacées.
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => {
+  if (window.innerWidth !== _typePopupsW) return;
+  ['bulkFromCombobox', 'bulkToCombobox'].forEach(k => { if (UI_STATE[k]) UI_STATE[k]._replace(); });
+  SharedCombobox.reposition();
+});
 window.addEventListener('resize', () => {
   if (window.innerWidth === _typePopupsW) return;
   _typePopupsW = window.innerWidth;
@@ -3450,6 +3489,7 @@ select[data-tbm-src] { display: none !important; }
 .tbm-opt.tbm-hide { display: none; }
 .tbm-none { padding: 10px 14px; color: var(--text-dim); font-family: var(--font-ui); font-size: 12px; text-align: center; list-style: none; }
 .tbm-none.tbm-hide { display: none; }
+@media (pointer: coarse) { .tbm-opt { min-height: 44px; } .tbm-search input { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .tbm-panel { animation: none; } }
 @media print { .tbm-panel { display: none; } }
 `;
@@ -3473,6 +3513,7 @@ function initListes(cfg) {
     window.addEventListener('resize', tbmResized);
     window.addEventListener('blur', () => tbmClose(false));
     window.addEventListener('scroll', tbmScrolled, true);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', tbmViewport);
   }
   tbmScan(document.body);
   if (TBM.mo) return;
@@ -3603,7 +3644,7 @@ function tbmSync(m) {
 
 /* Sans casse ni accents */
 function tbmNorm(s) {
-  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
 function tbmTexts() {
@@ -3621,13 +3662,15 @@ function tbmOpen(m) {
   ul.className = 'tbm-panel';
   ul.id = 'tbm-list-' + m.uid;
   ul.setAttribute('role', 'listbox');
-  ul.setAttribute('aria-label', name);
+  if (name) ul.setAttribute('aria-label', name);
   ul.tabIndex = -1;
-  const head = document.createElement('li');
-  head.className = 'tbm-head';
-  head.setAttribute('role', 'presentation');
-  head.textContent = name;
-  ul.appendChild(head);
+  if (name) {   /* jamais d'en-tête vide : sans intitulé, pas d'en-tête */
+    const head = document.createElement('li');
+    head.className = 'tbm-head';
+    head.setAttribute('role', 'presentation');
+    head.textContent = name;
+    ul.appendChild(head);
+  }
   const tx = tbmTexts();
   m.search = null;
   if (opts.length > 15) {
@@ -3688,6 +3731,10 @@ function tbmOpen(m) {
   ul.appendChild(none);
   m.none = none;
   ul.addEventListener('keydown', e => tbmKey(m, e));
+  /* Avec un champ de recherche, toucher un choix ne prend pas le focus : le clavier virtuel reste ouvert jusqu'au choix */
+  const keepFocus = e => { if (m.search && e.target.closest && e.target.closest('.tbm-opt')) e.preventDefault(); };
+  ul.addEventListener('mousedown', keepFocus);
+  ul.addEventListener('pointerdown', keepFocus);
   ul.addEventListener('click', e => {
     const li = e.target.closest ? e.target.closest('.tbm-opt') : null;
     if (!li || li.getAttribute('aria-disabled') === 'true') return;
@@ -3743,7 +3790,8 @@ function tbmPlace(m) {
 
 /* p : la liste (position: fixed), r : le rectangle de son bouton. Sert aussi aux listes à types du Ground Unit Swapper. */
 function tbmPlaceAt(p, r) {
-  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+  const vv = window.visualViewport, vw = document.documentElement.clientWidth;
+  const vh = vv ? Math.min(window.innerHeight, vv.offsetTop + vv.height) : window.innerHeight;
   const cap = Math.min(0.62 * vh, 440);
   const below = vh - (r.bottom + 4) - 12, above = (r.top - 4) - 12;
   p.style.minWidth = Math.min(Math.max(180, r.width), vw - 16) + 'px';
@@ -3879,6 +3927,12 @@ function tbmResized() {
   if (!m) return;
   if (m.search && window.innerWidth === m.w0) tbmPlace(m);
   else tbmClose(false);
+}
+
+/* Le clavier virtuel change la zone visible sans toujours changer window.innerHeight : la liste ouverte est replacée */
+function tbmViewport() {
+  const m = TBM.cur;
+  if (m && m.panel && window.innerWidth === m.w0) tbmPlace(m);
 }
 
 /* Le défilement de la page déplace le bouton : la liste se ferme */
