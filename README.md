@@ -39,10 +39,10 @@ The landing page presents each editor as a tile. Active tools open in place.
 
 | Tool                            | What it does                                                                                                                | Status      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.2.1` |
-| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.2.1` |
-| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.2.1` |
-| **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.2.1` |
+| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.3.0` |
+| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.3.0` |
+| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.3.0` |
+| **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.3.0` |
 
 > Each tool is a standalone HTML editor; the page bundles the live tools and shares a single working `.miz` between them.
 
