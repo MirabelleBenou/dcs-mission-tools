@@ -342,12 +342,22 @@
     .lv-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; }
     .lv-card.chosen .lv-dot { background: var(--accent); border-color: var(--accent); }
     .ld-badge.ld-arrow { white-space: nowrap; }
+    .lv-card.other { opacity: 0.55; }
+    .lv-card.other.chosen { opacity: 1; }
+    .lv-why { font-size: 11px; color: var(--text-dim); font-style: italic; padding-left: 20px; margin-top: 2px; }
     #action-bar {
       position: sticky; bottom: 0; z-index: 5; background: var(--surface);
-      border-top: 2px solid var(--accent); padding: 8px 14px; display: flex; flex-direction: column; gap: 8px;
+      border-top: 2px solid var(--accent); padding: 8px 14px; display: flex; flex-direction: column; gap: 6px;
     }
-    .bar-row { display: flex; align-items: center; gap: 10px; }
-    .bar-text { flex: 1; min-width: 0; font-size: 12px; color: var(--text); line-height: 1.35; }
+    .bar-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .bar-grid { display: grid; grid-template-columns: 74px 1fr; gap: 4px 10px; font-size: 12px; line-height: 1.35; }
+    .bar-k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); padding-top: 2px; }
+    .bar-v { color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+    .bar-v .n { color: var(--accent); font-weight: 700; }
+    .bar-v.off { color: var(--text-dim); }
+    .bar-v.warn { color: #E0B04C; }
+    .bar-empty { font-size: 12px; color: var(--text-dim); }
+    .bar-go { align-self: stretch; min-height: 34px; font-size: 13px; }
 
     .btn-apply {
       background: transparent; color: var(--accent); font-weight: 700; font-size: 12px;
@@ -369,7 +379,6 @@
     .set-hint { font-size: 11px; color: var(--text-dim); }
     .set-note { display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; color: var(--text-dim); }
     .set-note .set-cur { color: var(--text); }
-    .set-actions { display: flex; align-items: center; gap: 10px; }
 
     /* ── Footer sticky modifications ──────────────────────────────────────── */
     #modifications-bar {
@@ -528,7 +537,7 @@
     .cmp-svgbox svg [stroke]:not([stroke="none"]) { stroke: var(--text-2); }
     .cmp-svgbox svg [fill="#ffffff"] { fill: var(--cmp-frame); }
     .cmp-credit {
-      position: absolute; right: 10px; bottom: 6px; z-index: 4; max-width: calc(100% - 20px);
+      position: absolute; right: 10px; top: 6px; z-index: 4; max-width: calc(100% - 20px);
       font-size: 10px; line-height: 1.3; color: var(--text-dim); background: var(--cmp-frame); padding: 0 4px; text-align: right;
     }
     .cmp-num {
@@ -701,7 +710,6 @@
             <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-gun"></span><span id="max-gun"></span></div></div>
           </div>
           <div class="set-hint" data-i18n="panel.settings.hint">Un champ vide ne change rien.</div>
-          <div class="set-actions"><button class="btn-apply" id="btn-apply-settings" data-i18n="panel.apply">Appliquer à la sélection</button></div>
         </div>
       </details>
       <details class="panel-sec" open>
@@ -836,7 +844,7 @@ const I18N = {
     'cmp.sym':                     'Symétrique',
     'cmp.mass':                    'Masse des emports :',
     'cmp.cancel':                  'Annuler',
-    'cmp.apply':                   'Appliquer à la sélection ({n})',
+    'cmp.apply':                   'Retenir cet emport',
     'panel.noLiveries':            'Aucune livrée lisible pour ce type.',
     'footer.count.one':            'appareil modifié',
     'footer.count.other':          'appareils modifiés',
@@ -866,14 +874,25 @@ const I18N = {
     'toast.duplicates':            '\u26a0\ufe0f {n} appareil(s) à identifiant en double : non modifiables',
     'toast.savedReopen':           'Fichier enregistré ; rouvrez-le pour continuer',
     'table.notRepro':              'Emport non reproductible : ni emport ni réglage possible',
-    'bar.none':                    'Choisissez un emport ou une livrée',
-    'bar.loadout':                 'Appliquer l\'emport {l} à {n} — actuellement {cur}',
-    'bar.loadout0':                'Appliquer l\'emport {l} à {n}',
-    'bar.livery':                  'Appliquer la livrée « {name} » à {n}',
-    'bar.loadoutSame':             'Les appareils cochés portent déjà l\'emport {l}',
-    'bar.liverySame':              'Les appareils cochés portent déjà la livrée « {name} »',
-    'bar.apply':                   'Appliquer',
-    'toast.noSettings':            '⚠️ Renseignez au moins un réglage',
+    'bar.none':                    'Choisissez un emport, des réglages ou une livrée',
+    'bar.head.one':                'À appliquer · {n} coché de ce type',
+    'bar.head.other':              'À appliquer · {n} cochés de ce type',
+    'bar.k.loadout':               'Emport',
+    'bar.k.settings':              'Réglages',
+    'bar.k.livery':                'Livrée',
+    'bar.cur':                     ' (actuellement {cur})',
+    'bar.loadoutSame':             '{l} — déjà porté par les appareils cochés',
+    'bar.set.fuel':                'carburant {v} kg',
+    'bar.set.flare':               'leurres {v}',
+    'bar.set.chaff':               'paillettes {v}',
+    'bar.set.gun':                 'canon {v} %',
+    'bar.setSame':                 ' — déjà en place sur les appareils cochés',
+    'bar.livery':                  '« {name} » → {n}',
+    'bar.liveryOther':             ' ({m} d\'un autre pays, non touchés)',
+    'bar.liverySame':              '« {name} » — déjà portée par les appareils cochés',
+    'bar.liveryNoCountry':         '« {name} » est portée par des appareils de {country} ; aucun appareil coché n\'est de ce pays. Une livrée ne se pose que sur des appareils du même pays.',
+    'bar.applyN':                  'Appliquer à la sélection ({n})',
+    'lv.why':                      'Livrée de {country} : aucun appareil coché de ce pays',
     'toast.badValue':              '❌ Valeur invalide : {field}',
     'toast.saved':                 '💾 {file} sauvegardé ({n} appareil(s) modifié(s))',
     'toast.saveError':             '❌ Erreur de sauvegarde :',
@@ -957,7 +976,7 @@ const I18N = {
     'cmp.sym':                     'Symmetric',
     'cmp.mass':                    'Loadout weight:',
     'cmp.cancel':                  'Cancel',
-    'cmp.apply':                   'Apply to selection ({n})',
+    'cmp.apply':                   'Keep this loadout',
     'panel.noLiveries':            'No readable livery for this type.',
     'footer.count.one':            'aircraft modified',
     'footer.count.other':          'aircraft modified',
@@ -987,14 +1006,25 @@ const I18N = {
     'toast.duplicates':            '\u26a0\ufe0f {n} aircraft with a duplicate unit id: cannot be modified',
     'toast.savedReopen':           'File saved; reopen it to continue',
     'table.notRepro':              'Payload not reproducible: no loadout or setting can be applied',
-    'bar.none':                    'Choose a loadout or a livery',
-    'bar.loadout':                 'Apply loadout {l} to {n} — currently {cur}',
-    'bar.loadout0':                'Apply loadout {l} to {n}',
-    'bar.livery':                  'Apply livery “{name}” to {n}',
-    'bar.loadoutSame':             'The selected aircraft already carry loadout {l}',
-    'bar.liverySame':              'The selected aircraft already carry livery “{name}”',
-    'bar.apply':                   'Apply',
-    'toast.noSettings':            '⚠️ Fill in at least one setting',
+    'bar.none':                    'Choose a loadout, settings or a livery',
+    'bar.head.one':                'To apply · {n} selected of this type',
+    'bar.head.other':              'To apply · {n} selected of this type',
+    'bar.k.loadout':               'Loadout',
+    'bar.k.settings':              'Settings',
+    'bar.k.livery':                'Livery',
+    'bar.cur':                     ' (currently {cur})',
+    'bar.loadoutSame':             '{l} — already carried by the selected aircraft',
+    'bar.set.fuel':                'fuel {v} kg',
+    'bar.set.flare':               'flares {v}',
+    'bar.set.chaff':               'chaff {v}',
+    'bar.set.gun':                 'gun {v} %',
+    'bar.setSame':                 ' — already set on the selected aircraft',
+    'bar.livery':                  '“{name}” → {n}',
+    'bar.liveryOther':             ' ({m} from another country, unchanged)',
+    'bar.liverySame':              '“{name}” — already worn by the selected aircraft',
+    'bar.liveryNoCountry':         '“{name}” is worn by aircraft of {country}; no selected aircraft is from that country. A livery is only applied to aircraft of the same country.',
+    'bar.applyN':                  'Apply to selection ({n})',
+    'lv.why':                      '{country} livery: no selected aircraft from this country',
     'toast.badValue':              '❌ Invalid value: {field}',
     'toast.saved':                 '💾 {file} saved ({n} aircraft modified)',
     'toast.saveError':             '❌ Save error:',
@@ -8205,6 +8235,7 @@ const UI_STATE = {
   collapsed:     new Set(),   // types repliés
   filters:       { coalition: '', type: '', role: '', search: '' },
   showModifiedOnly: false,
+  lastSaved:     null,         // { bytes, defs } du dernier fichier enregistré par ce module
   loadoutDefs:   new Map(),   // type → [{ letter, sig, source, n0 }] : lettres fixes, données à l'ouverture
   choice:        { type: null, loadout: null, livery: null },   // carte d'emport / de livrée choisie
   dupIds:        new Set(),   // unitId portés par plusieurs appareils (ou absents) : aucune modification
@@ -8289,6 +8320,38 @@ function loadoutSig(payload) {
 
 // Les emports d'un type reçoivent leur lettre à l'ouverture du fichier (A, B, C… par nombre d'appareils
 // décroissant, puis ordre de la liste) ; elles ne changent plus jusqu'au prochain fichier ouvert.
+// Le dernier fichier enregistré par ce module : ses octets et les définitions d'emport de ce moment-là.
+// Rouvert à l'identique (réinjection par le shell, ou à la main), il reprend ses lettres au lieu de les recalculer.
+// Mémoire de la page seulement : rien n'est écrit dans le stockage du navigateur.
+function rememberSaved(bytes, defs) {
+  const copy = new Map();
+  for (const [type, list] of defs) copy.set(type, list.map(d => ({ sig: d.sig, source: lxClone(d.source), n0: d.n0, order: d.order, letter: d.letter })));
+  UI_STATE.lastSaved = { bytes, defs: copy };
+}
+
+function isLastSaved(buf) {
+  const ls = UI_STATE.lastSaved;
+  if (!ls || ls.bytes.length !== buf.byteLength) return false;
+  const a = new Uint8Array(buf), b = ls.bytes;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+// Reprend les définitions mémorisées ; un emport du fichier qui n'est dans aucune d'elles prend la lettre libre suivante.
+function restoreLoadoutDefs(saved) {
+  const fresh = UI_STATE.loadoutDefs;
+  for (const [type, flist] of fresh) {
+    const sl = saved.get(type);
+    if (!sl) continue;
+    const list = sl.map(d => ({ sig: d.sig, source: lxClone(d.source), n0: d.n0, order: d.order, letter: d.letter }));
+    for (const d of flist) {
+      if (list.some(x => x.sig === d.sig)) continue;
+      list.push({ sig: d.sig, source: d.source, n0: d.n0, order: list.length, letter: lxLetters(list.length) });
+    }
+    fresh.set(type, list);
+  }
+}
+
 function buildLoadoutDefs() {
   const defs = new Map();
   for (const [type, units] of UI_STATE.byType) {
@@ -8459,31 +8522,6 @@ function payloadWithLoadout(current, def) {
   return next;
 }
 
-function applyLoadoutToSelection(letter) {
-  const type = panelType();
-  if (type === null) return;
-  const def = (UI_STATE.loadoutDefs.get(type) || []).find(d => d.letter === letter);
-  if (!def) return;
-  applyDefToSelection(type, def);
-}
-
-// Pose une définition d'emport (lettre de la v1 ou composition) sur les appareils cochés ; même chemin pour les deux.
-function applyDefToSelection(type, def) {
-  let modified = 0;
-  const ignored = {};
-  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
-  for (const u of UI_STATE.aircraft) {
-    if (!UI_STATE.selected.has(u.unitId)) continue;
-    const why = skipReason(u, type, visSet, 'payload');
-    if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
-    if (hasLoadout(u, def)) continue;   // déjà cet emport : ni modifié ni ignoré
-    setPayload(u, payloadWithLoadout(curPayload(u), def));
-    modified++;
-  }
-  afterEdit();
-  resultToast(modified, ignored);
-}
-
 // Limites d'un type (null : type absent de la table, aucun maximum affiché ni contrôlé)
 function limitsFor(type) {
   return Object.prototype.hasOwnProperty.call(AIRCRAFT_LIMITS, type) ? AIRCRAFT_LIMITS[type] : null;
@@ -8558,6 +8596,7 @@ function settingsOverLimit(type, settings, targets) {
   return null;
 }
 
+// Lit les quatre champs des Réglages sans rien afficher : { out, error }. error : le texte du refus (sans pictogramme), ou null.
 function readSettings() {
   const defs = [
     { id: 'set-fuel',  key: 'fuel',  label: t('panel.fuel'),   int: false, max: Infinity },
@@ -8566,64 +8605,98 @@ function readSettings() {
     { id: 'set-gun',   key: 'gun',   label: t('panel.gun'),    int: true,  max: 100 },
   ];
   const out = {};
+  const bad = label => t('toast.badValue').replace('{field}', label).replace(/^\S+\s/, '');
   for (const d of defs) {
     const el = document.getElementById(d.id);
-    if (el.validity && el.validity.badInput) {   // saisie illisible : le champ « vide » n'est pas vide
-      showToast(t('toast.badValue').replace('{field}', d.label), 'error');
-      return null;
-    }
+    if (el.validity && el.validity.badInput) return { out, error: bad(d.label) };   // saisie illisible : le champ « vide » n'est pas vide
     const raw = el.value.trim();
     if (raw === '') continue;
     const n = Number(raw);
-    if (!isFinite(n) || n < 0 || n > d.max || (d.int && !Number.isInteger(n))) {
-      showToast(t('toast.badValue').replace('{field}', d.label), 'error');
-      return null;
-    }
+    if (!isFinite(n) || n < 0 || n > d.max || (d.int && !Number.isInteger(n))) return { out, error: bad(d.label) };
     out[d.key] = n;
   }
-  if (Object.keys(out).length === 0) { showToast(t('toast.noSettings'), 'warn'); return null; }
-  return out;
+  return { out, error: null };
 }
 
-function applySettingsToSelection() {
+// Un nombre de la barre : comme la masse de la fenêtre Composer (cmpNum) ; les décimales saisies sont gardées
+function fmtSetting(v) {
+  if (Number.isInteger(v)) return cmpNum(v);
+  const [i, d] = String(v).split('.');
+  return cmpNum(Number(i)) + (d !== undefined ? '.' + d : '');
+}
+
+// Ce que « Appliquer à la sélection » ferait, par part : { loadout, settings, livery } (null : part non choisie).
+// Chaque part porte ses appareils modifiés (targets) ; settings porte aussi une erreur éventuelle.
+function applyPlan(type) {
+  const ch = UI_STATE.choice;
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  const checked = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && visSet.has(u.unitId));
+  const plan = { type, visSet, checked, loadout: null, settings: null, livery: null };
+  const def = ch.loadout ? getLoadouts(type).list.find(d => d.letter === ch.loadout) : null;
+  if (def) plan.loadout = { def, targets: loadoutTargets(type, def) };
+  const rs = readSettings();
+  if (Object.keys(rs.out).length > 0 || rs.error) {
+    const el = checked.filter(u => !skipReason(u, type, visSet, 'payload'));
+    const over = rs.error ? null : settingsOverLimit(type, rs.out, el);
+    const error = rs.error || (over ? over.replace(/^\S+\s/, '') : null);
+    const targets = error ? [] : el.filter(u => {
+      const cur = curPayload(u);
+      const next = lxClone(cur);
+      for (const [k, v] of Object.entries(rs.out)) next[k] = v;
+      return !deepEqValues(cur, next);
+    });
+    plan.settings = { values: rs.out, error, targets };
+  }
+  const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
+  if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv) };
+  const all = new Set();
+  for (const k of ['loadout', 'settings', 'livery']) if (plan[k]) plan[k].targets.forEach(u => all.add(u.unitId));
+  plan.total = all.size;
+  return plan;
+}
+
+// Applique d'un coup les parts choisies, dans l'ordre emport, réglages, livrée, par les mêmes règles d'éligibilité ;
+// un seul afterEdit, un seul toast ; puis les choix se vident.
+function applyToSelection() {
   const type = panelType();
   if (type === null) return;
-  const settings = readSettings();
-  if (!settings) return;
-  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
-  const targets = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, 'payload'));
-  const over = settingsOverLimit(type, settings, targets);
-  if (over) { showToast(over, 'error'); return; }   // rien ne s'applique
+  const plan = applyPlan(type);
+  if (plan.settings && plan.settings.error) return;
+  if (!plan.loadout && !plan.settings && !plan.livery) return;
+  const visSet = plan.visSet;
   let modified = 0;
   const ignored = {};
   for (const u of UI_STATE.aircraft) {
     if (!UI_STATE.selected.has(u.unitId)) continue;
-    const why = skipReason(u, type, visSet, 'payload');
-    if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
-    const next = lxClone(curPayload(u));
-    for (const [k, v] of Object.entries(settings)) next[k] = v;
-    if (deepEqValues(curPayload(u), next)) continue;
-    setPayload(u, next);
-    modified++;
+    let reached = false, firstWhy = null, changed = false;
+    const part = (kind, country, fn) => {
+      const why = skipReason(u, type, visSet, kind, country);
+      if (why) { if (!firstWhy) firstWhy = why; return; }
+      reached = true;
+      if (fn()) changed = true;
+    };
+    if (plan.loadout) part('payload', undefined, () => {
+      if (hasLoadout(u, plan.loadout.def)) return false;
+      setPayload(u, payloadWithLoadout(curPayload(u), plan.loadout.def));
+      return true;
+    });
+    if (plan.settings) part('payload', undefined, () => {
+      const next = lxClone(curPayload(u));
+      for (const [k, v] of Object.entries(plan.settings.values)) next[k] = v;
+      if (deepEqValues(curPayload(u), next)) return false;
+      setPayload(u, next);
+      return true;
+    });
+    if (plan.livery) part('livery', plan.livery.entry.country, () => {
+      if (liveryEq(curLivery(u), plan.livery.entry.livery)) return false;
+      setLivery(u, plan.livery.entry.livery);
+      return true;
+    });
+    if (changed) modified++;
+    else if (!reached && firstWhy) ignored[firstWhy] = (ignored[firstWhy] || 0) + 1;
   }
-  afterEdit();
-  resultToast(modified, ignored);
-}
-
-function applyLiveryToSelection(country, livery) {
-  const type = panelType();
-  if (type === null) return;
-  let modified = 0;
-  const ignored = {};
-  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
-  for (const u of UI_STATE.aircraft) {
-    if (!UI_STATE.selected.has(u.unitId)) continue;
-    const why = skipReason(u, type, visSet, 'livery', country);
-    if (why) { ignored[why] = (ignored[why] || 0) + 1; continue; }
-    if (liveryEq(curLivery(u), livery)) continue;
-    setLivery(u, livery);
-    modified++;
-  }
+  UI_STATE.choice = { type, loadout: null, livery: null };
+  for (const id of ['set-fuel', 'set-flare', 'set-chaff', 'set-gun']) document.getElementById(id).value = '';
   afterEdit();
   resultToast(modified, ignored);
 }
@@ -8649,6 +8722,7 @@ async function loadMiz(file) {
   showSpinner(t('spinner.parsing'));
   try {
     const arrayBuffer = await file.arrayBuffer();
+    const reopened = isLastSaved(arrayBuffer);   // le fichier que ce module vient d'enregistrer : mêmes octets
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     // Lire mission
@@ -8695,6 +8769,7 @@ async function loadMiz(file) {
     UI_STATE.showModifiedOnly = false;
     setModel({ source: extracted.source, aircraft });
     buildLoadoutDefs();
+    if (reopened) restoreLoadoutDefs(UI_STATE.lastSaved.defs);
     UI_STATE.choice = { type: null, loadout: null, livery: null };
     resetFilterControls();
 
@@ -8859,7 +8934,6 @@ function renderPanel() {
     if (!u) continue;
     if (u.type === type) same++; else other++;
   }
-  const canApply = same > 0;
   document.getElementById('panel-sel').innerHTML = escHtml(t('panel.sel.same').replace('{n}', same)) +
     (other > 0 ? ' · <span class="warn">' + escHtml(t('panel.sel.other').replace('{n}', other)) + '</span>' : '');
 
@@ -8889,11 +8963,15 @@ function renderPanel() {
   const lvs = getLiveries(type);
   if (UI_STATE.choice.livery && !lvs.some(e => e.key === UI_STATE.choice.livery)) UI_STATE.choice.livery = null;
   let lhtml = '';
+  const lvVis = new Set(UI_STATE.filtered.map(x => x.unitId));
+  const lvCountries = new Set(UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && lvVis.has(u.unitId)).map(u => u.country));
   lvs.forEach((e, i) => {
     const chosen = UI_STATE.choice.livery === e.key;
-    lhtml += '<div class="lv-card' + (chosen ? ' chosen' : '') + '" data-index="' + i + '" role="button" tabindex="0" aria-pressed="' + chosen + '">' +
+    const other = !lvCountries.has(e.country);
+    lhtml += '<div class="lv-card' + (chosen ? ' chosen' : '') + (other ? ' other' : '') + '" data-index="' + i + '" role="button" tabindex="0" aria-pressed="' + chosen + '">' +
       '<div class="lv-card-top"><span class="lv-dot"></span><div class="lv-info"><span class="lv-name">' + escHtml(e.livery) + '</span>' +
-      '<span class="lv-country">' + escHtml(e.country) + ' · ' + escHtml(tn('panel.count', e.count)) + '</span></div></div></div>';
+      '<span class="lv-country">' + escHtml(e.country) + ' · ' + escHtml(tn('panel.count', e.count)) + '</span></div></div>' +
+      (other ? '<div class="lv-why">' + escHtml(t('lv.why').replace('{country}', e.country)) + '</div>' : '') + '</div>';
   });
   document.getElementById('panel-liveries').innerHTML = lhtml || '<div class="none">' + escHtml(t('panel.noLiveries')) + '</div>';
   renderActionBar(type);
@@ -8902,8 +8980,6 @@ function renderPanel() {
   const canCompose = cmpPylonsOf(type) !== null;
   bc.disabled = !canCompose;
   bc.title = canCompose ? '' : t('cmp.open.none');
-  // Désactivé tant qu'aucune case de ce type n'est cochée
-  document.getElementById('btn-apply-settings').disabled = !canApply;
 }
 
 // « A ×2, C ×1 » : les lettres actuelles des appareils visés, dans l'ordre des lettres
@@ -8913,41 +8989,46 @@ function lettersSummary(units, info) {
   return info.list.filter(d => n.has(d.letter)).map(d => d.letter + ' ×' + n.get(d.letter)).join(', ');
 }
 
-// Appareils cochés qui pourraient prendre la modification (visibles, du type, du pays), changée ou non
-function eligibleChecked(type, kind, country) {
-  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
-  let n = 0;
-  for (const u of UI_STATE.aircraft) {
-    if (UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, kind, country)) n++;
-  }
-  return n;
-}
-
-// La barre d'action : dit ce qui va se passer, un bouton « Appliquer » par choix
+// La barre d'action : le récapitulatif de ce qui va se passer, puis un seul bouton
 function renderActionBar(type) {
   const bar = document.getElementById('action-bar');
   const info = getLoadouts(type);
-  const ch = UI_STATE.choice;
+  const plan = applyPlan(type);
   const rows = [];
-  const def = ch.loadout ? info.list.find(d => d.letter === ch.loadout) : null;
-  if (def) {
-    const targets = loadoutTargets(type, def);
+  if (plan.loadout) {
+    const { def, targets } = plan.loadout;
     const cur = lettersSummary(targets, info);
-    const same = targets.length === 0 && eligibleChecked(type, 'payload') > 0;
-    const txt = same ? t('bar.loadoutSame').replace('{l}', def.letter) : t(targets.length > 0 && cur ? 'bar.loadout' : 'bar.loadout0')
-      .replace('{l}', def.letter).replace('{n}', tn('panel.count', targets.length)).replace('{cur}', cur);
-    rows.push({ act: 'loadout', txt, disabled: targets.length === 0 });
+    rows.push([t('bar.k.loadout'), targets.length
+      ? '<span class="n">' + escHtml(def.letter) + '</span> → ' + escHtml(tn('panel.count', targets.length)) + (cur ? escHtml(t('bar.cur').replace('{cur}', cur)) : '')
+      : escHtml(t('bar.loadoutSame').replace('{l}', def.letter)), targets.length ? '' : 'off']);
   }
-  const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
-  if (lv) {
-    const targets = liveryTargets(type, lv);
-    const same = targets.length === 0 && eligibleChecked(type, 'livery', lv.country) > 0;
-    rows.push({ act: 'livery', txt: (same ? t('bar.liverySame') : t('bar.livery').replace('{n}', tn('panel.count', targets.length))).replace('{name}', lv.livery), disabled: targets.length === 0 });
+  if (plan.settings) {
+    const s = plan.settings;
+    if (s.error) rows.push([t('bar.k.settings'), escHtml(s.error), 'warn']);
+    else {
+      const txt = ['fuel', 'flare', 'chaff', 'gun'].filter(k => s.values[k] !== undefined)
+        .map(k => t('bar.set.' + k).replace('{v}', fmtSetting(s.values[k]))).join(' · ');
+      rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : escHtml(t('bar.setSame'))), s.targets.length ? '' : 'off']);
+    }
   }
-  if (rows.length === 0) rows.push({ act: 'none', txt: t('bar.none'), disabled: true });
-  bar.innerHTML = rows.map(r =>
-    '<div class="bar-row"><span class="bar-text">' + escHtml(r.txt) + '</span>' +
-    '<button class="btn-apply btn-bar" data-act="' + r.act + '"' + (r.disabled ? ' disabled' : '') + '>' + escHtml(t('bar.apply')) + '</button></div>').join('');
+  if (plan.livery) {
+    const { entry, targets } = plan.livery;
+    const nOther = plan.checked.filter(u => u.country !== entry.country).length;
+    let v, cls = '';
+    if (nOther === plan.checked.length) { v = t('bar.liveryNoCountry').replace('{name}', entry.livery).replace('{country}', entry.country); cls = 'warn'; }
+    else if (!targets.length) { v = t('bar.liverySame').replace('{name}', entry.livery); cls = 'off'; }
+    else v = t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', targets.length)) + (nOther ? t('bar.liveryOther').replace('{m}', nOther) : '');
+    rows.push([t('bar.k.livery'), escHtml(v), cls]);
+  }
+  const blocked = !!(plan.settings && plan.settings.error);
+  const can = plan.total > 0 && !blocked;
+  let h;
+  if (!rows.length) h = '<div class="bar-empty">' + escHtml(t('bar.none')) + '</div>';
+  else h = '<div class="bar-head">' + escHtml(tn('bar.head', plan.checked.length)) + '</div><div class="bar-grid">' +
+    rows.map(r => '<div class="bar-k">' + escHtml(r[0]) + '</div><div class="bar-v ' + r[2] + '">' + r[1] + '</div>').join('') + '</div>';
+  h += '<button class="btn-apply btn-go bar-go"' + (can ? '' : ' disabled') + '>' +
+    escHtml(can ? t('bar.applyN').replace('{n}', plan.total) : t('panel.apply')) + '</button>';
+  bar.innerHTML = h;
 }
 
 // Un clic sur une carte la choisit (une seule par liste) ; un second clic la lâche.
@@ -9094,7 +9175,7 @@ document.getElementById('le-tabs').addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════════════════
 // COMPOSER UN EMPORT — station par station
 //   Tables : AIRCRAFT_PYLONS (pylônes et emports permis, masses) et AIRCRAFT_VIEWS (vue de face).
-//   La composition devient une définition d'emport comme celles de la v1 et suit le même chemin (applyDefToSelection).
+//   La composition devient une définition d'emport comme celles de la v1 ; « Retenir » la choisit, le bouton du panneau l'applique.
 // ═══════════════════════════════════════════════════════════════
 const CMP = {
   open: false, type: null, pyl: [], pylBase: [], view: null, pairs: {},
@@ -9327,10 +9408,9 @@ function cmpUpdate() {
     }
   }
   document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(cmpNum(total) + ' kg' + (unknown ? ' + ?' : '')) + '</b>';
-  const n = loadoutTargets(CMP.type, cmpDef()).length;
   const ap = document.getElementById('cmp-apply');
-  ap.textContent = t('cmp.apply').replace('{n}', n);
-  ap.disabled = n === 0;
+  ap.textContent = t('cmp.apply');
+  ap.disabled = false;
   cmpDraw();
 }
 
@@ -9382,12 +9462,17 @@ function cmpRegister(type, def) {
   }
 }
 
+// « Retenir cet emport » : la composition entre dans les emports du type et devient l'emport choisi du panneau ;
+// aucun appareil n'est modifié (c'est « Appliquer à la sélection » qui l'applique).
 function cmpApply() {
   if (!CMP.open) return;
   const def = cmpDef(), type = CMP.type;
   cmpRegister(type, def);
-  applyDefToSelection(type, def);
+  const d = UI_STATE.loadoutDefs.get(type).find(x => x.sig === def.sig);
+  const keepLivery = UI_STATE.choice.type === type ? UI_STATE.choice.livery : null;
+  UI_STATE.choice = { type, loadout: d.letter, livery: keepLivery };
   cmpClose();
+  renderPanel();
 }
 
 // Pendant que la fenêtre est ouverte, le reste de la page ne reçoit ni clic ni clavier
@@ -9463,18 +9548,14 @@ function cardActivate(e, listId, kind, valueOf) {
   }));
 });
 document.getElementById('action-bar').addEventListener('click', function(e) {
-  const b = e.target.closest('.btn-bar');
+  const b = e.target.closest('.btn-go');
   if (!b || b.disabled) return;
-  const type = panelType();
-  if (type === null) return;
-  if (b.dataset.act === 'loadout') {
-    if (UI_STATE.choice.loadout) applyLoadoutToSelection(UI_STATE.choice.loadout);
-  } else if (b.dataset.act === 'livery') {
-    const entry = getLiveries(type).find(x => x.key === UI_STATE.choice.livery);
-    if (entry) applyLiveryToSelection(entry.country, entry.livery);
-  }
+  applyToSelection();
 });
-document.getElementById('btn-apply-settings').addEventListener('click', applySettingsToSelection);
+['set-fuel', 'set-flare', 'set-chaff', 'set-gun'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+  const ty = panelType();
+  if (ty !== null) renderActionBar(ty);
+}));
 
 // Pied de page
 document.getElementById('btn-revert-all').addEventListener('click', () => {
@@ -9599,6 +9680,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
 
     // Le texte écrit devient la base : plus rien n'est « non sauvegardé »
     const nMod = UI_STATE.edits.size;
+    const savedBytes = new Uint8Array(await blob.arrayBuffer());
     const otherFilesMap = _HQ_MIZ_CONTEXT.otherFilesMap;
     let extracted;
     try {
@@ -9611,6 +9693,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       return;
     }
     UI_STATE.edits = new Map();
+    rememberSaved(savedBytes, UI_STATE.loadoutDefs);
     setModel({ source: extracted.source, aircraft: verdict.aircraft });
     renderAll();
 

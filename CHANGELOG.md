@@ -14,6 +14,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 ### Changed
 - A *Coming soon* tile now keeps the width of a tool tile instead of stretching across the board.
 - **Comm Plan Editor**: channels are numbered as in the cockpit (the Mi-24P's R-863 and R-828 start at channel 0), with the mission file's number in a tooltip; radio names come from a block shared with Mission Plan. The .miz and the template keep the mission file's numbering.
+- **Loadout Editor**: one *Apply to selection* button applies the chosen loadout, settings and livery together, under a summary of what will change; the *Compose a loadout* window now keeps the loadout for that button; a livery of another country is dimmed and explained; loadout letters no longer change when the file is saved; the drawing credit sits at the top right of the view.
 
 ## [1.2.1] — 2026-10-16
 
