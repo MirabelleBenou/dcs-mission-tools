@@ -32,3 +32,35 @@ Table `DCS aircraft type -> limits`, sorted by key, used by the **Loadout Editor
 
   Running it again on the same version rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_LIMITS:BEGIN */` and `/* AIRCRAFT_LIMITS:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_limits.json`.
+
+## aircraft_pylons.json
+
+Table `DCS aircraft type -> pylons -> weapons each pylon accepts`, used by the **Loadout Editor** to compose a loadout station by station: one row per pylon, a drop-down with the weapons the pylon accepts, and the weight of the loadout. A type missing from the table cannot be composed.
+
+- **Shape**: `{"clsids": [...], "weights": [...], "types": {"<type>": {"<pylon>": [index, ...]}}}`. `clsids` is sorted and `weights` has the same rank (kg from pydcs, `null` when pydcs gives none); for each type the pylons are in numeric order and, for each pylon, the weapons (indexes into `clsids`) in pydcs order. Every type that declares at least one pylon is in the table.
+- **Source**: the `dcs/planes.py`, `dcs/helicopters.py` and `dcs/weapons_data.py` modules of [pydcs](https://github.com/pydcs/dcs) **1.0.0** (same wheel as above): the `PylonN` classes of each aircraft class that declares an `id`, and the `weight` of each `Weapons` entry.
+- **Licence**: LGPL-3.0-or-later, as for `weapon_names.json` ([`COPYING.LESSER`](COPYING.LESSER)).
+- **Regenerate** (the modules are read as text, not executed):
+
+  ```
+  pip download --no-deps pydcs==1.0.0 -d /tmp/pydcs
+  python3 -I tools/gen_aircraft_pylons.py /tmp/pydcs/pydcs-1.0.0-py3-none-any.whl
+  ```
+
+  Running it again on the same version rewrites the same bytes.
+- **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_PYLONS:BEGIN */` and `/* AIRCRAFT_PYLONS:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_pylons.json`.
+
+## aircraft_views.json
+
+Table `DCS aircraft type -> front view`, used by the **Loadout Editor** to show where each station is: the drawing (SVG text), its `viewBox`, the attachment point of each station in `viewBox` units, and the stations that are off the view. Four types have a view: Mi-24P, Mi-8MT, F-4E-45MC and Mirage-F1EE.
+
+- **Source**: [`views/`](views/): the four `.svg` drawings and `stations.json`, where each type names its drawing (`svg`, relative to `data/`).
+- **Licence**: the drawings are by **Goldwolf** (DCS Reference Guide), used with permission, and are **not covered by the repository's MIT licence**: do not reuse them without the author's permission (see [`views/LICENSE.md`](views/LICENSE.md)).
+- **Regenerate**:
+
+  ```
+  python3 -I tools/gen_aircraft_views.py
+  ```
+
+  The generator writes `stations.json` with each `svg` replaced by the text of the file; running it again rewrites the same bytes.
+- **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_VIEWS:BEGIN */` and `/* AIRCRAFT_VIEWS:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_views.json`.
