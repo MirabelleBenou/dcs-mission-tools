@@ -8622,7 +8622,7 @@ function readSettings() {
 function fmtSetting(v) {
   if (Number.isInteger(v)) return cmpNum(v);
   const [i, d] = String(v).split('.');
-  return cmpNum(Number(i)) + (d !== undefined ? '.' + d : '');
+  return cmpNum(Number(i)) + (d !== undefined ? (CURRENT_LANG === 'fr' ? ',' : '.') + d : '');
 }
 
 // Ce que « Appliquer à la sélection » ferait, par part : { loadout, settings, livery } (null : part non choisie).
@@ -8633,7 +8633,7 @@ function applyPlan(type) {
   const checked = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && visSet.has(u.unitId));
   const plan = { type, visSet, checked, loadout: null, settings: null, livery: null };
   const def = ch.loadout ? getLoadouts(type).list.find(d => d.letter === ch.loadout) : null;
-  if (def) plan.loadout = { def, targets: loadoutTargets(type, def) };
+  if (def) plan.loadout = { def, targets: loadoutTargets(type, def), eligible: checked.some(u => !skipReason(u, type, visSet, 'payload')) };
   const rs = readSettings();
   if (Object.keys(rs.out).length > 0 || rs.error) {
     const el = checked.filter(u => !skipReason(u, type, visSet, 'payload'));
@@ -8645,10 +8645,10 @@ function applyPlan(type) {
       for (const [k, v] of Object.entries(rs.out)) next[k] = v;
       return !deepEqValues(cur, next);
     });
-    plan.settings = { values: rs.out, error, targets };
+    plan.settings = { values: rs.out, error, targets, eligible: el.length > 0 };
   }
   const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
-  if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv) };
+  if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv), eligible: checked.some(u => !skipReason(u, type, visSet, 'livery', lv.country)) };
   const all = new Set();
   for (const k of ['loadout', 'settings', 'livery']) if (plan[k]) plan[k].targets.forEach(u => all.add(u.unitId));
   plan.total = all.size;
@@ -8938,7 +8938,10 @@ function renderPanel() {
     (other > 0 ? ' · <span class="warn">' + escHtml(t('panel.sel.other').replace('{n}', other)) + '</span>' : '');
 
   // Choix : valable pour le type du panneau seulement
-  if (UI_STATE.choice.type !== type) UI_STATE.choice = { type, loadout: null, livery: null };
+  if (UI_STATE.choice.type !== type) {
+    UI_STATE.choice = { type, loadout: null, livery: null };
+    for (const id of ['set-fuel', 'set-flare', 'set-chaff', 'set-gun']) document.getElementById(id).value = '';
+  }
 
   // Emports : une carte par emport, désigné par ses pylônes (nom de l'arme)
   const { list } = getLoadouts(type);
@@ -8996,9 +8999,9 @@ function renderActionBar(type) {
   const plan = applyPlan(type);
   const rows = [];
   if (plan.loadout) {
-    const { def, targets } = plan.loadout;
+    const { def, targets, eligible } = plan.loadout;
     const cur = lettersSummary(targets, info);
-    rows.push([t('bar.k.loadout'), targets.length
+    rows.push([t('bar.k.loadout'), targets.length || !eligible
       ? '<span class="n">' + escHtml(def.letter) + '</span> → ' + escHtml(tn('panel.count', targets.length)) + (cur ? escHtml(t('bar.cur').replace('{cur}', cur)) : '')
       : escHtml(t('bar.loadoutSame').replace('{l}', def.letter)), targets.length ? '' : 'off']);
   }
@@ -9008,7 +9011,7 @@ function renderActionBar(type) {
     else {
       const txt = ['fuel', 'flare', 'chaff', 'gun'].filter(k => s.values[k] !== undefined)
         .map(k => t('bar.set.' + k).replace('{v}', fmtSetting(s.values[k]))).join(' · ');
-      rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : escHtml(t('bar.setSame'))), s.targets.length ? '' : 'off']);
+      rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : (s.eligible ? escHtml(t('bar.setSame')) : ' → ' + escHtml(tn('panel.count', 0)))), s.targets.length ? '' : 'off']);
     }
   }
   if (plan.livery) {
@@ -9016,7 +9019,7 @@ function renderActionBar(type) {
     const nOther = plan.checked.filter(u => u.country !== entry.country).length;
     let v, cls = '';
     if (nOther === plan.checked.length) { v = t('bar.liveryNoCountry').replace('{name}', entry.livery).replace('{country}', entry.country); cls = 'warn'; }
-    else if (!targets.length) { v = t('bar.liverySame').replace('{name}', entry.livery); cls = 'off'; }
+    else if (!targets.length) { v = plan.livery.eligible ? t('bar.liverySame').replace('{name}', entry.livery) : t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', 0)); cls = 'off'; }
     else v = t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', targets.length)) + (nOther ? t('bar.liveryOther').replace('{m}', nOther) : '');
     rows.push([t('bar.k.livery'), escHtml(v), cls]);
   }
@@ -9077,7 +9080,7 @@ function renderBars() {
   if (n > 0) wrap.style.display = '';
   else {
     wrap.style.display = 'none';
-    if (UI_STATE.showModifiedOnly) { UI_STATE.showModifiedOnly = false; chk.checked = false; renderTable(); }
+    if (UI_STATE.showModifiedOnly) { UI_STATE.showModifiedOnly = false; chk.checked = false; renderTable(); renderPanel(); }
   }
 }
 
@@ -9161,6 +9164,7 @@ document.getElementById('filter-search').addEventListener('input', () => {
 document.getElementById('toggle-modified').addEventListener('change', function() {
   UI_STATE.showModifiedOnly = this.checked;
   renderTable();
+  renderPanel();
   renderBars();
 });
 
