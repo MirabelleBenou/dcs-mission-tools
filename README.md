@@ -97,13 +97,31 @@ The Loadout Editor **applies a loadout that already exists in the mission** — 
 
 ## 📸 Screenshots
 
-![landing](docs/screenshots/landing.png)
+**The board** — four editors on one offline page, FR/EN
 
-![comm-plan-editor](docs/screenshots/comm_plan_editor.png)
+![board](docs/screenshots/landing.jpg)
 
-![ground-unit-swapper](docs/screenshots/ground_unit_swapper.png)
+**Comm Plan Editor** — every flight's radios and presets, channels numbered as in the cockpit
 
-![weather-editor](docs/screenshots/weather_editor.png)
+![comm-plan-editor](docs/screenshots/comm_plan_editor.jpg)
+
+**Ground Unit Swapper** — filter by coalition, group and family, then swap types and skill in bulk
+
+![ground-unit-swapper](docs/screenshots/ground_unit_swapper.jpg)
+
+**Weather Editor** — date and time, wind layers, clouds and precipitation, 34 presets
+
+![weather-editor](docs/screenshots/weather_editor.jpg)
+
+**Loadout Editor** — loadouts by letter, settings and livery applied to the selection in one click
+
+![loadout-editor](docs/screenshots/loadout_editor.jpg)
+
+**Loadout Editor · Compose a loadout** — station by station, on a front view of the aircraft
+
+![loadout-composer](docs/screenshots/loadout_composer.jpg)
+
+<sub>Front-view drawing: Goldwolf, DCS Reference Guide — used with permission, not covered by the MIT licence. Screenshots taken on a generic demo mission.</sub>
 
 ## 🚀 Quick Start
 
