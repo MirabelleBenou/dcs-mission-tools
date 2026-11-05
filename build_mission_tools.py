@@ -110,6 +110,11 @@ def check_inline_tables():
         print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
         sys.exit(1)
     for label, json_path, const, marker in INLINE_TABLES:
+        for edge in ('BEGIN', 'END'):
+            n = html.count('/* ' + marker + ':' + edge + ' */')
+            if n != 1:
+                print(f'  [ERREUR] Le marqueur {marker}:{edge} figure {n} fois dans {WEAPON_NAMES_MODULE} (attendu : une fois) — build arrêté', file=sys.stderr)
+                sys.exit(1)
         try:
             with open(os.path.join(SCRIPT_DIR, json_path), 'r', encoding='utf-8') as fh:
                 ref = fh.read().rstrip('\n')
@@ -128,6 +133,27 @@ def check_inline_tables():
             print(f'  [ERREUR] La {label} de {WEAPON_NAMES_MODULE} diffère de {json_path} — build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] {label[0].upper() + label[1:]} identique à {json_path}')
+    check_views_generated()
+
+
+def check_views_generated():
+    """Garde de la table des vues : data/aircraft_views.json doit être la sortie de tools/gen_aircraft_views.py
+    sur data/views/ (les .svg et stations.json). Sinon le build s'arrête."""
+    import importlib.util
+    try:
+        spec = importlib.util.spec_from_file_location('gen_aircraft_views', os.path.join(SCRIPT_DIR, 'tools', 'gen_aircraft_views.py'))
+        gen = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(gen)
+        expected = gen.build()
+        with open(os.path.join(SCRIPT_DIR, AIRCRAFT_VIEWS_JSON), 'r', encoding='utf-8', newline='') as fh:
+            actual = fh.read()
+    except (OSError, SystemExit, ValueError) as exc:
+        print(f'  [ERREUR] Table des vues : générateur ou fichier illisible ({exc}) — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    if actual != expected:
+        print(f'  [ERREUR] {AIRCRAFT_VIEWS_JSON} diffère de la sortie de tools/gen_aircraft_views.py sur data/views/ — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    print(f'  [OK] {AIRCRAFT_VIEWS_JSON} identique à la sortie de tools/gen_aircraft_views.py')
 
 
 RADIO_BLOCK_MODULE = 'modules/dcs_comm_plan_editor.html'

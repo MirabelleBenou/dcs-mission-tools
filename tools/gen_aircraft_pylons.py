@@ -54,6 +54,7 @@ def parse(src):
 def weapons_table(src):
     """Attribut de la classe Weapons -> (clsid, masse ou None)."""
     table = {}
+    seen = {}
     for node in parse(src).body:
         if not (isinstance(node, ast.ClassDef) and node.name == 'Weapons'):
             continue
@@ -70,6 +71,9 @@ def weapons_table(src):
                 continue
             if isinstance(weight, bool) or not isinstance(weight, (int, float)):
                 weight = None
+            if clsid in seen and seen[clsid] != weight:
+                sys.exit('CLSID en double avec deux masses : %s (%s, %s)' % (clsid, seen[clsid], weight))
+            seen[clsid] = weight
             table[st.targets[0].id] = (clsid, weight)
     return table
 

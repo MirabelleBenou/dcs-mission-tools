@@ -580,6 +580,7 @@
       .cmp-foot .sp { margin-left: 0; }
     }
   </style>
+</head>
 <body>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -9096,10 +9097,11 @@ document.getElementById('le-tabs').addEventListener('click', function(e) {
 //   La composition devient une définition d'emport comme celles de la v1 et suit le même chemin (applyDefToSelection).
 // ═══════════════════════════════════════════════════════════════
 const CMP = {
-  open: false, type: null, pyl: [], view: null, pairs: {},
+  open: false, type: null, pyl: [], pylBase: [], view: null, pairs: {},
   baseLetter: '', base: null, start: {}, st: {}, sym: true, sel: null,
-  opener: null, ro: null, mq: window.matchMedia('(max-width: 768px)'),
+  opener: null, ro: null, mq: null,
 };
+function cmpSmall() { return CMP.mq ? CMP.mq.matches : window.innerWidth <= 768; }
 const cmpHas = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const cmpIdx = new Map(AIRCRAFT_PYLONS.clsids.map((c, i) => [c, i]));
 
@@ -9152,6 +9154,11 @@ function cmpSetBase(letter) {
   CMP.baseLetter = def ? letter : '';
   CMP.base = def ? def.source : null;
   const py = (CMP.base && CMP.base.pylons && typeof CMP.base.pylons === 'object') ? CMP.base.pylons : {};
+  // Un pylône de l'emport de départ que la table du type ne connaît pas a sa ligne, à sa place dans l'ordre numérique
+  const inTable = new Set(CMP.pylBase.map(p => p.n));
+  const extra = Object.keys(py).filter(k => !inTable.has(k) && py[k] && py[k].CLSID !== undefined && String(py[k].CLSID) !== '')
+    .map(k => ({ n: k, allowed: [], extra: true }));
+  CMP.pyl = CMP.pylBase.concat(extra).sort((a, b) => Number(a.n) - Number(b.n));
   CMP.start = {}; CMP.st = {};
   for (const { n } of CMP.pyl) {
     const c = (cmpHas(py, n) && py[n] && py[n].CLSID !== undefined) ? String(py[n].CLSID) : '';
@@ -9187,13 +9194,14 @@ function cmpOpen() {
   const pyl = cmpPylonsOf(type);
   if (!pyl) return;
   CMP.opener = document.activeElement;
-  CMP.type = type; CMP.pyl = pyl;
+  CMP.type = type; CMP.pylBase = pyl; CMP.pyl = pyl;
   CMP.view = cmpHas(AIRCRAFT_VIEWS, type) ? AIRCRAFT_VIEWS[type] : null;
   CMP.pairs = CMP.view ? cmpPairs(CMP.view) : {};
   CMP.sym = true;
   const list = getLoadouts(type).list;
   cmpSetBase(list.length ? list[0].letter : '');
   CMP.open = true;
+  cmpInert(true);
   document.getElementById('cmp-overlay').classList.remove('hidden');
   cmpBuild();
   document.getElementById('cmp-modal').focus();
@@ -9202,6 +9210,7 @@ function cmpOpen() {
 function cmpClose() {
   if (!CMP.open) return;
   CMP.open = false;
+  cmpInert(false);
   if (CMP.ro) { CMP.ro.disconnect(); CMP.ro = null; }
   document.getElementById('cmp-overlay').classList.add('hidden');
   document.getElementById('cmp-modal').innerHTML = '';
@@ -9211,7 +9220,7 @@ function cmpClose() {
 
 function cmpBuild() {
   const modal = document.getElementById('cmp-modal');
-  const small = CMP.mq.matches;
+  const small = cmpSmall();
   const view = CMP.view;
   const info = getLoadouts(CMP.type);
   let h = '<div class="cmp-head"><h2 id="cmp-title">' + escHtml(t('cmp.title') + ' · ' + CMP.type) + '</h2>' +
@@ -9304,7 +9313,7 @@ function cmpUpdate() {
     let w = null;
     if (c !== '') {
       const i = cmpIdx.get(c);
-      w = i !== undefined ? AIRCRAFT_PYLONS.weights[i] : null;
+      w = (i !== undefined && !CMP.pyl.find(x => x.n === n).extra) ? AIRCRAFT_PYLONS.weights[i] : null;
       if (w === null || w === undefined) { w = null; unknown = true; } else total += w;
     }
     row.querySelector('.cmp-kg').textContent = w === null ? '—' : cmpNum(w) + ' kg';
@@ -9349,25 +9358,51 @@ function cmpDraw() {
 }
 
 // Un choix sur une station ; « Symétrique » le pose aussi sur sa paire quand la paire le permet
+// « Vide » ne se pose sur la paire que si elle portait le même CLSID que la station juste avant ce choix.
 function cmpChoose(n, c) {
+  const prev = CMP.st[n];
   CMP.st[n] = c;
   CMP.sel = n;
   if (CMP.sym && CMP.view && cmpHas(CMP.pairs, n)) {
     const pp = CMP.pyl.find(x => x.n === CMP.pairs[n]);
-    if (pp && (c === '' || pp.allowed.includes(c))) CMP.st[pp.n] = c;
+    if (pp && (c === '' ? (prev !== '' && CMP.st[pp.n] === prev) : pp.allowed.includes(c))) CMP.st[pp.n] = c;
   }
   cmpUpdate();
+}
+
+// La composition entre dans les emports du type (lettre suivante, les lettres existantes ne bougent pas) ;
+// égale à un emport existant, elle prend sa lettre.
+function cmpRegister(type, def) {
+  let list = UI_STATE.loadoutDefs.get(type);
+  if (!list) { list = []; UI_STATE.loadoutDefs.set(type, list); }
+  if (!list.some(d => d.sig === def.sig)) {
+    list.push({ sig: def.sig, source: lxClone(def.source), n0: 0, order: list.length, letter: lxLetters(list.length) });
+    UI_STATE._cache.clear();
+    UI_STATE.rev++;
+  }
 }
 
 function cmpApply() {
   if (!CMP.open) return;
   const def = cmpDef(), type = CMP.type;
+  cmpRegister(type, def);
   applyDefToSelection(type, def);
   cmpClose();
 }
 
-document.getElementById('btn-compose').addEventListener('click', cmpOpen);
-(function () {
+// Pendant que la fenêtre est ouverte, le reste de la page ne reçoit ni clic ni clavier
+function cmpInert(on) {
+  for (const id of ['main-ui', 'modifications-bar']) {
+    const e = document.getElementById(id);
+    if (!e) continue;
+    if (on) e.setAttribute('inert', ''); else e.removeAttribute('inert');
+  }
+}
+
+try {
+  document.getElementById('btn-compose').addEventListener('click', cmpOpen);
+  try { CMP.mq = window.matchMedia('(max-width: 768px)'); } catch (e) { CMP.mq = null; }
+  (function () {
   const modal = document.getElementById('cmp-modal');
   modal.addEventListener('click', e => {
     if (e.target.closest('#cmp-x') || e.target.closest('#cmp-cancel')) { cmpClose(); return; }
@@ -9401,9 +9436,15 @@ document.getElementById('btn-compose').addEventListener('click', cmpOpen);
       else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
     }
   });
-  CMP.mq.addEventListener('change', () => { if (CMP.open) cmpBuild(); });
-  window.addEventListener('resize', () => { if (CMP.open) { cmpDraw(); if (CMP.mq.matches) cmpStaggerNums(); } });
-})();
+  const onMq = () => { if (CMP.open) cmpBuild(); };
+  if (!CMP.mq) { /* pas de matchMedia : largeur lue à l'ouverture */ }
+  else if (CMP.mq.addEventListener) CMP.mq.addEventListener('change', onMq); else if (CMP.mq.addListener) CMP.mq.addListener(onMq);
+  document.addEventListener('focusin', e => { if (CMP.open && !modal.contains(e.target)) modal.focus(); });
+  window.addEventListener('resize', () => { if (CMP.open) { cmpDraw(); if (cmpSmall()) cmpStaggerNums(); } });
+  })();
+} catch (err) {
+  console.error('[composer] initialisation :', err);
+}
 
 // Panneau du type
 function cardActivate(e, listId, kind, valueOf) {
