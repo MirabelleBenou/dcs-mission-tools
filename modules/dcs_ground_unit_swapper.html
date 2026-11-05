@@ -592,44 +592,13 @@
     .combobox-value { flex: 1; margin-right: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .combobox-value.placeholder { color: var(--text-dim); }
 
-    .tbm-panel.tbm-embed {
-      position: absolute;
-      top: calc(100% + 3px);
-      left: 0;
-      min-width: 100%;
-      max-height: none;
-      overflow: visible;
-      z-index: 500;
-      display: flex;
-      flex-direction: column;
-      animation: none;
-    }
-    .tbm-panel.tbm-embed[hidden] { display: none; }
-    .tbm-embed .tbm-search { position: static; }
-    .combobox-list {
-      list-style: none;
-      overflow-y: auto;
-      max-height: 280px;
-      margin: 0;
-      padding: 0;
-    }
+    .combobox-popup[hidden], #shared-combobox-popup[hidden] { display: none; }
+    .combobox-list { list-style: none; margin: 0; padding: 0; }
 
     /* Combobox dans le bulk-bar : largeur fixe */
     #bulk-bar .combobox { min-width: 200px; max-width: 240px; }
 
     /* Popup partagé pour les cellules tableau — ancré sur document.body */
-    #shared-combobox-popup {
-      position: fixed;
-      min-width: 220px;
-      max-height: none;
-      overflow: visible;
-      z-index: 500;
-      display: flex;
-      flex-direction: column;
-      animation: none;
-    }
-    #shared-combobox-popup[hidden] { display: none; }
-    #shared-combobox-popup .tbm-search { position: static; }
 
     /* Cellule type dans le tableau — affichage fermé léger */
     .combobox-cell {
@@ -1721,7 +1690,7 @@ class Combobox {
       <div class="combobox-display tbm-trigger" tabindex="-1">
         <span class="combobox-value placeholder"></span>
       </div>
-      <div class="combobox-popup tbm-panel tbm-embed" hidden>
+      <div class="combobox-popup tbm-panel" hidden>
         <div class="tbm-head"></div>
         <div class="tbm-search"><input type="text" class="combobox-search" autocomplete="off"></div>
         <ul class="combobox-list" role="listbox"></ul>
@@ -1810,6 +1779,7 @@ class Combobox {
     this._filtered = q ? all.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)) : all;
     this._hlIndex = -1;
     this._renderList();
+    if (this._open && !this._popup.hasAttribute('hidden')) tbmPlaceAt(this._popup, this._display.getBoundingClientRect());
   }
 
   _renderList() {
@@ -1965,6 +1935,7 @@ const SharedCombobox = (() => {
     _filtered = q ? all.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)) : all;
     _hlIndex = -1;
     _renderList();
+    if (_activeCell && !_popup.hasAttribute('hidden')) _position(_activeCell);
   }
 
   function _renderList() {
@@ -2016,10 +1987,7 @@ const SharedCombobox = (() => {
   }
 
   function _position(cellEl) {
-    const rect = cellEl.getBoundingClientRect();
-    _popup.style.top    = (rect.bottom + window.scrollY + 3) + 'px';
-    _popup.style.left   = (rect.left   + window.scrollX) + 'px';
-    _popup.style.minWidth = Math.max(rect.width, 220) + 'px';
+    tbmPlaceAt(_popup, cellEl.getBoundingClientRect());
   }
 
   function openOn(cellEl, { initialValue, onChange }) {
@@ -2032,8 +2000,8 @@ const SharedCombobox = (() => {
     _emptyEl.textContent = t('combo.noResult');
     _search.value = '';
     _filterList();
-    _position(cellEl);
     _popup.removeAttribute('hidden');
+    _position(cellEl);
     requestAnimationFrame(() => _search.focus());
   }
 
@@ -2944,7 +2912,7 @@ function _updateRowAfterEdit(unitId) {
   }
 
   // Cellule skill
-  const skillSel = tr.querySelector('.skill-sel');
+  const skillSel = tr.querySelector('select.skill-sel');   // le bouton de la liste porte les mêmes classes : viser le <select>
   if (skillSel) {
     const skillChanged = ed.newSkill !== undefined;
     skillSel.classList.toggle('skill-changed', skillChanged);
@@ -3412,6 +3380,23 @@ document.getElementById('json-file-input').addEventListener('change', async (e) 
   showToast(msg, applied > 0 ? 'success' : 'warn');
 });
 
+// Les listes à types sont posées en fixe : elles se ferment quand la page défile ou change de largeur.
+function closeTypePopups() {
+  ['bulkFromCombobox', 'bulkToCombobox'].forEach(k => { if (UI_STATE[k]) UI_STATE[k]._close(); });
+  SharedCombobox.close();
+}
+let _typePopupsW = window.innerWidth;
+window.addEventListener('scroll', e => {
+  const n = e.target;
+  if (n && n.nodeType === 1 && n.closest('.combobox-popup, #shared-combobox-popup')) return;
+  closeTypePopups();
+}, true);
+window.addEventListener('resize', () => {
+  if (window.innerWidth === _typePopupsW) return;
+  _typePopupsW = window.innerWidth;
+  closeTypePopups();
+});
+
 /* ===== LISTES DEROULANTES AU THEME ===== */
 /* Le <select> reste dans la page (id, options, écouteurs, valeur) mais masqué ; un <button> le remplace et porte le
    libellé ; la liste ouverte est un <ul role="listbox"> posé en fin de <body>. initListes() rattache tout <select>
@@ -3751,9 +3736,14 @@ function tbmFilter(m, q) {
 /* Sous le bouton (4 px), bord gauche aligné, au moins aussi large, à 8 px au moins des bords de la fenêtre ;
    dessous si elle y tient entière, sinon dessus si la place y est plus grande (classe tbm-up). */
 function tbmPlace(m) {
-  const r = m.btn.getBoundingClientRect(), p = m.panel;
-  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+  const r = m.btn.getBoundingClientRect();
   m.x0 = r.left; m.y0 = r.top;
+  tbmPlaceAt(m.panel, r);
+}
+
+/* p : la liste (position: fixed), r : le rectangle de son bouton. Sert aussi aux listes à types du Ground Unit Swapper. */
+function tbmPlaceAt(p, r) {
+  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
   const cap = Math.min(0.62 * vh, 440);
   const below = vh - (r.bottom + 4) - 12, above = (r.top - 4) - 12;
   p.style.minWidth = Math.min(Math.max(180, r.width), vw - 16) + 'px';

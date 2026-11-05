@@ -10122,9 +10122,14 @@ function tbmFilter(m, q) {
 /* Sous le bouton (4 px), bord gauche aligné, au moins aussi large, à 8 px au moins des bords de la fenêtre ;
    dessous si elle y tient entière, sinon dessus si la place y est plus grande (classe tbm-up). */
 function tbmPlace(m) {
-  const r = m.btn.getBoundingClientRect(), p = m.panel;
-  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
+  const r = m.btn.getBoundingClientRect();
   m.x0 = r.left; m.y0 = r.top;
+  tbmPlaceAt(m.panel, r);
+}
+
+/* p : la liste (position: fixed), r : le rectangle de son bouton. Sert aussi aux listes à types du Ground Unit Swapper. */
+function tbmPlaceAt(p, r) {
+  const vw = document.documentElement.clientWidth, vh = window.innerHeight;
   const cap = Math.min(0.62 * vh, 440);
   const below = vh - (r.bottom + 4) - 12, above = (r.top - 4) - 12;
   p.style.minWidth = Math.min(Math.max(180, r.width), vw - 16) + 'px';
