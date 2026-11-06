@@ -295,7 +295,7 @@
     td.cell-livery.changed { color: var(--accent); }
     .none { color: var(--text-dim); font-style: italic; }
     td.c-mass { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; }
-    .mass-over, .cmp-tot .mass-over b, .bar-v .lv-other { color: #E0B04C; }
+    .mass-over, .cmp-tot .cmp-over, .bar-v .lv-other { color: #E0B04C; }
     .mass-over { font-weight: 600; }
     .narrow-only { display: none; }
     .btn-undo-cell {
@@ -815,9 +815,9 @@ const I18N = {
     'table.col.loadout':           'Emport',
     'table.col.mass':              'Masse',
     'table.col.mass.title':        'Estimation : à vide + carburant + emports (canon non compté)',
-    'mass.max':                    'Masse maximale recommandée : {max} kg',
-    'mass.over':                   'Au-delà de la masse maximale recommandée ({max} kg) — permis',
-    'cmp.takeoff':                 ' · Au décollage, plein interne : {y} (max {max} kg)',
+    'mass.tip':                    'À vide {e} + carburant {f} + emports {s} = {m} kg · max {max} kg',
+    'mass.tipOver':                ' — au-delà, permis',
+    'cmp.takeoff':                 ' · Au décollage, carburant {f} kg : {y} (max {max} kg)',
     'table.col.livery':            'Livrée',
     'table.empty':                 'Aucun appareil ne correspond aux filtres actifs.',
     'table.type.count.one':        '{n} appareil',
@@ -952,9 +952,9 @@ const I18N = {
     'table.col.loadout':           'Loadout',
     'table.col.mass':              'Weight',
     'table.col.mass.title':        'Estimate: empty + fuel + stores (gun not counted)',
-    'mass.max':                    'Recommended maximum weight: {max} kg',
-    'mass.over':                   'Above the recommended maximum weight ({max} kg) — allowed',
-    'cmp.takeoff':                 ' · Take-off, full internal fuel: {y} (max {max} kg)',
+    'mass.tip':                    'Empty {e} + fuel {f} + stores {s} = {m} kg · max {max} kg',
+    'mass.tipOver':                ' — above, allowed',
+    'cmp.takeoff':                 ' · Take-off, fuel {f} kg: {y} (max {max} kg)',
     'table.col.livery':            'Livery',
     'table.empty':                 'No aircraft match the active filters.',
     'table.type.count.one':        '{n} aircraft',
@@ -8897,15 +8897,17 @@ function unitMass(u) {
   const fuel = p && typeof p === 'object' ? Number(p.fuel) : 0;
   const py = p && typeof p === 'object' && p.pylons && typeof p.pylons === 'object' ? p.pylons : {};
   const st = massOfStores(Object.values(py).map(x => x && typeof x === 'object' ? x.CLSID : undefined));
-  return { kg: m.empty + (isFinite(fuel) ? fuel : 0) + st.kg, unknown: st.unknown, max: m.max };
+  const f = isFinite(fuel) ? fuel : 0;
+  return { kg: m.empty + f + st.kg, unknown: st.unknown, max: m.max, e: m.empty, f, s: st.kg };
 }
 function massCell(u) {
   const m = unitMass(u);
   if (!m) return '<td class="c-mass"><span class="none">' + escHtml(t('livery.none')) + '</span></td>';
-  const over = m.kg > m.max;
+  const over = Math.round(m.kg) > m.max;
   const txt = cmpNum(m.kg) + ' kg' + (m.unknown ? ' + ?' : '');
-  const key = over ? 'mass.over' : 'mass.max';
-  return '<td class="c-mass' + (over ? ' mass-over' : '') + '" title="' + escHtml(t(key).replace('{max}', cmpNum(m.max))) + '">' + escHtml(txt) + '</td>';
+  const tip = t('mass.tip').replace('{e}', cmpNum(m.e)).replace('{f}', cmpNum(m.f)).replace('{s}', cmpNum(m.s) + (m.unknown ? ' + ?' : ''))
+    .replace('{m}', cmpNum(m.kg)).replace('{max}', cmpNum(m.max)) + (over ? t('mass.tipOver') : '');
+  return '<td class="c-mass' + (over ? ' mass-over' : '') + '" title="' + escHtml(tip) + '">' + escHtml(txt) + '</td>';
 }
 
 function renderTable() {
@@ -9331,6 +9333,30 @@ function cmpDef() {
   return { letter: null, sig: loadoutSig({ pylons }), source, count: 0 };
 }
 
+// Appareils cochés, visibles, du type
+function cmpChecked(type) {
+  const vis = new Set(UI_STATE.filtered.map(x => x.unitId));
+  return UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && vis.has(u.unitId));
+}
+// Carburant de la masse au décollage : le champ Carburant s'il est rempli et valide, sinon le plus grand carburant
+// courant des appareils cochés, sinon le maximum interne du type
+function cmpFuel(type) {
+  const el = document.getElementById('set-fuel');
+  if (el && !(el.validity && el.validity.badInput)) {
+    const raw = el.value.trim();
+    const n = Number(raw);
+    if (raw !== '' && isFinite(n) && n >= 0) return n;
+  }
+  const us = cmpChecked(type);
+  if (us.length) {
+    let mx = 0;
+    for (const u of us) { const p = curPayload(u); const f = p && typeof p === 'object' ? Number(p.fuel) : 0; if (isFinite(f) && f > mx) mx = f; }
+    return mx;
+  }
+  const lim = AIRCRAFT_LIMITS[type];
+  return lim && typeof lim.fuel_max === 'number' ? lim.fuel_max : null;
+}
+
 function cmpOpen() {
   const type = panelType();
   if (type === null || CMP.open) return;
@@ -9341,8 +9367,13 @@ function cmpOpen() {
   CMP.view = cmpHas(AIRCRAFT_VIEWS, type) ? AIRCRAFT_VIEWS[type] : null;
   CMP.pairs = CMP.view ? cmpPairs(CMP.view) : {};
   CMP.sym = true;
-  const list = getLoadouts(type).list;
-  cmpSetBase(list.length ? list[0].letter : '');
+  const info = getLoadouts(type);
+  const list = info.list;
+  const cnt = new Map();
+  for (const u of cmpChecked(type)) { const l = info.cur.get(u.unitId); if (l) cnt.set(l, (cnt.get(l) || 0) + 1); }
+  let start = list.length ? list[0].letter : '', best = 0;
+  for (const d of list) if ((cnt.get(d.letter) || 0) > best) { best = cnt.get(d.letter); start = d.letter; }
+  cmpSetBase(start);
   CMP.open = true;
   cmpInert(true);
   document.getElementById('cmp-overlay').classList.remove('hidden');
@@ -9457,7 +9488,6 @@ function cmpStaggerNums() {
 // Valeurs affichées : listes, masses, cases, total, bouton
 function cmpUpdate() {
   const modal = document.getElementById('cmp-modal');
-  let total = 0, unknown = false;
   for (const { n } of CMP.pyl) {
     const c = CMP.st[n];
     const row = modal.querySelector('.cmp-row[data-st="' + n + '"]');
@@ -9467,7 +9497,7 @@ function cmpUpdate() {
     if (c !== '') {
       const i = cmpIdx.get(c);
       w = (i !== undefined && !CMP.pyl.find(x => x.n === n).extra) ? AIRCRAFT_PYLONS.weights[i] : null;
-      if (w === null || w === undefined) { w = null; unknown = true; } else total += w;
+      if (w === null || w === undefined) w = null;
     }
     row.querySelector('.cmp-kg').textContent = w === null ? '—' : cmpNum(w) + ' kg';
     row.classList.toggle('sel', CMP.sel === n);
@@ -9479,11 +9509,13 @@ function cmpUpdate() {
       cell.setAttribute('aria-pressed', CMP.sel === n);
     }
   }
+  const st = massOfStores(CMP.pyl.map(p => CMP.st[p.n]));
+  const total = st.kg, unknown = st.unknown;
   let takeoff = '';
-  const am = AIRCRAFT_MASSES[CMP.type], lim = AIRCRAFT_LIMITS[CMP.type];
-  if (am && lim && typeof lim.fuel_max === 'number') {
-    const y = am.empty + lim.fuel_max + total;
-    takeoff = '<span class="' + (y > am.max ? 'mass-over' : '') + '">' + escHtml(t('cmp.takeoff')).replace('{y}', '<b>' + escHtml(cmpNum(y) + ' kg' + (unknown ? ' + ?' : '')) + '</b>').replace('{max}', escHtml(cmpNum(am.max))) + '</span>';
+  const am = AIRCRAFT_MASSES[CMP.type], f = cmpFuel(CMP.type);
+  if (am && f !== null) {
+    const y = am.empty + f + total;
+    takeoff = '<span class="' + (Math.round(y) > am.max ? 'cmp-over' : '') + '">' + escHtml(t('cmp.takeoff')).replace('{f}', escHtml(cmpNum(f))).replace('{y}', escHtml(cmpNum(y) + ' kg' + (unknown ? ' + ?' : ''))).replace('{max}', escHtml(cmpNum(am.max))) + '</span>';
   }
   document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(cmpNum(total) + ' kg' + (unknown ? ' + ?' : '')) + '</b>' + takeoff;
   const ap = document.getElementById('cmp-apply');
