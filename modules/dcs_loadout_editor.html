@@ -380,7 +380,6 @@
     .set-field input:focus { outline: none; border-color: var(--accent); }
     .set-hint { font-size: 11px; color: var(--text-dim); }
     .set-note { display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; color: var(--text-dim); }
-    .set-note .set-cur { color: var(--text); }
     .set-slider { display: flex; align-items: center; gap: 8px; }
     .set-field .set-slider input[type="range"] {
       --p: 0%; flex: 1 1 auto; min-width: 0; width: auto; height: 34px; min-height: 34px; margin: 0; padding: 0;
@@ -726,12 +725,12 @@
         <summary data-i18n="panel.settings">Réglages</summary>
         <div class="sec-body">
           <div class="set-grid">
-            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-slider"><input type="range" id="set-fuel-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-fuel-pct-val">—</span></div><div class="set-note"><span class="set-cur" id="cur-fuel"></span><span id="max-fuel"></span></div></div>
-            <div class="set-field"><label for="set-flare" data-i18n="panel.flares">Leurres</label><input type="number" id="set-flare" min="0" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-flare"></span><span id="max-flare"></span></div></div>
-            <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-chaff"></span><span id="max-chaff"></span></div></div>
-            <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-gun"></span><span id="max-gun"></span></div></div>
+            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-slider"><input type="range" id="set-fuel-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-fuel-pct-val">—</span></div><div class="set-note"><span id="max-fuel"></span></div></div>
+            <div class="set-field"><label for="set-flare" data-i18n="panel.flares">Leurres</label><input type="number" id="set-flare" min="0" step="1" inputmode="numeric"><div class="set-note"><span id="max-flare"></span></div></div>
+            <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"><div class="set-note"><span id="max-chaff"></span></div></div>
+            <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-slider"><input type="range" id="set-gun-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-gun-pct-val">—</span></div><div class="set-note"><span id="max-gun"></span></div></div>
           </div>
-          <div class="set-hint" data-i18n="panel.settings.hint">Un champ vide ne change rien.</div>
+          <div class="set-hint" data-i18n="panel.settings.hint">Les valeurs affichées sont celles des appareils cochés ; seul un champ modifié s'applique.</div>
         </div>
       </details>
       <details class="panel-sec" open>
@@ -852,8 +851,8 @@ const I18N = {
     'panel.flares':                'Leurres',
     'panel.chaff':                 'Paillettes',
     'panel.gun':                   'Canon',
-    'panel.settings.hint':         'Un champ vide ne change rien.',
-    'set.current':                 'Actuel : {v}',
+    'panel.settings.hint':         'Les valeurs affichées sont celles des appareils cochés ; seul un champ modifié s\'applique.',
+    'set.gunPct':                  'Canon en %',
     'set.fuelMax':                 'max {n} kg',
     'set.gunRange':                '0 – 100 %',
     'set.charge':                  'leurres{fs} + paillettes{cs} ≤ {n}',
@@ -990,8 +989,8 @@ const I18N = {
     'panel.flares':                'Flares',
     'panel.chaff':                 'Chaff',
     'panel.gun':                   'Gun',
-    'panel.settings.hint':         'An empty field changes nothing.',
-    'set.current':                 'Current: {v}',
+    'panel.settings.hint':         'Values shown are those of the selected aircraft; only a changed field is applied.',
+    'set.gunPct':                  'Gun in %',
     'set.fuelMax':                 'max {n} kg',
     'set.gunRange':                '0 – 100 %',
     'set.charge':                  'flares{fs} + chaff{cs} ≤ {n}',
@@ -8587,8 +8586,8 @@ function chargeRule(cl) {
 
 function fmtNum(n) { return String(Math.round(n * 100) / 100); }
 
-// Valeurs actuelles d'un réglage sur les appareils cochés, visibles, du type : « 1701 », « 1200 – 1701 » ou « — »
-function currentSettingText(type, key) {
+// Valeurs actuelles d'un réglage sur les appareils cochés, visibles, du type : { lo, hi } (lo = Infinity : aucune)
+function settingRef(type, key) {
   const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
   let lo = Infinity, hi = -Infinity;
   for (const u of UI_STATE.aircraft) {
@@ -8598,9 +8597,24 @@ function currentSettingText(type, key) {
     if (v < lo) lo = v;
     if (v > hi) hi = v;
   }
-  const v = lo === Infinity ? '—' : (lo === hi ? fmtNum(lo) : fmtNum(lo) + ' – ' + fmtNum(hi));
-  return t('set.current').replace('{v}', v);
+  return { lo, hi };
 }
+
+// Champs de Réglages modifiés par l'utilisateur (saisie ou curseur) : ils gardent leur valeur quand les coches changent
+const SET_KEYS = ['fuel', 'flare', 'chaff', 'gun'];
+const SET_TOUCH = new Set();
+// Les champs non touchés portent la valeur actuelle des cochés (une seule), ou restent vides avec la plage en grisé
+function fillSettings(type) {
+  for (const key of SET_KEYS) {
+    const el = document.getElementById('set-' + key);
+    const touched = SET_TOUCH.has(key);
+    const r = type === null ? { lo: Infinity, hi: -Infinity } : settingRef(type, key);
+    el.placeholder = r.lo === Infinity || r.lo === r.hi ? '' : fmtNum(r.lo) + ' – ' + fmtNum(r.hi);
+    if (!touched) el.value = r.lo !== Infinity && r.lo === r.hi ? fmtNum(r.lo) : '';
+  }
+  syncFuelSlider(); syncGunSlider();
+}
+function resetSettings() { SET_TOUCH.clear(); fillSettings(panelType()); }
 
 // Le curseur du carburant suit le champ en kg : round(kg / fuel_max × 100), borné à 0–100 ; champ vide : 0 et « — »
 function syncFuelSlider() {
@@ -8613,23 +8627,30 @@ function syncFuelSlider() {
   if (max !== null && raw !== '' && isFinite(kg)) { pct = Math.max(0, Math.min(100, Math.round(kg / max * 100))); txt = pct + ' %'; }
   setFuelSliderView(pct, txt, max === null);
 }
-function setFuelSliderView(pct, txt, off) {
-  const sl = document.getElementById('set-fuel-pct'), out = document.getElementById('set-fuel-pct-val');
+function setFuelSliderView(pct, txt, off) { setSliderView('fuel', pct, txt, off); }
+function setSliderView(key, pct, txt, off) {
+  const sl = document.getElementById('set-' + key + '-pct'), out = document.getElementById('set-' + key + '-pct-val');
   sl.value = String(pct); sl.disabled = !!off; sl.style.setProperty('--p', pct + '%');
-  sl.setAttribute('aria-label', t('set.fuelPct')); sl.setAttribute('aria-valuetext', txt);
+  sl.setAttribute('aria-label', t(key === 'fuel' ? 'set.fuelPct' : 'set.gunPct')); sl.setAttribute('aria-valuetext', txt);
   out.textContent = txt;
+}
+// Le curseur du canon suit son champ (pourcentage) : borné à 0–100 ; champ vide : 0 et « — »
+function syncGunSlider() {
+  const raw = document.getElementById('set-gun').value.trim(), v = Number(raw);
+  let pct = 0, txt = '—';
+  if (raw !== '' && isFinite(v)) { pct = Math.max(0, Math.min(100, Math.round(v))); txt = pct + ' %'; }
+  setSliderView('gun', pct, txt, false);
 }
 
 // Sous chaque champ des Réglages : la valeur actuelle et le maximum du type
 function renderSettingsInfo(type) {
-  syncFuelSlider();
+  fillSettings(type);
   const lim = limitsFor(type);
   const cl = chargeLimit(lim);
   const fuelMax = lim && typeof lim.fuel_max === 'number' ? t('set.fuelMax').replace('{n}', fmtNum(lim.fuel_max)) : '';
   const charge = cl ? chargeRule(cl) : '';
   const info = { fuel: fuelMax, flare: charge, chaff: charge, gun: t('set.gunRange') };
   for (const key of ['fuel', 'flare', 'chaff', 'gun']) {
-    document.getElementById('cur-' + key).textContent = currentSettingText(type, key);
     document.getElementById('max-' + key).textContent = info[key];
   }
 }
@@ -8672,6 +8693,7 @@ function readSettings() {
   const out = {};
   const bad = label => t('toast.badValue').replace('{field}', label).replace(/^\S+\s/, '');
   for (const d of defs) {
+    if (!SET_TOUCH.has(d.key)) continue;   // champ non touché : valeur de référence, ne compte pas
     const el = document.getElementById(d.id);
     if (el.validity && el.validity.badInput) return { out, error: bad(d.label) };   // saisie illisible : le champ « vide » n'est pas vide
     const raw = el.value.trim();
@@ -8700,8 +8722,13 @@ function applyPlan(type) {
   const def = ch.loadout ? getLoadouts(type).list.find(d => d.letter === ch.loadout) : null;
   if (def) plan.loadout = { def, targets: loadoutTargets(type, def), eligible: checked.some(u => !skipReason(u, type, visSet, 'payload')) };
   const rs = readSettings();
+  const elig = checked.filter(u => !skipReason(u, type, visSet, 'payload'));
+  // Seul un champ qui diffère de l'actuel d'au moins un appareil coché compte comme réglage
+  for (const k of Object.keys(rs.out)) {
+    if (!elig.some(u => { const c = curPayload(u)[k]; return c === undefined || Number(c) !== rs.out[k]; })) delete rs.out[k];
+  }
   if (Object.keys(rs.out).length > 0 || rs.error) {
-    const el = checked.filter(u => !skipReason(u, type, visSet, 'payload'));
+    const el = elig;
     const over = rs.error ? null : settingsOverLimit(type, rs.out, el);
     const error = rs.error || (over ? over.replace(/^\S+\s/, '') : null);
     const targets = error ? [] : el.filter(u => {
@@ -8761,9 +8788,8 @@ function applyToSelection() {
     else if (!reached && firstWhy) ignored[firstWhy] = (ignored[firstWhy] || 0) + 1;
   }
   UI_STATE.choice = { type, loadout: null, livery: null };
-  for (const id of ['set-fuel', 'set-flare', 'set-chaff', 'set-gun']) document.getElementById(id).value = '';
-  syncFuelSlider();
   afterEdit();
+  resetSettings();
   resultToast(modified, ignored);
 }
 
@@ -8864,8 +8890,9 @@ function resetFilterControls() {
   document.getElementById('filter-role').value = '';
   document.getElementById('filter-search').value = '';
   document.getElementById('toggle-modified').checked = false;
-  ['set-fuel', 'set-flare', 'set-chaff', 'set-gun'].forEach(id => { document.getElementById(id).value = ''; });
-  syncFuelSlider();
+  SET_TOUCH.clear();
+  SET_KEYS.forEach(k => { const el = document.getElementById('set-' + k); el.value = ''; el.placeholder = ''; });
+  syncFuelSlider(); syncGunSlider();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -9040,8 +9067,7 @@ function renderPanel() {
   // Choix : valable pour le type du panneau seulement
   if (UI_STATE.choice.type !== type) {
     UI_STATE.choice = { type, loadout: null, livery: null };
-    for (const id of ['set-fuel', 'set-flare', 'set-chaff', 'set-gun']) document.getElementById(id).value = '';
-    syncFuelSlider();
+    SET_TOUCH.clear();
   }
 
   // Emports : une carte par emport, désigné par ses pylônes (nom de l'arme)
@@ -9699,11 +9725,19 @@ document.getElementById('action-bar').addEventListener('click', function(e) {
   if (!b || b.disabled) return;
   applyToSelection();
 });
-['set-fuel', 'set-flare', 'set-chaff', 'set-gun'].forEach(id => document.getElementById(id).addEventListener('input', () => {
+SET_KEYS.forEach(k => document.getElementById('set-' + k).addEventListener('input', () => {
+  SET_TOUCH.add(k);
   const ty = panelType();
   if (ty !== null) renderActionBar(ty);
 }));
 document.getElementById('set-fuel').addEventListener('input', syncFuelSlider);
+document.getElementById('set-gun').addEventListener('input', syncGunSlider);
+document.getElementById('set-gun-pct').addEventListener('input', () => {
+  const pc = Number(document.getElementById('set-gun-pct').value);
+  document.getElementById('set-gun').value = String(pc);
+  setSliderView('gun', pc, pc + ' %', false);
+  document.getElementById('set-gun').dispatchEvent(new Event('input', { bubbles: true }));
+});
 document.getElementById('set-fuel-pct').addEventListener('input', () => {
   const ty = panelType(), sl = document.getElementById('set-fuel-pct');
   const lim = ty !== null ? AIRCRAFT_LIMITS[ty] : null;
