@@ -381,6 +381,19 @@
     .set-hint { font-size: 11px; color: var(--text-dim); }
     .set-note { display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; color: var(--text-dim); }
     .set-note .set-cur { color: var(--text); }
+    .set-slider { display: flex; align-items: center; gap: 8px; }
+    .set-field .set-slider input[type="range"] {
+      --p: 0%; flex: 1 1 auto; min-width: 0; width: auto; height: 34px; min-height: 34px; margin: 0; padding: 0;
+      background: transparent; border: none; border-radius: 0; cursor: pointer; -webkit-appearance: none; appearance: none;
+    }
+    .set-slider input[type="range"]:disabled { opacity: 0.4; cursor: default; }
+    .set-slider input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--accent) var(--p), var(--surface-2) var(--p)); border: 1px solid var(--border); }
+    .set-slider input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--surface-2); border: 1px solid var(--border); }
+    .set-slider input[type="range"]::-moz-range-progress { height: 8px; border-radius: 4px; background: var(--accent); }
+    .set-slider input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); margin-top: -7px; }
+    .set-slider input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
+    .set-slider input[type="range"]:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+    .set-pct { flex: 0 0 auto; min-width: 40px; text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text); }
 
     /* ── Footer sticky modifications ──────────────────────────────────────── */
     #modifications-bar {
@@ -713,7 +726,7 @@
         <summary data-i18n="panel.settings">Réglages</summary>
         <div class="sec-body">
           <div class="set-grid">
-            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-note"><span class="set-cur" id="cur-fuel"></span><span id="max-fuel"></span></div></div>
+            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-slider"><input type="range" id="set-fuel-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-fuel-pct-val">—</span></div><div class="set-note"><span class="set-cur" id="cur-fuel"></span><span id="max-fuel"></span></div></div>
             <div class="set-field"><label for="set-flare" data-i18n="panel.flares">Leurres</label><input type="number" id="set-flare" min="0" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-flare"></span><span id="max-flare"></span></div></div>
             <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-chaff"></span><span id="max-chaff"></span></div></div>
             <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-note"><span class="set-cur" id="cur-gun"></span><span id="max-gun"></span></div></div>
@@ -835,6 +848,7 @@ const I18N = {
     'panel.pylons':                'Pylônes',
     'panel.noPylons':              'Aucun pylône',
     'panel.fuel':                  'Carburant',
+    'set.fuelPct':                 'Carburant en % du maximum',
     'panel.flares':                'Leurres',
     'panel.chaff':                 'Paillettes',
     'panel.gun':                   'Canon',
@@ -972,6 +986,7 @@ const I18N = {
     'panel.pylons':                'Pylons',
     'panel.noPylons':              'No pylons',
     'panel.fuel':                  'Fuel',
+    'set.fuelPct':                 'Fuel as a % of the maximum',
     'panel.flares':                'Flares',
     'panel.chaff':                 'Chaff',
     'panel.gun':                   'Gun',
@@ -8587,8 +8602,27 @@ function currentSettingText(type, key) {
   return t('set.current').replace('{v}', v);
 }
 
+// Le curseur du carburant suit le champ en kg : round(kg / fuel_max × 100), borné à 0–100 ; champ vide : 0 et « — »
+function syncFuelSlider() {
+  const sl = document.getElementById('set-fuel-pct'), out = document.getElementById('set-fuel-pct-val'), el = document.getElementById('set-fuel');
+  const ty = panelType();
+  const lim = ty !== null ? AIRCRAFT_LIMITS[ty] : null;
+  const max = lim && typeof lim.fuel_max === 'number' && lim.fuel_max > 0 ? lim.fuel_max : null;
+  const raw = el.value.trim(), kg = Number(raw);
+  let pct = 0, txt = '—';
+  if (max !== null && raw !== '' && isFinite(kg)) { pct = Math.max(0, Math.min(100, Math.round(kg / max * 100))); txt = pct + ' %'; }
+  setFuelSliderView(pct, txt, max === null);
+}
+function setFuelSliderView(pct, txt, off) {
+  const sl = document.getElementById('set-fuel-pct'), out = document.getElementById('set-fuel-pct-val');
+  sl.value = String(pct); sl.disabled = !!off; sl.style.setProperty('--p', pct + '%');
+  sl.setAttribute('aria-label', t('set.fuelPct')); sl.setAttribute('aria-valuetext', txt);
+  out.textContent = txt;
+}
+
 // Sous chaque champ des Réglages : la valeur actuelle et le maximum du type
 function renderSettingsInfo(type) {
+  syncFuelSlider();
   const lim = limitsFor(type);
   const cl = chargeLimit(lim);
   const fuelMax = lim && typeof lim.fuel_max === 'number' ? t('set.fuelMax').replace('{n}', fmtNum(lim.fuel_max)) : '';
@@ -8728,6 +8762,7 @@ function applyToSelection() {
   }
   UI_STATE.choice = { type, loadout: null, livery: null };
   for (const id of ['set-fuel', 'set-flare', 'set-chaff', 'set-gun']) document.getElementById(id).value = '';
+  syncFuelSlider();
   afterEdit();
   resultToast(modified, ignored);
 }
@@ -8830,6 +8865,7 @@ function resetFilterControls() {
   document.getElementById('filter-search').value = '';
   document.getElementById('toggle-modified').checked = false;
   ['set-fuel', 'set-flare', 'set-chaff', 'set-gun'].forEach(id => { document.getElementById(id).value = ''; });
+  syncFuelSlider();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -9005,6 +9041,7 @@ function renderPanel() {
   if (UI_STATE.choice.type !== type) {
     UI_STATE.choice = { type, loadout: null, livery: null };
     for (const id of ['set-fuel', 'set-flare', 'set-chaff', 'set-gun']) document.getElementById(id).value = '';
+    syncFuelSlider();
   }
 
   // Emports : une carte par emport, désigné par ses pylônes (nom de l'arme)
@@ -9666,6 +9703,16 @@ document.getElementById('action-bar').addEventListener('click', function(e) {
   const ty = panelType();
   if (ty !== null) renderActionBar(ty);
 }));
+document.getElementById('set-fuel').addEventListener('input', syncFuelSlider);
+document.getElementById('set-fuel-pct').addEventListener('input', () => {
+  const ty = panelType(), sl = document.getElementById('set-fuel-pct');
+  const lim = ty !== null ? AIRCRAFT_LIMITS[ty] : null;
+  if (!lim || typeof lim.fuel_max !== 'number') return;
+  const pc = Number(sl.value);
+  document.getElementById('set-fuel').value = pc >= 100 ? String(lim.fuel_max) : String(Math.round(lim.fuel_max * pc / 100));
+  setFuelSliderView(pc, pc + ' %', false);
+  document.getElementById('set-fuel').dispatchEvent(new Event('input', { bubbles: true }));
+});
 
 // Pied de page
 document.getElementById('btn-revert-all').addEventListener('click', () => {
