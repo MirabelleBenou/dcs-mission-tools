@@ -89,6 +89,7 @@ def read_module_versions(modules):
 WEAPON_NAMES_JSON = 'data/weapon_names.json'
 WEAPON_NAMES_MODULE = 'modules/dcs_loadout_editor.html'
 AIRCRAFT_LIMITS_JSON = 'data/aircraft_limits.json'
+AIRCRAFT_MASSES_JSON = 'data/aircraft_masses.json'
 AIRCRAFT_PYLONS_JSON = 'data/aircraft_pylons.json'
 AIRCRAFT_VIEWS_JSON = 'data/aircraft_views.json'
 
@@ -96,6 +97,7 @@ AIRCRAFT_VIEWS_JSON = 'data/aircraft_views.json'
 INLINE_TABLES = (
     ('table des armes', WEAPON_NAMES_JSON, 'WEAPON_NAMES', 'WEAPON_NAMES'),
     ('table des limites des appareils', AIRCRAFT_LIMITS_JSON, 'AIRCRAFT_LIMITS', 'AIRCRAFT_LIMITS'),
+    ('table des masses des appareils', AIRCRAFT_MASSES_JSON, 'AIRCRAFT_MASSES', 'AIRCRAFT_MASSES'),
     ('table des pylônes des appareils', AIRCRAFT_PYLONS_JSON, 'AIRCRAFT_PYLONS', 'AIRCRAFT_PYLONS'),
     ('table des vues des appareils', AIRCRAFT_VIEWS_JSON, 'AIRCRAFT_VIEWS', 'AIRCRAFT_VIEWS'),
 )

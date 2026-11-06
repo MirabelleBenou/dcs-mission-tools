@@ -33,6 +33,16 @@ Table `DCS aircraft type -> limits`, sorted by key, used by the **Loadout Editor
   Running it again on the same version rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_LIMITS:BEGIN */` and `/* AIRCRAFT_LIMITS:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_limits.json`.
 
+## aircraft_masses.json
+
+Table `DCS aircraft type -> empty and maximum weight`, sorted by key, used by the **Loadout Editor** for the weight estimate of each aircraft (empty weight + fuel + stores, gun not counted). A type missing from the table has no estimate.
+
+- **Fields**: `empty` and `max` (kg, integers): the empty weight and the recommended maximum weight.
+- **Source**: the aircraft definitions of DCS World (`M_empty`, `M_max`, in `CoreMods/aircraft/<type>/`), read on 6 November 2026 and checked against the mission editor. The Mi-8MT was read in the mission editor (its module was not installed).
+- **Licence**: none added; these are values.
+- **Regenerate**: no script; the values were entered by hand.
+- **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_MASSES:BEGIN */` and `/* AIRCRAFT_MASSES:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_masses.json`.
+
 ## aircraft_pylons.json
 
 Table `DCS aircraft type -> pylons -> weapons each pylon accepts`, used by the **Loadout Editor** to compose a loadout station by station: one row per pylon, a drop-down with the weapons the pylon accepts, and the weight of the loadout. A type missing from the table cannot be composed.

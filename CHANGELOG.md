@@ -4,6 +4,12 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ## [Unreleased]
 
+### Added
+- **Loadout Editor**: an estimated weight for each Mi-24P, Mi-8MTV2, F-4E and Mirage F1EE — empty weight, fuel and stores, gun not counted — in orange above the recommended maximum, which stays allowed; the *Compose a loadout* window adds the take-off weight with full internal fuel. Empty and maximum weights from the DCS World aircraft definitions.
+
+### Changed
+- **Loadout Editor**: a livery can now be applied to aircraft of any country; the summary warns that the DCS mission editor does not offer it for that country, while the game shows it.
+
 ## [1.3.0] — 2026-11-05
 
 ### Added

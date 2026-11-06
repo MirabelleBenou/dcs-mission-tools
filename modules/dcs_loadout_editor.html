@@ -294,6 +294,9 @@
     .ld-badge.changed { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
     td.cell-livery.changed { color: var(--accent); }
     .none { color: var(--text-dim); font-style: italic; }
+    td.c-mass { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; }
+    .mass-over, .cmp-tot .mass-over b, .bar-v .lv-other { color: #E0B04C; }
+    .mass-over { font-weight: 600; }
     .narrow-only { display: none; }
     .btn-undo-cell {
       background: none; border: 1px solid var(--border); border-radius: 3px;
@@ -344,9 +347,6 @@
     .lv-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0; }
     .lv-card.chosen .lv-dot { background: var(--accent); border-color: var(--accent); }
     .ld-badge.ld-arrow { white-space: nowrap; }
-    .lv-card.other { opacity: 0.55; }
-    .lv-card.other.chosen { opacity: 1; }
-    .lv-why { font-size: 11px; color: var(--text-dim); font-style: italic; padding-left: 20px; margin-top: 2px; }
     #action-bar {
       position: sticky; bottom: 0; z-index: 5; background: var(--surface);
       border-top: 2px solid var(--accent); padding: 8px 14px; display: flex; flex-direction: column; gap: 6px;
@@ -498,6 +498,7 @@
       table { table-layout: fixed; }
       th.th-chk, td.td-chk { width: 30px; padding-left: 6px; padding-right: 4px; }
       th.th-ld, td.td-ld { width: 70px; }
+      th.c-mass, td.c-mass { width: 84px; white-space: normal; }
       th, td { padding-left: 6px; padding-right: 6px; overflow-wrap: anywhere; }
       th { white-space: normal; letter-spacing: 0.03em; }
     }
@@ -683,6 +684,7 @@
               <th class="c-role" data-i18n="table.col.role">Rôle</th>
               <th class="c-country" data-i18n="table.col.country">Pays</th>
               <th class="th-ld" data-i18n="table.col.loadout">Emport</th>
+              <th class="c-mass" data-i18n="table.col.mass" data-i18n-title="table.col.mass.title" title="Estimation : à vide + carburant + emports (canon non compté)">Masse</th>
               <th class="c-livery" data-i18n="table.col.livery">Livrée</th>
             </tr>
           </thead>
@@ -808,6 +810,11 @@ const I18N = {
     'table.col.role':              'Rôle',
     'table.col.country':           'Pays',
     'table.col.loadout':           'Emport',
+    'table.col.mass':              'Masse',
+    'table.col.mass.title':        'Estimation : à vide + carburant + emports (canon non compté)',
+    'mass.max':                    'Masse maximale recommandée : {max} kg',
+    'mass.over':                   'Au-delà de la masse maximale recommandée ({max} kg) — permis',
+    'cmp.takeoff':                 ' · Au décollage, plein interne : {y} (max {max} kg)',
     'table.col.livery':            'Livrée',
     'table.empty':                 'Aucun appareil ne correspond aux filtres actifs.',
     'table.type.count.one':        '{n} appareil',
@@ -894,11 +901,9 @@ const I18N = {
     'bar.set.gun':                 'canon {v} %',
     'bar.setSame':                 ' — déjà en place sur les appareils cochés',
     'bar.livery':                  '« {name} » → {n}',
-    'bar.liveryOther':             ' ({m} d\'un autre pays, non touchés)',
+    'bar.liveryOther':             ' ({m} d\'un autre pays : l\'éditeur de DCS ne propose pas cette livrée pour ce pays, le jeu l\'affiche)',
     'bar.liverySame':              '« {name} » — déjà portée par les appareils cochés',
-    'bar.liveryNoCountry':         '« {name} » est portée par des appareils de {country} ; aucun appareil coché n\'est de ce pays. Une livrée ne se pose que sur des appareils du même pays.',
     'bar.applyN':                  'Appliquer à la sélection ({n})',
-    'lv.why':                      'Livrée de {country} : aucun appareil coché de ce pays',
     'toast.badValue':              '❌ Valeur invalide : {field}',
     'toast.saved':                 '💾 {file} sauvegardé ({n} appareil(s) modifié(s))',
     'toast.saveError':             '❌ Erreur de sauvegarde :',
@@ -942,6 +947,11 @@ const I18N = {
     'table.col.role':              'Role',
     'table.col.country':           'Country',
     'table.col.loadout':           'Loadout',
+    'table.col.mass':              'Weight',
+    'table.col.mass.title':        'Estimate: empty + fuel + stores (gun not counted)',
+    'mass.max':                    'Recommended maximum weight: {max} kg',
+    'mass.over':                   'Above the recommended maximum weight ({max} kg) — allowed',
+    'cmp.takeoff':                 ' · Take-off, full internal fuel: {y} (max {max} kg)',
     'table.col.livery':            'Livery',
     'table.empty':                 'No aircraft match the active filters.',
     'table.type.count.one':        '{n} aircraft',
@@ -1028,11 +1038,9 @@ const I18N = {
     'bar.set.gun':                 'gun {v} %',
     'bar.setSame':                 ' — already set on the selected aircraft',
     'bar.livery':                  '“{name}” → {n}',
-    'bar.liveryOther':             ' ({m} from another country, unchanged)',
+    'bar.liveryOther':             ' ({m} from another country: the DCS mission editor does not offer this livery for that country; the game shows it)',
     'bar.liverySame':              '“{name}” — already worn by the selected aircraft',
-    'bar.liveryNoCountry':         '“{name}” is worn by aircraft of {country}; no selected aircraft is from that country. A livery is only applied to aircraft of the same country.',
     'bar.applyN':                  'Apply to selection ({n})',
-    'lv.why':                      '{country} livery: no selected aircraft from this country',
     'toast.badValue':              '❌ Invalid value: {field}',
     'toast.saved':                 '💾 {file} saved ({n} aircraft modified)',
     'toast.saveError':             '❌ Save error:',
@@ -3454,6 +3462,19 @@ const AIRCRAFT_LIMITS = {
  "Yak-52": {"fuel_max":87.84,"flare":null,"chaff":null,"charge_total":null,"flare_charge_size":null,"chaff_charge_size":null}
 };
 /* AIRCRAFT_LIMITS:END */
+
+// ═══════════════════════════════════════════════════════════════
+// MASSES DES APPAREILS — type DCS → masse à vide et masse maximale recommandée (kg), lues dans les définitions d'appareils
+// de DCS World (M_empty, M_max), data/aircraft_masses.json du dépôt. Copie en ligne : même garde de build que les autres tables.
+// ═══════════════════════════════════════════════════════════════
+/* AIRCRAFT_MASSES:BEGIN */
+const AIRCRAFT_MASSES = {
+ "F-4E-45MC": {"empty": 14742, "max": 28122},
+ "Mi-24P": {"empty": 8891, "max": 11500},
+ "Mi-8MT": {"empty": 8866, "max": 13000},
+ "Mirage-F1EE": {"empty": 7887, "max": 16200}
+};
+/* AIRCRAFT_MASSES:END */
 
 // ═══════════════════════════════════════════════════════════════
 // PYLÔNES — type → pylône → emports permis (index dans « clsids »), masse de chaque emport (kg) ;
@@ -8471,7 +8492,7 @@ function afterEdit() {
 
 // Motif pour lequel un appareil coché ne prend pas une modification (null : il la prend).
 // kind : 'payload' (emport, réglages) ou 'livery'.
-function skipReason(u, type, visSet, kind, country) {
+function skipReason(u, type, visSet, kind) {
   if (u.type !== type) return 'type';
   if (!visSet.has(u.unitId)) return 'hidden';
   if (UI_STATE.dupIds.has(u.unitId)) return 'duplicate';
@@ -8479,7 +8500,6 @@ function skipReason(u, type, visSet, kind, country) {
     if (u.payloadPos === null || !u.payloadTable) return 'noPayload';
     if (!u.reproducible) return 'notRepro';
   } else {
-    if (u.country !== country) return 'country';
     if (u.liveryPos === null) return 'noLivery';
   }
   return null;
@@ -8513,7 +8533,7 @@ function liveryTargets(type, entry) {
   const out = [];
   for (const u of UI_STATE.aircraft) {
     if (!UI_STATE.selected.has(u.unitId)) continue;
-    if (skipReason(u, type, visSet, 'livery', entry.country)) continue;
+    if (skipReason(u, type, visSet, 'livery')) continue;
     if (liveryEq(curLivery(u), entry.livery)) continue;
     out.push(u);
   }
@@ -8656,7 +8676,7 @@ function applyPlan(type) {
     plan.settings = { values: rs.out, error, targets, eligible: el.length > 0 };
   }
   const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
-  if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv), eligible: checked.some(u => !skipReason(u, type, visSet, 'livery', lv.country)) };
+  if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv), eligible: checked.some(u => !skipReason(u, type, visSet, 'livery')) };
   const all = new Set();
   for (const k of ['loadout', 'settings', 'livery']) if (plan[k]) plan[k].targets.forEach(u => all.add(u.unitId));
   plan.total = all.size;
@@ -8677,25 +8697,25 @@ function applyToSelection() {
   for (const u of UI_STATE.aircraft) {
     if (!UI_STATE.selected.has(u.unitId)) continue;
     let reached = false, firstWhy = null, changed = false;
-    const part = (kind, country, fn) => {
-      const why = skipReason(u, type, visSet, kind, country);
+    const part = (kind, fn) => {
+      const why = skipReason(u, type, visSet, kind);
       if (why) { if (!firstWhy) firstWhy = why; return; }
       reached = true;
       if (fn()) changed = true;
     };
-    if (plan.loadout) part('payload', undefined, () => {
+    if (plan.loadout) part('payload', () => {
       if (hasLoadout(u, plan.loadout.def)) return false;
       setPayload(u, payloadWithLoadout(curPayload(u), plan.loadout.def));
       return true;
     });
-    if (plan.settings) part('payload', undefined, () => {
+    if (plan.settings) part('payload', () => {
       const next = lxClone(curPayload(u));
       for (const [k, v] of Object.entries(plan.settings.values)) next[k] = v;
       if (deepEqValues(curPayload(u), next)) return false;
       setPayload(u, next);
       return true;
     });
-    if (plan.livery) part('livery', plan.livery.entry.country, () => {
+    if (plan.livery) part('livery', () => {
       if (liveryEq(curLivery(u), plan.livery.entry.livery)) return false;
       setLivery(u, plan.livery.entry.livery);
       return true;
@@ -8855,6 +8875,36 @@ function natCompare(a, b) {
   return String(a == null ? '' : a).localeCompare(String(b == null ? '' : b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
+// Masse estimée d'un appareil : à vide + carburant + emports (canon non compté) ; null : type absent de la table.
+// <CLEAN> et un pylône vide comptent 0 ; un CLSID sans masse connue compte 0 et rend l'estimation incertaine.
+function massOfStores(clsids) {
+  let kg = 0, unknown = false;
+  for (const c of clsids) {
+    if (c === undefined || c === null || c === '' || c === '<CLEAN>') continue;
+    const i = cmpIdx.get(c);
+    const w = i === undefined ? null : AIRCRAFT_PYLONS.weights[i];
+    if (w === null || w === undefined) unknown = true; else kg += w;
+  }
+  return { kg, unknown };
+}
+function unitMass(u) {
+  const m = AIRCRAFT_MASSES[u.type];
+  if (!m) return null;
+  const p = curPayload(u);
+  const fuel = p && typeof p === 'object' ? Number(p.fuel) : 0;
+  const py = p && typeof p === 'object' && p.pylons && typeof p.pylons === 'object' ? p.pylons : {};
+  const st = massOfStores(Object.values(py).map(x => x && typeof x === 'object' ? x.CLSID : undefined));
+  return { kg: m.empty + (isFinite(fuel) ? fuel : 0) + st.kg, unknown: st.unknown, max: m.max };
+}
+function massCell(u) {
+  const m = unitMass(u);
+  if (!m) return '<td class="c-mass"><span class="none">' + escHtml(t('livery.none')) + '</span></td>';
+  const over = m.kg > m.max;
+  const txt = cmpNum(m.kg) + ' kg' + (m.unknown ? ' + ?' : '');
+  const key = over ? 'mass.over' : 'mass.max';
+  return '<td class="c-mass' + (over ? ' mass-over' : '') + '" title="' + escHtml(t(key).replace('{max}', cmpNum(m.max))) + '">' + escHtml(txt) + '</td>';
+}
+
 function renderTable() {
   const rows = filteredAircraft();
   UI_STATE.filtered = rows;
@@ -8877,7 +8927,7 @@ function renderTable() {
     html += '<tr class="row-type" data-type="' + escHtml(tp) + '"><td class="td-chk">' +
       '<input type="checkbox" class="type-chk" data-type="' + escHtml(tp) + '" title="' + escHtml(t('table.checkType')) + '"' +
         (selN === list.length ? ' checked' : '') + (selN > 0 && selN < list.length ? ' data-indeterminate="1"' : '') + '>' +
-      '</td><td colspan="' + (narrowMQ.matches ? 4 : 6) + '"><div class="type-head">' +
+      '</td><td colspan="' + (narrowMQ.matches ? 5 : 7) + '"><div class="type-head">' +
       '<button class="type-caret" data-type="' + escHtml(tp) + '" title="' + escHtml(t('table.collapse')) + '">' + (collapsed ? '▸' : '▾') + '</button>' +
       '<span class="type-name">' + escHtml(tp) + '</span>' +
       '<span class="type-meta">' + escHtml(tn('table.type.count', list.length, list.length === total ? total : list.length + ' / ' + total)) +
@@ -8905,6 +8955,7 @@ function renderTable() {
               ? '<span class="ld-badge warn" title="' + escHtml(t('table.notRepro')) + '">!</span>'
               : '<span class="ld-badge">—</span>')) +
           (ed ? '<button class="btn-undo-cell" data-id="' + u.unitId + '" title="' + escHtml(t('table.undo')) + '">↺</button>' : '') + '</td>' +
+        massCell(u) +
         '<td class="c-livery cell-livery' + (lChanged ? ' changed' : '') + '">' +
           (lv === undefined ? '<span class="none">' + escHtml(t('livery.none')) + '</span>' : escHtml(lv)) + '</td>' +
         '</tr>';
@@ -8974,15 +9025,12 @@ function renderPanel() {
   const lvs = getLiveries(type);
   if (UI_STATE.choice.livery && !lvs.some(e => e.key === UI_STATE.choice.livery)) UI_STATE.choice.livery = null;
   let lhtml = '';
-  const lvVis = new Set(UI_STATE.filtered.map(x => x.unitId));
-  const lvCountries = new Set(UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && lvVis.has(u.unitId)).map(u => u.country));
   lvs.forEach((e, i) => {
     const chosen = UI_STATE.choice.livery === e.key;
-    const other = !lvCountries.has(e.country);
-    lhtml += '<div class="lv-card' + (chosen ? ' chosen' : '') + (other ? ' other' : '') + '" data-index="' + i + '" role="button" tabindex="0" aria-pressed="' + chosen + '">' +
+    lhtml += '<div class="lv-card' + (chosen ? ' chosen' : '') + '" data-index="' + i + '" role="button" tabindex="0" aria-pressed="' + chosen + '">' +
       '<div class="lv-card-top"><span class="lv-dot"></span><div class="lv-info"><span class="lv-name">' + escHtml(e.livery) + '</span>' +
       '<span class="lv-country">' + escHtml(e.country) + ' · ' + escHtml(tn('panel.count', e.count)) + '</span></div></div>' +
-      (other ? '<div class="lv-why">' + escHtml(t('lv.why').replace('{country}', e.country)) + '</div>' : '') + '</div>';
+      '</div>';
   });
   document.getElementById('panel-liveries').innerHTML = lhtml || '<div class="none">' + escHtml(t('panel.noLiveries')) + '</div>';
   renderActionBar(type);
@@ -9024,12 +9072,11 @@ function renderActionBar(type) {
   }
   if (plan.livery) {
     const { entry, targets } = plan.livery;
-    const nOther = plan.checked.filter(u => u.country !== entry.country).length;
+    const nOther = targets.filter(u => u.country !== entry.country).length;
     let v, cls = '';
-    if (nOther === plan.checked.length) { v = t('bar.liveryNoCountry').replace('{name}', entry.livery).replace('{country}', entry.country); cls = 'warn'; }
-    else if (!targets.length) { v = plan.livery.eligible ? t('bar.liverySame').replace('{name}', entry.livery) : t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', 0)); cls = 'off'; }
-    else v = t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', targets.length)) + (nOther ? t('bar.liveryOther').replace('{m}', nOther) : '');
-    rows.push([t('bar.k.livery'), escHtml(v), cls]);
+    if (!targets.length) { v = plan.livery.eligible ? t('bar.liverySame').replace('{name}', entry.livery) : t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', 0)); cls = 'off'; }
+    else v = t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', targets.length));
+    rows.push([t('bar.k.livery'), escHtml(v) + (targets.length && nOther ? '<span class="lv-other">' + escHtml(t('bar.liveryOther').replace('{m}', nOther)) + '</span>' : ''), cls]);
   }
   const blocked = !!(plan.settings && plan.settings.error);
   const can = plan.total > 0 && !blocked;
@@ -9429,7 +9476,13 @@ function cmpUpdate() {
       cell.setAttribute('aria-pressed', CMP.sel === n);
     }
   }
-  document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(cmpNum(total) + ' kg' + (unknown ? ' + ?' : '')) + '</b>';
+  let takeoff = '';
+  const am = AIRCRAFT_MASSES[CMP.type], lim = AIRCRAFT_LIMITS[CMP.type];
+  if (am && lim && typeof lim.fuel_max === 'number') {
+    const y = am.empty + lim.fuel_max + total;
+    takeoff = '<span class="' + (y > am.max ? 'mass-over' : '') + '">' + escHtml(t('cmp.takeoff')).replace('{y}', '<b>' + escHtml(cmpNum(y) + ' kg' + (unknown ? ' + ?' : '')) + '</b>').replace('{max}', escHtml(cmpNum(am.max))) + '</span>';
+  }
+  document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(cmpNum(total) + ' kg' + (unknown ? ' + ?' : '')) + '</b>' + takeoff;
   const ap = document.getElementById('cmp-apply');
   ap.textContent = t('cmp.apply');
   ap.disabled = false;
