@@ -587,6 +587,8 @@
     .cmp-row select { width: 100%; min-width: 0; }
     .cmp-row .cmp-nomirror { grid-column: 2 / -1; font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
     .cmp-row .cmp-nomirror[hidden] { display: none; }
+    .cmp-row .cmp-oneof { grid-column: 2 / -1; font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
+    .cmp-row .cmp-oneof[hidden] { display: none; }
     .cmp-row .pair { font: 12px var(--font-mono); color: var(--text-dim); }
     .cmp-row .cmp-kg { text-align: right; font: 13px var(--font-mono); color: var(--text-2); white-space: nowrap; }
     .cmp-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 12px 20px; border-top: 1px solid var(--border); }
@@ -874,6 +876,9 @@ const I18N = {
     'cmp.offTable':                '(hors table)',
     'cmp.sym':                     'Symétrique',
     'cmp.noMirror':                '↔ pas d\'équivalent sur la station jumelle {0}',
+    'cmp.oneOf':                   'Une seule porte : retiré de la station {0}',
+    'w.left':                      '(gauche)',
+    'w.right':                     '(droite)',
     'cmp.mass':                    'Masse des emports :',
     'cmp.cancel':                  'Annuler',
     'cmp.apply':                   'Retenir cet emport',
@@ -1013,6 +1018,9 @@ const I18N = {
     'cmp.offTable':                '(not in table)',
     'cmp.sym':                     'Symmetric',
     'cmp.noMirror':                '↔ no equivalent on twin station {0}',
+    'cmp.oneOf':                   'One door only: removed from station {0}',
+    'w.left':                      '(left)',
+    'w.right':                     '(right)',
     'cmp.mass':                    'Loadout weight:',
     'cmp.cancel':                  'Cancel',
     'cmp.apply':                   'Keep this loadout',
@@ -8383,6 +8391,55 @@ function payloadMirrorClsid(clsid, allowedOnTwin) {
   return same.length === 1 ? same[0] : '';
 }
 
+// Ces deux fonctions tiennent lieu de celles du bloc d'emport de Mission Plan.
+const payloadHas = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+function payloadPylons(type) { return cmpPylonsOf(type); }
+
+// Côté d'une arme, pour l'afficher dans son nom : 'L', 'R' ou ''. Un côté n'est rendu que si le nom de l'arme (payloadWeaponName) est porté par
+// plusieurs CLSID du même appareil (stations permises de `type`, plus l'ajout PAYLOAD_EXTRA) ET que ce CLSID porte un côté : « Left » / « Right »,
+// « LEFT » / « RIGHT » n'importe où, ou « _L » / « _R » en fin de CLSID (avant une accolade fermante éventuelle). Sinon ''.
+// Fonction pure : elle ne lit que les tables ; le texte « gauche » / « droite » est à la charge de l'appelant. Le nom des tables ne change pas.
+const payloadSideCache = {};
+function payloadClsidSide(clsid) {
+  const s = String(clsid);
+  if (/Left|LEFT/.test(s)) return 'L';
+  if (/Right|RIGHT/.test(s)) return 'R';
+  const m = /_([LR])\}?$/.exec(s);
+  return m ? m[1] : '';
+}
+function payloadWeaponSide(type, clsid) {
+  if (typeof clsid !== 'string' || clsid === '') return '';
+  const side = payloadClsidSide(clsid);
+  if (side === '') return '';
+  const name = payloadWeaponName(clsid);
+  if (name === null || name === '') return '';
+  if (!payloadHas(payloadSideCache, type)) {
+    const count = {};
+    const add = c => { const nm = payloadWeaponName(c); if (nm) count[nm] = (payloadHas(count, nm) ? count[nm] : 0) + 1; };
+    const seen = new Set();
+    (payloadPylons(type) || []).forEach(p => p.allowed.forEach(c => { if (!seen.has(c)) { seen.add(c); add(c); } }));
+    payloadSideCache[type] = count;
+  }
+  const c = payloadSideCache[type];
+  return payloadHas(c, name) && c[name] > 1 ? side : '';
+}
+
+// Stations dont une seule peut porter une arme à la fois : le Kord du Mi-24P, une porte (décision du 7 novembre).
+const PAYLOAD_ONE_OF = { 'Mi-24P': [['7', '8']] };
+// Les autres stations du groupe de `n` pour `type` ([] si aucun). Fonction pure : ni DOM, ni t(), ni stockage.
+function payloadOneOfOthers(type, n) {
+  if (!Object.prototype.hasOwnProperty.call(PAYLOAD_ONE_OF, type)) return [];
+  const out = [];
+  PAYLOAD_ONE_OF[type].forEach(g => { if (g.indexOf(String(n)) >= 0) g.forEach(m => { if (m !== String(n) && out.indexOf(m) < 0) out.push(m); }); });
+  return out;
+}
+
+// Nom d'une arme suivi de son côté, quand elle en a un parmi des homonymes (payloadWeaponSide).
+function weaponLabel(type, clsid) {
+  const side = payloadWeaponSide(type, clsid);
+  return weaponName(clsid) + (side === 'L' ? ' ' + t('w.left') : side === 'R' ? ' ' + t('w.right') : '');
+}
+
 // Un emport, ce sont ses pylônes : les mêmes CLSID aux mêmes numéros.
 function loadoutSig(payload) {
   const py = payload && payload.pylons;
@@ -9104,7 +9161,7 @@ function renderPanel() {
     const py = (e.source.pylons && typeof e.source.pylons === 'object') ? e.source.pylons : {};
     const keys = Object.keys(py).sort((a, b) => Number(a) - Number(b));
     const pyl = keys.length
-      ? keys.map(k => '<div><span class="pn">' + escHtml(k) + ' — </span>' + escHtml(py[k] && py[k].CLSID !== undefined ? weaponName(py[k].CLSID) : '?') + '</div>').join('')
+      ? keys.map(k => '<div><span class="pn">' + escHtml(k) + ' — </span>' + escHtml(py[k] && py[k].CLSID !== undefined ? weaponLabel(type, py[k].CLSID) : '?') + '</div>').join('')
       : '<div class="none">' + escHtml(t('panel.noPylons')) + '</div>';
     const chosen = UI_STATE.choice.loadout === e.letter;
     html += '<div class="ld-card' + (chosen ? ' chosen' : '') + '" data-letter="' + escHtml(e.letter) + '" role="button" tabindex="0" aria-pressed="' + chosen + '">' +
@@ -9332,7 +9389,7 @@ document.getElementById('le-tabs').addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════════════════════
 const CMP = {
   open: false, type: null, pyl: [], pylBase: [], view: null, pairs: {},
-  baseLetter: '', base: null, start: {}, st: {}, sym: true, sel: null,
+  baseLetter: '', base: null, start: {}, st: {}, sym: true, sel: null, oneOf: null,
   opener: null, ro: null, mq: null,
 };
 function cmpSmall() { return CMP.mq ? CMP.mq.matches : window.innerWidth <= 768; }
@@ -9399,6 +9456,7 @@ function cmpSetBase(letter) {
     CMP.start[n] = c; CMP.st[n] = c;
   }
   CMP.sel = null;
+  CMP.oneOf = null;
 }
 
 // La composition, sous la forme d'une définition d'emport de la v1 : { sig, source:{ pylons, ammo_type?, restricted? } }.
@@ -9483,6 +9541,7 @@ function cmpFocusFrom() {
 function cmpClose() {
   if (!CMP.open) return;
   CMP.open = false;
+  CMP.oneOf = null;
   cmpInert(false);
   if (CMP.ro) { CMP.ro.disconnect(); CMP.ro = null; }
   document.getElementById('cmp-overlay').classList.add('hidden');
@@ -9529,15 +9588,15 @@ function cmpBuild() {
     let opts = '';
     const s0 = CMP.start[n];
     if (s0 !== '' && !allowed.includes(s0)) {
-      opts += '<option value="' + escHtml(s0) + '">' + escHtml(weaponName(s0) + ' ' + t('cmp.offTable')) + '</option>';
+      opts += '<option value="' + escHtml(s0) + '">' + escHtml(weaponLabel(CMP.type, s0) + ' ' + t('cmp.offTable')) + '</option>';
     }
     opts += '<option value="">' + escHtml(t('cmp.none')) + '</option>';
-    for (const c of allowed) opts += '<option value="' + escHtml(c) + '">' + escHtml(weaponName(c)) + '</option>';
+    for (const c of allowed) opts += '<option value="' + escHtml(c) + '">' + escHtml(weaponLabel(CMP.type, c)) + '</option>';
     const p = (view && cmpHas(CMP.pairs, n)) ? CMP.pairs[n] : null;
     h += '<div class="cmp-row" data-st="' + escHtml(n) + '"><span class="sn">' + escHtml(n) + '</span>' +
       '<select class="cmp-sel" data-st="' + escHtml(n) + '" aria-label="' + escHtml(n) + '">' + opts + '</select>' +
       '<span class="pair">' + (p !== null ? '↔ ' + escHtml(p) : '') + '</span><span class="cmp-kg"></span>' +
-      '<span class="cmp-nomirror" hidden></span></div>';
+      '<span class="cmp-nomirror" hidden></span><span class="cmp-oneof" hidden></span></div>';
   }
   h += '</div><div class="cmp-foot">' +
     (view ? '<label><input type="checkbox" id="cmp-sym"' + (CMP.sym ? ' checked' : '') + '> ' + escHtml(t('cmp.sym')) + '</label>' : '') +
@@ -9597,11 +9656,19 @@ function cmpUpdate() {
       nm.textContent = none ? t('cmp.noMirror').replace('{0}', tw.n) : '';
       nm.hidden = !none;
     }
+    const oo = row.querySelector('.cmp-oneof');
+    if (oo) {
+      const on = !!CMP.oneOf && CMP.oneOf.n === n;
+      oo.textContent = on ? t('cmp.oneOf').replace('{0}', CMP.oneOf.removed.join(', ')) : '';
+      oo.hidden = !on;
+    }
     row.classList.toggle('sel', CMP.sel === n);
     const cell = modal.querySelector('.cmp-st[data-st="' + n + '"]');
     if (cell) {
-      cell.querySelector('.w').textContent = cmpShort(c);
-      cell.title = c ? weaponName(c) : '';
+      const sd = payloadWeaponSide(CMP.type, c);
+      const sdt = sd === 'L' ? ' ' + t('w.left') : sd === 'R' ? ' ' + t('w.right') : '';
+      cell.querySelector('.w').textContent = cmpShort(c) + (c ? sdt : '');
+      cell.title = c ? weaponLabel(CMP.type, c) : '';
       cell.classList.toggle('sel', CMP.sel === n);
       cell.setAttribute('aria-pressed', CMP.sel === n);
     }
@@ -9644,12 +9711,18 @@ function cmpDraw() {
   svg.innerHTML = out;
 }
 
-// Un choix sur une station ; « Symétrique » pose aussi sur sa paire l'arme miroir (payloadMirrorClsid) ; si elle n'en a pas, la paire ne bouge pas.
+// Un choix non vide vide les autres stations de son groupe (payloadOneOfOthers) et le dit sur la station choisie ; « Symétrique » pose aussi sur sa paire l'arme miroir (payloadMirrorClsid) ; si elle n'en a pas, la paire ne bouge pas.
 // « Vide » ne vide la paire que si elle portait, juste avant ce choix, le miroir de l'arme que la station portait.
 function cmpChoose(n, c) {
   const prev = CMP.st[n];
   CMP.st[n] = c;
   CMP.sel = n;
+  CMP.oneOf = null;
+  if (c !== '') {
+    const removed = payloadOneOfOthers(CMP.type, n).filter(m => cmpHas(CMP.st, m) && CMP.st[m] !== '');
+    removed.forEach(m => { CMP.st[m] = ''; });
+    if (removed.length) CMP.oneOf = { n, removed };
+  }
   if (CMP.sym && CMP.view && cmpHas(CMP.pairs, n)) {
     const pp = CMP.pyl.find(x => x.n === CMP.pairs[n]);
     if (pp) {
