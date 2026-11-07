@@ -585,6 +585,8 @@
     .cmp-row .sn { font: 600 13px var(--font-mono); color: var(--text-dim); }
     .cmp-row.sel .sn { color: var(--accent); }
     .cmp-row select { width: 100%; min-width: 0; }
+    .cmp-row .cmp-nomirror { grid-column: 2 / -1; font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
+    .cmp-row .cmp-nomirror[hidden] { display: none; }
     .cmp-row .pair { font: 12px var(--font-mono); color: var(--text-dim); }
     .cmp-row .cmp-kg { text-align: right; font: 13px var(--font-mono); color: var(--text-2); white-space: nowrap; }
     .cmp-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 18px; padding: 12px 20px; border-top: 1px solid var(--border); }
@@ -871,6 +873,7 @@ const I18N = {
     'cmp.none':                    '— vide —',
     'cmp.offTable':                '(hors table)',
     'cmp.sym':                     'Symétrique',
+    'cmp.noMirror':                '↔ pas d\'équivalent sur la station jumelle {0}',
     'cmp.mass':                    'Masse des emports :',
     'cmp.cancel':                  'Annuler',
     'cmp.apply':                   'Retenir cet emport',
@@ -1009,6 +1012,7 @@ const I18N = {
     'cmp.none':                    '— empty —',
     'cmp.offTable':                '(not in table)',
     'cmp.sym':                     'Symmetric',
+    'cmp.noMirror':                '↔ no equivalent on twin station {0}',
     'cmp.mass':                    'Loadout weight:',
     'cmp.cancel':                  'Cancel',
     'cmp.apply':                   'Keep this loadout',
@@ -8357,6 +8361,28 @@ function weaponName(clsid) {
   return n === undefined ? String(clsid) : n;
 }
 
+// Tient lieu de payloadWeaponName du bloc d'emport de Mission Plan : '' pour un CLSID vide, le nom de WEAPON_NAMES, sinon null.
+function payloadWeaponName(clsid) {
+  if (clsid === '' || clsid === undefined || clsid === null) return '';
+  return Object.prototype.hasOwnProperty.call(WEAPON_NAMES, clsid) ? WEAPON_NAMES[clsid] : null;
+}
+
+// Symétrie : le CLSID à poser sur la station jumelle pour le choix `clsid` ; '' s'il n'y a rien à poser. allowedOnTwin : les CLSID permis sur la jumelle.
+// Dans l'ordre : le même CLSID, s'il est permis ; sinon celui où Left↔Right (LEFT↔RIGHT, _L↔_R en fin de mot) sont échangés, s'il est permis ;
+// sinon l'unique arme permise de même nom (payloadWeaponName) ; sinon ''. Fonction pure : elle ne lit ni la page, ni le stockage, ni les textes affichés.
+function payloadMirrorClsid(clsid, allowedOnTwin) {
+  if (clsid === '' || clsid === undefined || clsid === null) return '';
+  const allowed = Array.isArray(allowedOnTwin) ? allowedOnTwin : [];
+  if (allowed.indexOf(clsid) >= 0) return clsid;
+  const swap = { Left: 'Right', Right: 'Left', LEFT: 'RIGHT', RIGHT: 'LEFT' };
+  const swapped = String(clsid).replace(/Left|Right|LEFT|RIGHT/g, m => swap[m]).replace(/_([LR])(?![A-Za-z0-9])/g, (m, c) => '_' + (c === 'L' ? 'R' : 'L'));
+  if (swapped !== clsid && allowed.indexOf(swapped) >= 0) return swapped;
+  const name = payloadWeaponName(clsid);
+  if (name === null || name === '') return '';
+  const same = allowed.filter(c => payloadWeaponName(c) === name);
+  return same.length === 1 ? same[0] : '';
+}
+
 // Un emport, ce sont ses pylônes : les mêmes CLSID aux mêmes numéros.
 function loadoutSig(payload) {
   const py = payload && payload.pylons;
@@ -9510,7 +9536,8 @@ function cmpBuild() {
     const p = (view && cmpHas(CMP.pairs, n)) ? CMP.pairs[n] : null;
     h += '<div class="cmp-row" data-st="' + escHtml(n) + '"><span class="sn">' + escHtml(n) + '</span>' +
       '<select class="cmp-sel" data-st="' + escHtml(n) + '" aria-label="' + escHtml(n) + '">' + opts + '</select>' +
-      '<span class="pair">' + (p !== null ? '↔ ' + escHtml(p) : '') + '</span><span class="cmp-kg"></span></div>';
+      '<span class="pair">' + (p !== null ? '↔ ' + escHtml(p) : '') + '</span><span class="cmp-kg"></span>' +
+      '<span class="cmp-nomirror" hidden></span></div>';
   }
   h += '</div><div class="cmp-foot">' +
     (view ? '<label><input type="checkbox" id="cmp-sym"' + (CMP.sym ? ' checked' : '') + '> ' + escHtml(t('cmp.sym')) + '</label>' : '') +
@@ -9563,6 +9590,13 @@ function cmpUpdate() {
       if (w === null || w === undefined) w = null;
     }
     row.querySelector('.cmp-kg').textContent = w === null ? '—' : cmpNum(w) + ' kg';
+    const nm = row.querySelector('.cmp-nomirror');
+    if (nm) {
+      const tw = (CMP.sym && CMP.view && c !== '' && cmpHas(CMP.pairs, n)) ? CMP.pyl.find(x => x.n === CMP.pairs[n]) : null;
+      const none = !!tw && payloadMirrorClsid(c, tw.allowed) === '';
+      nm.textContent = none ? t('cmp.noMirror').replace('{0}', tw.n) : '';
+      nm.hidden = !none;
+    }
     row.classList.toggle('sel', CMP.sel === n);
     const cell = modal.querySelector('.cmp-st[data-st="' + n + '"]');
     if (cell) {
@@ -9610,15 +9644,22 @@ function cmpDraw() {
   svg.innerHTML = out;
 }
 
-// Un choix sur une station ; « Symétrique » le pose aussi sur sa paire quand la paire le permet
-// « Vide » ne se pose sur la paire que si elle portait le même CLSID que la station juste avant ce choix.
+// Un choix sur une station ; « Symétrique » pose aussi sur sa paire l'arme miroir (payloadMirrorClsid) ; si elle n'en a pas, la paire ne bouge pas.
+// « Vide » ne vide la paire que si elle portait, juste avant ce choix, le miroir de l'arme que la station portait.
 function cmpChoose(n, c) {
   const prev = CMP.st[n];
   CMP.st[n] = c;
   CMP.sel = n;
   if (CMP.sym && CMP.view && cmpHas(CMP.pairs, n)) {
     const pp = CMP.pyl.find(x => x.n === CMP.pairs[n]);
-    if (pp && (c === '' ? (prev !== '' && CMP.st[pp.n] === prev) : pp.allowed.includes(c))) CMP.st[pp.n] = c;
+    if (pp) {
+      if (c === '') {
+        if (prev !== '' && CMP.st[pp.n] === payloadMirrorClsid(prev, pp.allowed)) CMP.st[pp.n] = '';
+      } else {
+        const m = payloadMirrorClsid(c, pp.allowed);
+        if (m !== '') CMP.st[pp.n] = m;
+      }
+    }
   }
   cmpUpdate();
 }
@@ -9676,7 +9717,7 @@ try {
   modal.addEventListener('change', e => {
     const s = e.target;
     if (s.id === 'cmp-from') { cmpSetBase(s.value); cmpBuild(); cmpFocusFrom(); return; }
-    if (s.id === 'cmp-sym') { CMP.sym = s.checked; return; }
+    if (s.id === 'cmp-sym') { CMP.sym = s.checked; cmpUpdate(); return; }
     if (s.classList && s.classList.contains('cmp-sel')) cmpChoose(s.dataset.st, s.value);
   });
   modal.addEventListener('focusin', e => {
