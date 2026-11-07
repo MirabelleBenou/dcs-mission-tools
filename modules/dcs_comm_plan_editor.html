@@ -278,6 +278,7 @@
       border-top: 1px solid var(--border);
       padding: 10px 24px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 12px;
       flex-shrink: 0;
@@ -539,6 +540,23 @@
       color: var(--phosphor);
     }
     .freq-input[placeholder="~ multiples ~"] { color: var(--text-dim); font-style: italic; }
+    .freq-input.out-of-band { color: var(--warn); border-color: var(--warn); }
+    .radio-band {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+    .band-error {
+      font-size: 11px;
+      color: var(--warn);
+      font-family: var(--font-mono);
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
 
     /* Bouton undo par cellule */
     .btn-undo-cell {
@@ -895,7 +913,10 @@ const I18N = {
     'import.applied':          '• Types du template appliqués au .miz : ',
     'import.absentMiz':        '• Types du template absents du .miz (ignorés) : ',
     'import.absentTpl':        '• Types du .miz absents du template (intacts) : ',
-    'import.warnValues':       '⚠ {n} valeur(s) invalide(s) ignorée(s)',
+    'import.warnValues':       '⚠ {n} valeur(s) invalide(s) ou hors bande ignorée(s)',
+    'band.label':              'Bande : {b} MHz',
+    'band.refused':            '{v} MHz : hors bande ({b} MHz).',
+    'band.outTitle':           'Hors bande : {b} MHz',
   },
   en: {
     'doc.title':               'DCS Comm Plan Editor',
@@ -950,7 +971,10 @@ const I18N = {
     'import.applied':          '• Template types applied to .miz: ',
     'import.absentMiz':        '• Template types absent from .miz (ignored): ',
     'import.absentTpl':        '• .miz types absent from template (intact): ',
-    'import.warnValues':       '⚠ {n} invalid value(s) ignored',
+    'import.warnValues':       '⚠ {n} invalid or out-of-band value(s) ignored',
+    'band.label':              'Band: {b} MHz',
+    'band.refused':            '{v} MHz: out of band ({b} MHz).',
+    'band.outTitle':           'Out of band: {b} MHz',
   }
 };
 
@@ -1969,6 +1993,45 @@ function radioCockpitChannel(type, radioIndex, mizChannel) {
 }
 /* ===== FIN DES POSTES RADIO ===== */
 
+// Bornes de l'éditeur de mission de DCS World (CoreMods, panelRadio), recoupées avec Chuck's Guide pour le Mi-24P ; Mi-8MT : Chuck's Guide ; Mirage F1EE : manuel d'Aerges.
+const RADIO_BANDES = {
+  "Mi-24P":        { 1: [[100, 149.975], [220, 399.9]], 2: [[20, 59.9]] },
+  "Mi-8MT":        { 1: [[100, 149.975], [220, 399.975]], 2: [[20, 59.975]] },
+  "F-4E-45MC":     { 1: [[225, 399.95]], 2: [[265, 284.9]] },
+  "Mirage-F1EE":   { 1: [[118, 143.975], [225, 399.975]], 2: [[225, 399.975]] },
+  "A-10C":         { 1: [[116, 151.975]], 2: [[225, 399.975]], 3: [[30, 87.995]] },
+  "A-10C_2":       { 2: [[225, 399.975]], 3: [[30, 87.995]] },
+  "AH-64D_BLK_II": { 1: [[108, 151.975]], 2: [[225, 399.975]], 3: [[30, 87.975]], 4: [[30, 87.975]] },
+  "AV8BNA":        { 1: [[30, 400]], 2: [[30, 400]] },
+  "CH-47Fbl1":     { 1: [[30, 87.975], [108, 151.975]], 2: [[225, 399.975]], 3: [[30, 87.975]] },
+  "F-14B":         { 1: [[225, 399.975]], 2: [[30, 87.975], [108, 173.975], [225, 399.975]] },
+  "F-14A-135-GR":  { 1: [[225, 399.975]], 2: [[30, 87.975], [108, 173.975], [225, 399.975]] },
+  "F-14A-135-GR-Early": { 1: [[225, 399.975]], 2: [[30, 87.975], [108, 173.975], [225, 399.975]] },
+  "F-15ESE":       { 1: [[225, 399.975]] },
+  "F-16C_50":      { 1: [[225, 399.975]], 2: [[30, 87.975], [116, 155.975]] },
+  "F-5E-3":        { 1: [[225, 399.999]] },
+  "FA-18C_hornet": { 1: [[30, 87.995], [118, 173.995], [225, 399.975]], 2: [[30, 87.995], [118, 173.995], [225, 399.975]] },
+  "MiG-29 Fulcrum": { 1: [[100, 149.975], [220, 399.975]] },
+  "OH58D":         { 3: [[30, 87.975]] }
+};
+
+// Plages [min, max] du poste (MHz) pour un type et un numéro de poste ; null si pas de bande connue.
+function radioBand(type, radioIndex) {
+  const map = Object.prototype.hasOwnProperty.call(RADIO_BANDES, type) ? RADIO_BANDES[type] : null;
+  return map && Object.prototype.hasOwnProperty.call(map, radioIndex) ? map[radioIndex] : null;
+}
+function freqInBand(ranges, v) {
+  return ranges.some(function(r) { return v >= r[0] - 1e-6 && v <= r[1] + 1e-6; });
+}
+// Une borne au plus juste (3 décimales max, sans zéro final), virgule en FR.
+function fmtBandNum(n, decimals3) {
+  const s = decimals3 ? Number(n).toFixed(3) : String(parseFloat(Number(n).toFixed(3)));
+  return CURRENT_LANG === 'fr' ? s.replace('.', ',') : s;
+}
+function bandRangesText(ranges) {
+  return ranges.map(function(r) { return fmtBandNum(r[0]) + '–' + fmtBandNum(r[1]); }).join(' · ');
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // UI STATE
 // ════════════════════════════════════════════════════════════════════════════
@@ -2518,8 +2581,51 @@ function refreshInputState(input, isModified, originalValue) {
   if (undoBtn) undoBtn.style.display = isModified ? 'inline-flex' : 'none';
 }
 
+// Une cellule (type, poste, canal) est hors bande si une des valeurs courantes de ses slots l'est.
+function cellOutOfBand(type, radioIndex, chNum, slots) {
+  const band = radioBand(type, radioIndex);
+  if (!band || !slots) return false;
+  for (const slot of slots) {
+    const radio = slot.unit.radios && slot.unit.radios.find(function(r) { return r.index === radioIndex; });
+    const ch = radio && radio.channels[chNum];
+    if (!ch) continue;
+    const v = currentFreqValue(slotId(slot), radioIndex, chNum, ch.frequency);
+    if (!freqInBand(band, v)) return true;
+  }
+  return false;
+}
+// Pose ou retire la marque hors bande d'un champ de fréquence de canal.
+function refreshBandMark(input, type, slots) {
+  if (input.dataset.field !== 'frequency') return;
+  const rIdx = parseInt(input.dataset.radio);
+  const band = radioBand(type, rIdx);
+  const oob = !!band && cellOutOfBand(type, rIdx, parseInt(input.dataset.ch), slots);
+  input.classList.toggle('out-of-band', oob);
+  if (oob) input.title = t('band.outTitle').replace('{b}', bandRangesText(band));
+  else input.removeAttribute('title');
+}
+function clearBandError(input) {
+  const block = input.closest('.radio-block');
+  const old = block && block.querySelector('.band-error');
+  if (old) old.remove();
+}
+function showBandError(input, band, value) {
+  const block = input.closest('.radio-block');
+  if (!block) return;
+  clearBandError(input);
+  const el = document.createElement('div');
+  el.className = 'band-error';
+  el.setAttribute('role', 'alert');
+  el.textContent = t('band.refused').replace('{v}', fmtBandNum(value, true)).replace('{b}', bandRangesText(band));
+  const anchor = block.querySelector('.radio-band') || block.querySelector('.radio-label');
+  anchor.after(el);
+}
+
 // ─── renderRadioTable : version Étape C (inputs actifs) ───────────────────
-function renderRadioTable(radio, type, groupModulation, isReadOnly, divergentCells, slotKey) {
+function renderRadioTable(radio, type, groupModulation, isReadOnly, divergentCells, slotKey, slots) {
+  const band = radioBand(type, radio.index);
+  const bandMin = band ? String(Math.min.apply(null, band.map(function(r) { return r[0]; }))) : '0';
+  const bandMax = band ? String(Math.max.apply(null, band.map(function(r) { return r[1]; }))) : '999.999';
   const channels = Object.keys(radio.channels).map(Number).sort((a,b) => a - b);
 
   let rows = '';
@@ -2548,12 +2654,15 @@ function renderRadioTable(radio, type, groupModulation, isReadOnly, divergentCel
       const modCls  = isModified ? ' modified' : '';
       const modColor = isModified ? 'style="color:var(--phosphor)"' : '';
       const undoDisplay = isModified ? 'inline-flex' : 'none';
+      const oob = band && cellOutOfBand(type, radio.index, chNum, slots || null);
+      const oobCls = oob ? ' out-of-band' : '';
+      const oobTitle = oob ? ` title="${esc(t('band.outTitle').replace('{b}', bandRangesText(band)))}"` : '';
 
       rows += `<tr>
         <td${chTitle}>${chShown}</td>
         <td>
           <div class="freq-cell" style="position:relative;display:flex;align-items:center;gap:6px;justify-content:flex-end">
-            <input class="freq-input${modCls}" type="number" step="0.001" min="0" max="999.999"
+            <input class="freq-input${modCls}${oobCls}" type="number" step="0.001" min="${bandMin}" max="${bandMax}"${oobTitle}
               value="${esc(freqVal)}" placeholder="${esc(placeholder)}"
               data-orig="${esc(String(origFreq))}"
               data-radio="${radio.index}" data-ch="${chNum}" data-field="frequency"
@@ -2569,6 +2678,7 @@ function renderRadioTable(radio, type, groupModulation, isReadOnly, divergentCel
   return `
     <div class="radio-block">
       <div class="radio-label" title="${esc(radioLabel(type, radio.index))}">${esc(radioLabel(type, radio.index))}</div>
+      ${band ? `<div class="radio-band">${esc(t('band.label').replace('{b}', bandRangesText(band)))}</div>` : ''}
       <table class="radio-table">
         <thead><tr><th>${t('table.ch')}</th><th style="text-align:right">${t('table.freq')}</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -2650,6 +2760,20 @@ function attachCardListeners(body, targetSlots, view) {
       return;
     }
     const newValue = Math.round(rawVal * 1000) / 1000; // 3 décimales max
+    // Bande du poste : une saisie hors de toutes ses plages est refusée (le champ reprend sa valeur courante)
+    if (field === 'frequency') {
+      const band = radioBand(view.type, parseInt(input.dataset.radio));
+      if (band && !freqInBand(band, newValue)) {
+        const sidB = slotId(targetSlots[0]);
+        const kB   = editKey(sidB, parseInt(input.dataset.radio), parseInt(input.dataset.ch));
+        const isDivB = !!input.placeholder && input.placeholder.includes('multiples');
+        if (isDivB && !UI_STATE.edits.has(kB)) input.value = '';
+        else input.value = Number(UI_STATE.edits.has(kB) ? UI_STATE.edits.get(kB).newValue : parseFloat(input.dataset.orig)).toFixed(3);
+        showBandError(input, band, newValue);
+        return;
+      }
+      clearBandError(input);
+    }
     // Cellule divergente : forcer l'application même si newValue = oldValue sur certains slots
     const isDivergent = !!input.placeholder && input.placeholder.includes('multiples');
 
@@ -2670,6 +2794,7 @@ function attachCardListeners(body, targetSlots, view) {
     const k       = field2 === 'groupFreq' ? groupFreqEditKey(sid) : editKey(sid, rIdx, chNum);
     const isMod   = UI_STATE.edits.has(k);
     refreshInputState(input, isMod, undefined);
+    refreshBandMark(input, view.type, targetSlots);
     // Marquer la carte comme modifiée
     const card = body.closest('.type-card');
     if (card) card.classList.toggle('has-edits', typeHasEdits(view.type));
@@ -2701,6 +2826,7 @@ function attachCardListeners(body, targetSlots, view) {
         const orig = parseFloat(inp.dataset.orig);
         inp.value = Number(orig).toFixed(3);
         refreshInputState(inp, false, orig);
+        refreshBandMark(inp, view.type, targetSlots);
       }
     }
 
@@ -2788,7 +2914,7 @@ function renderTypeCard(view) {
       let subHTML = `<div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">${esc(csName)} <span style="color:var(--text-dim);font-weight:400">— ${esc(slot.unit.type)}</span></div>`;
       if (isNoSync) subHTML += renderGroupFreqPanel(slot.group, false, slotId(slot));
       for (const radio of slot.unit.radios) {
-        subHTML += renderRadioTable(radio, view.type, gmod, false, new Set(), slotId(slot));
+        subHTML += renderRadioTable(radio, view.type, gmod, false, new Set(), slotId(slot), [slot]);
       }
       sub.innerHTML = subHTML;
       // Attacher les listeners sur ce sous-bloc (1 slot uniquement)
@@ -2823,7 +2949,7 @@ function renderTypeCard(view) {
 
     if (isNoSync) bodyHTML += renderGroupFreqPanel(rep.group, false, repSid);
     for (const radio of rep.unit.radios) {
-      bodyHTML += renderRadioTable(radio, view.type, gmod, false, view.divergentCells, repSid);
+      bodyHTML += renderRadioTable(radio, view.type, gmod, false, view.divergentCells, repSid, view.slots);
     }
 
     body.innerHTML = bodyHTML;
@@ -2996,6 +3122,12 @@ function importTemplate(file) {
             const newFreq = chConfig.frequency;
             if (typeof newFreq !== 'number' || !Number.isFinite(newFreq) || newFreq < 0) {
               warnings.push('Fréquence invalide ignorée : ' + type + ' Radio[' + radioIndex + '].ch[' + chNum + '] = ' + newFreq);
+              continue;
+            }
+
+            const bandI = radioBand(type, radioIndex);
+            if (bandI && !freqInBand(bandI, newFreq)) {
+              warnings.push('Fréquence hors bande ignorée : ' + type + ' Radio[' + radioIndex + '].ch[' + chNum + '] = ' + newFreq);
               continue;
             }
 

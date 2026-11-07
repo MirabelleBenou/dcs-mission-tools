@@ -363,6 +363,7 @@
       border-top: 1px solid var(--border);
       padding: 10px 24px;
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 12px;
       flex-shrink: 0;
@@ -714,7 +715,7 @@
   <!-- Action bar -->
   <!-- Info tableau : compteur + toggle + exclus -->
   <div id="table-info-bar">
-    <div class="display-count">Affichage : <span id="count-display">0</span> / <span id="count-total">0</span> unités</div>
+    <div class="display-count"><span data-i18n="table.showing">Affichage :</span> <span id="count-display">0</span> / <span id="count-total">0</span> <span data-i18n="table.units">unités</span></div>
     <div class="excl-count" id="excl-count" style="display:none"></div>
     <label class="toggle-modified" id="toggle-modified-wrap" style="display:none">
       <input type="checkbox" id="toggle-modified">
@@ -830,6 +831,8 @@ const I18N = {
     'table.col.newType':           'Nouveau type',
     'table.col.skill':             'Skill',
     'table.empty':                 'Aucune unité ne correspond aux filtres actifs.',
+    'table.showing':               'Affichage :',
+    'table.units':                 'unités',
     'table.readonly.title':        'Lecture seule — préservé pour scripts mission',
     'table.cancelSkill.title':     'Annuler la modification du skill',
     'spinner.loading':             'Chargement\u2026',
@@ -910,6 +913,8 @@ const I18N = {
     'table.col.newType':           'New type',
     'table.col.skill':             'Skill',
     'table.empty':                 'No units match the active filters.',
+    'table.showing':               'Showing:',
+    'table.units':                 'units',
     'table.readonly.title':        'Read-only — preserved for mission scripts',
     'table.cancelSkill.title':     'Cancel skill edit',
     'spinner.loading':             'Loading\u2026',

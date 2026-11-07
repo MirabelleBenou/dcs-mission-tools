@@ -7,9 +7,13 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 ### Added
 - **Loadout Editor**: an estimated weight for each Mi-24P, Mi-8MTV2, F-4E and Mirage F1EE — empty weight, fuel and stores, gun not counted, detailed on hover — in orange above the recommended maximum, which stays allowed; the *Compose a loadout* window starts from the loadout of the selected aircraft and adds their take-off weight. Empty and maximum weights from the DCS World aircraft definitions.
 - **Loadout Editor**: the settings show the values of the selected aircraft — or their range when they differ — and only a changed field is applied; sliders set the fuel as a percentage of the type's maximum and the gun in %, the fields still taking a number.
+- **Comm Plan Editor**: each radio shows its frequency band under its name; a frequency typed outside the band is refused with the band quoted, one already in the mission is shown in orange without blocking the save, and an imported template value outside the band is skipped. Bands from the DCS World mission editor, cross-checked with Chuck's Guide for the Mi-24P; Mi-8MTV2 from Chuck's Guide, Mirage F1EE from the Aerges manual; radios without a known band are unchanged.
 
 ### Changed
 - **Loadout Editor**: a livery can now be applied to aircraft of any country; the summary warns that the DCS mission editor does not offer it for that country, while the game shows it.
+
+### Fixed
+- **Comm Plan Editor** and **Ground Unit Swapper**: on a narrow screen the footer wraps instead of pushing the *Save* button off-screen; the Ground Unit Swapper's unit counter follows the language.
 
 ## [1.3.0] — 2026-11-05
 
