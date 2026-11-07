@@ -541,6 +541,7 @@
     }
     .freq-input[placeholder="~ multiples ~"] { color: var(--text-dim); font-style: italic; }
     .freq-input.out-of-band { color: var(--warn); border-color: var(--warn); }
+    .freq-input.out-of-band::placeholder { color: var(--warn); }
     .radio-band {
       font-size: 11px;
       color: var(--text-dim);
@@ -2021,7 +2022,8 @@ function radioBand(type, radioIndex) {
   return map && Object.prototype.hasOwnProperty.call(map, radioIndex) ? map[radioIndex] : null;
 }
 function freqInBand(ranges, v) {
-  return ranges.some(function(r) { return v >= r[0] - 1e-6 && v <= r[1] + 1e-6; });
+  v = Math.round(v * 1000) / 1000; // le test porte sur la valeur affichée (3 décimales)
+  return ranges.some(function(r) { return v >= r[0] - 1e-9 && v <= r[1] + 1e-9; });
 }
 // Une borne au plus juste (3 décimales max, sans zéro final), virgule en FR.
 function fmtBandNum(n, decimals3) {
@@ -3126,6 +3128,14 @@ function importTemplate(file) {
             }
 
             const bandI = radioBand(type, radioIndex);
+            // Ne compte que ce qui changerait : une valeur déjà présente à l'identique dans tous les slots n'est ni une modification ni un avertissement
+            const wouldChange = slots.some(function(slot) {
+              const radio = slot.unit.radios && slot.unit.radios.find(function(r) { return r.index === radioIndex; });
+              const ch    = radio && radio.channels[chNum];
+              if (!ch) return false;
+              return Math.abs(currentFreqValue(slotId(slot), radioIndex, chNum, ch.frequency) - newFreq) >= 1e-9;
+            });
+            if (!wouldChange) continue;
             if (bandI && !freqInBand(bandI, newFreq)) {
               warnings.push('Fréquence hors bande ignorée : ' + type + ' Radio[' + radioIndex + '].ch[' + chNum + '] = ' + newFreq);
               continue;
