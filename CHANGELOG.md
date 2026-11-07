@@ -17,6 +17,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Comm Plan Editor**: radio names now follow the DCS World mission editor for the A-10C II, C-130J-30, M-2000C, OH-58D Kiowa Warrior, SA342 Gazelle, F-15E and AV-8B (a single FM radio for the Gazelle, a fourth radio for the Kiowa, a third for the Harrier), and these radios now show their frequency band, except the M-2000C's V/UHF radio.
 - **Loadout Editor**: with *Symmetric* ticked in *Compose a loadout*, the twin station now gets the mirror weapon when it has its own left/right reference (F-4E) or another reference with the same name (Mi-24P), and a station says when its twin has no equivalent — the same rule as Mission Plan's Flight Configurator.
 - **Loadout Editor**: a weapon offered on both sides under the same name now shows its side (*left* / *right*), e.g. the Mi-24P's Kord door guns; choosing the Kord on one door removes it from the other and says so, as it can only be fitted on one door.
+- **All tools**: on a narrow screen (under 560 px) the header now takes two lines — back, tool name and language, then version and file name — instead of running off the right edge; the loaded file name stays readable.
 
 ## [1.3.0] — 2026-11-05
 
