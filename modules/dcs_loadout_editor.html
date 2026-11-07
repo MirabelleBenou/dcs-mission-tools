@@ -911,7 +911,6 @@ const I18N = {
     'toast.ignored.one':           '{n} ignoré',
     'toast.ignored.other':         '{n} ignorés',
     'reason.type':                 'autre type',
-    'reason.country':              'autre pays',
     'reason.noLivery':             'sans livrée',
     'reason.noPayload':            'sans emport',
     'reason.notRepro':             'emport non reproductible',
@@ -933,7 +932,6 @@ const I18N = {
     'bar.set.flare':               'leurres {v}',
     'bar.set.chaff':               'paillettes {v}',
     'bar.set.gun':                 'canon {v} %',
-    'bar.setSame':                 ' — déjà en place sur les appareils cochés',
     'bar.livery':                  '« {name} » → {n}',
     'bar.liveryOther':             ' ({m} d\'un autre pays : l\'éditeur de DCS ne propose pas cette livrée pour ce pays, le jeu l\'affiche)',
     'bar.liverySame':              '« {name} » — déjà portée par les appareils cochés',
@@ -1053,7 +1051,6 @@ const I18N = {
     'toast.ignored.one':           '{n} ignored',
     'toast.ignored.other':         '{n} ignored',
     'reason.type':                 'other type',
-    'reason.country':              'other country',
     'reason.noLivery':             'no livery',
     'reason.noPayload':            'no loadout',
     'reason.notRepro':             'payload not reproducible',
@@ -1075,7 +1072,6 @@ const I18N = {
     'bar.set.flare':               'flares {v}',
     'bar.set.chaff':               'chaff {v}',
     'bar.set.gun':                 'gun {v} %',
-    'bar.setSame':                 ' — already set on the selected aircraft',
     'bar.livery':                  '“{name}” → {n}',
     'bar.liveryOther':             ' ({m} from another country: the DCS mission editor does not offer this livery for that country; the game shows it)',
     'bar.liverySame':              '“{name}” — already worn by the selected aircraft',
@@ -8816,9 +8812,10 @@ function applyPlan(type) {
   if (def) plan.loadout = { def, targets: loadoutTargets(type, def), eligible: checked.some(u => !skipReason(u, type, visSet, 'payload')) };
   const rs = readSettings();
   const elig = checked.filter(u => !skipReason(u, type, visSet, 'payload'));
-  // Seul un champ qui diffère de l'actuel d'au moins un appareil coché compte comme réglage
+  // Seul un champ qui diffère de l'actuel d'au moins un appareil éligible compte comme réglage ;
+  // sans éligible, le champ saisi reste (réglage appliqué à 0 appareil)
   for (const k of Object.keys(rs.out)) {
-    if (!elig.some(u => { const c = curPayload(u)[k]; return c === undefined || Number(c) !== rs.out[k]; })) delete rs.out[k];
+    if (elig.length && !elig.some(u => { const c = curPayload(u)[k]; return c === undefined || Number(c) !== rs.out[k]; })) delete rs.out[k];
   }
   if (Object.keys(rs.out).length > 0 || rs.error) {
     const el = elig;
@@ -9228,7 +9225,7 @@ function renderActionBar(type) {
     else {
       const txt = ['fuel', 'flare', 'chaff', 'gun'].filter(k => s.values[k] !== undefined)
         .map(k => t('bar.set.' + k).replace('{v}', fmtSetting(s.values[k]))).join(' · ');
-      rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : (s.eligible ? escHtml(t('bar.setSame')) : ' → ' + escHtml(tn('panel.count', 0)))), s.targets.length ? '' : 'off']);
+      rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : ' → ' + escHtml(tn('panel.count', 0))), s.targets.length ? '' : 'off']);
     }
   }
   if (plan.livery) {
@@ -9496,7 +9493,7 @@ function cmpChecked(type) {
   return UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && vis.has(u.unitId));
 }
 // Carburant de la masse au décollage : le champ Carburant s'il est rempli et valide, sinon le plus grand carburant
-// courant des appareils cochés, sinon le maximum interne du type
+// courant des appareils cochés que l'emport peut atteindre, sinon le maximum interne du type
 function cmpFuel(type) {
   const el = document.getElementById('set-fuel');
   if (el && !(el.validity && el.validity.badInput)) {
@@ -9504,7 +9501,8 @@ function cmpFuel(type) {
     const n = Number(raw);
     if (raw !== '' && isFinite(n) && n >= 0) return n;
   }
-  const us = cmpChecked(type);
+  const vis = new Set(UI_STATE.filtered.map(x => x.unitId));
+  const us = cmpChecked(type).filter(u => !skipReason(u, type, vis, 'payload'));
   if (us.length) {
     let mx = 0;
     for (const u of us) { const p = curPayload(u); const f = p && typeof p === 'object' ? Number(p.fuel) : 0; if (isFinite(f) && f > mx) mx = f; }
