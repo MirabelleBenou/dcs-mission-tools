@@ -14,6 +14,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ### Fixed
 - **Comm Plan Editor** and **Ground Unit Swapper**: on a narrow screen the footer wraps instead of pushing the *Save* button off-screen; the Ground Unit Swapper's unit counter follows the language.
+- **Comm Plan Editor**: radio names now follow the DCS World mission editor for the A-10C II, C-130J-30, M-2000C, OH-58D Kiowa Warrior, SA342 Gazelle, F-15E and AV-8B (a single FM radio for the Gazelle, a fourth radio for the Kiowa, a third for the Harrier), and these radios now show their frequency band, except the M-2000C's V/UHF radio.
 
 ## [1.3.0] — 2026-11-05
 
