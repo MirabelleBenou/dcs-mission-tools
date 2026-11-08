@@ -154,6 +154,8 @@
     .drop-icon { font-size: 48px; margin-bottom: 16px; }
     .drop-title { font-size: 18px; font-weight: 600; color: var(--amber); margin-bottom: 8px; }
     .drop-sub { color: var(--text-dim); font-size: 13px; }
+    .credits { margin-top: 4px; max-width: 100%; text-align: center; font-size: 11px; color: var(--text-dim); overflow-wrap: anywhere; }
+    .credits a { color: inherit; text-decoration: underline; }
     .btn-load {
       background: var(--amber);
       color: #1A1A1A;
@@ -736,7 +738,7 @@
 <header id="app-header">
   <div class="header-logo">C·P</div>
   <div class="header-title">DCS Comm Plan Editor</div>
-  <div class="header-version">v1.3.0</div>
+  <div class="header-version">v1.4.0</div>
   <div class="header-miz empty" id="header-miz" data-i18n="header.noFile">Aucun fichier chargé</div>
   <button class="header-lang-btn" id="btn-lang" title="Switch language / Changer de langue"></button>
 </header>
@@ -750,6 +752,7 @@
     <div class="drop-sub">ou cliquer pour parcourir</div>
   </div>
   <button class="btn-load" id="btn-browse" data-i18n="drop.btn">📂 Choisir un fichier .miz</button>
+  <div class="credits">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
   <input type="file" id="file-input" accept=".miz" style="display:none">
 </div>
 
@@ -864,10 +867,10 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 </script>
 <script>
 // ════════════════════════════════════════════════════════════════════════════
-// DCS Comm Plan Editor v1.3.0 — Pipeline parser + extracteur + UI
+// DCS Comm Plan Editor v1.4.0 — Pipeline parser + extracteur + UI
 // ════════════════════════════════════════════════════════════════════════════
 'use strict';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 // ════════════════════════════════════════════════════════════════════════════
 // I18N — Internationalisation FR/EN

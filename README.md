@@ -4,7 +4,9 @@
 
 > Edit your DCS World mission files surgically — four editors in one offline page. **Download a single file, drop a `.miz`, edit, save.**
 
-![License](https://img.shields.io/badge/license-MIT-blue) ![Platform](https://img.shields.io/badge/platform-Web-green) ![Offline](https://img.shields.io/badge/offline-yes-success) ![Tablet & mobile](https://img.shields.io/badge/tablet%20%26%20mobile-ready-orange) ![Tools](https://img.shields.io/badge/tools-4%20live-brown)
+![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue) ![Platform](https://img.shields.io/badge/platform-Web-green) ![Offline](https://img.shields.io/badge/offline-yes-success) ![Tablet & mobile](https://img.shields.io/badge/tablet%20%26%20mobile-ready-orange) ![Tools](https://img.shields.io/badge/tools-4%20live-brown)
+
+> Aircraft, weapon and radio data come from **[pydcs](https://github.com/pydcs/dcs)** (LGPL-3.0-or-later) — many thanks to its authors.
 
 🌐 **[Use it online »](https://mirabellebenou.github.io/dcs-mission-tools/)** · 💾 **[Download the offline file »](https://github.com/MirabelleBenou/dcs-mission-tools/releases)**
 
@@ -39,10 +41,10 @@ The landing page presents each editor as a tile. Active tools open in place.
 
 | Tool                            | What it does                                                                                                                | Status      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.3.0` |
-| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.3.0` |
-| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.3.0` |
-| **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.3.0` |
+| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.4.0` |
+| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.4.0` |
+| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.4.0` |
+| **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.4.0` |
 
 > Each tool is a standalone HTML editor; the page bundles the live tools and shares a single working `.miz` between them.
 
@@ -121,7 +123,7 @@ The Loadout Editor **applies a loadout that already exists in the mission** — 
 
 ![loadout-composer](docs/screenshots/loadout_composer.jpg)
 
-<sub>Front-view drawing: Goldwolf, DCS Reference Guide — used with permission, not covered by the MIT licence. Screenshots taken on a generic demo mission.</sub>
+<sub>Front-view drawing: Goldwolf, DCS Reference Guide — used with permission, not covered by the AGPL licence. Screenshots taken on a generic demo mission.</sub>
 
 ## 🚀 Quick Start
 
@@ -201,13 +203,13 @@ For code contributions: fork, branch, study the build script to understand the a
 
 ## 📄 License
 
-[MIT License](https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE) — free to use, modify, and distribute, including commercially.
+[GNU AGPL-3.0-or-later](https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE) — free to use, modify and share, commercial use included (a paid service too), **provided the source code of your version is published under the same licence**, hosted services included (section 13). Every interface must keep the credit line “Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing” (an additional term under section 7(b), see `LICENSE`). Releases up to v1.3.0 remain under the MIT licence. Exceptions: the front-view drawings (by Goldwolf, `data/views/LICENSE.md`) and the pydcs-derived tables (LGPL-3.0-or-later, `data/COPYING.LESSER`).
 
 ## 🙏 Acknowledgments
 
 - Built for the DCS World virtual aviation community
-- Weapon names and aircraft limits in the Loadout Editor come from **[pydcs](https://github.com/pydcs/dcs)** 1.0.0 (LGPL-3.0-or-later) — the tables and their licence are in [`data/`](data/)
-- Front-view drawings in `data/views/`: Goldwolf, DCS Reference Guide — used with permission, not covered by the MIT licence.
+- **[pydcs](https://github.com/pydcs/dcs)** 1.0.0 (LGPL-3.0-or-later) is the source of the suite's aircraft data: weapon names, stations and limits in the Loadout Editor, aircraft types and the default radio channels that check the Comm Plan Editor's frequency bands — the tables and their licence are in [`data/`](data/)
+- Front-view drawings in `data/views/`: Goldwolf, DCS Reference Guide — used with permission, not covered by the AGPL licence.
 - Initial version developed for the **4th VEAW** virtual wing — distributed as generic, public tools
 - A companion to **[DCS Mission Plan](https://github.com/MirabelleBenou/dcs-mission-plan)** (briefings, recon, HQ)
 

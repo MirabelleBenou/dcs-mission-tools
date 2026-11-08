@@ -25,7 +25,7 @@ from radio_block import build_block
 from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-APP_VERSION = '1.3.0'
+APP_VERSION = '1.4.0'
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [
@@ -55,7 +55,7 @@ def encode_module_b64(path):
     return base64.b64encode(html.encode('utf-8')).decode('ascii')
 
 
-# APP_VERSION déclarée dans le script du module : const APP_VERSION = '1.3.0';
+# APP_VERSION déclarée dans le script du module : const APP_VERSION = '1.4.0';
 _APP_VERSION_RE = re.compile(
     r"""^[ \t]*(?:const|let|var)[ \t]+APP_VERSION[ \t]*=[ \t]*(['"])([0-9A-Za-z][0-9A-Za-z.+\-]*)\1""",
     re.MULTILINE,
@@ -455,6 +455,16 @@ def build_html(module_html_js, tile_uris, versions):
       letter-spacing: 0.15em;
       text-transform: uppercase;
     }}
+    #credits {{
+      margin-top: -4px;
+      max-width: 100%;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      overflow-wrap: anywhere;
+    }}
+    #credits a {{ color: inherit; text-decoration: underline; }}
+    #credits .credits-line + .credits-line {{ margin-top: 6px; }}
     .section-title {{
       font-family: var(--font-mono);
       font-size: 13px;
@@ -754,6 +764,7 @@ def build_html(module_html_js, tile_uris, versions):
     @media (max-width: 600px) {{
       #landing {{ padding: 20px 14px calc(20px + var(--wf-bar-h)); }}
       .landing-inner {{ gap: 20px; }}
+      #credits {{ margin-top: 4px; }}
     }}
     @media (hover: none) {{
       .module-card:hover {{ transform: none; }}
@@ -792,6 +803,11 @@ def build_html(module_html_js, tile_uris, versions):
             <div class="section-title" data-i18n="sectionRoadmap">Roadmap</div>
           </div>
           <div id="ghost-grid"></div>
+        </div>
+
+        <div id="credits">
+          <div class="credits-line">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
+          <div class="credits-line"><span data-i18n="credits.data1">Données des appareils : </span><a href="https://github.com/pydcs/dcs" target="_blank" rel="noopener">pydcs</a><span data-i18n="credits.data2"> (LGPL-3.0-or-later) · vues de face : Goldwolf, DCS Reference Guide, avec son autorisation</span></div>
         </div>
       </div>
     </div>
@@ -845,6 +861,8 @@ def build_html(module_html_js, tile_uris, versions):
         'desc.wx': 'Édition des conditions météo dans les missions .miz DCS.',
         'desc.le': "Application en masse des emports et livrées d\'appareils (IA ou joueurs).",
         /* Fichier de travail */
+        'credits.data1': 'Données des appareils : ',
+        'credits.data2': ' (LGPL-3.0-or-later) · vues de face : Goldwolf, DCS Reference Guide, avec son autorisation',
         'wf.label': 'Fichier de travail',
         'wf.none':  'Aucun fichier chargé',
         'wf.load':  'Charger .miz',
@@ -863,6 +881,8 @@ def build_html(module_html_js, tile_uris, versions):
         'desc.wx': 'Weather conditions editor for DCS .miz missions.',
         'desc.le': 'Bulk-apply aircraft loadouts and liveries (AI or player).',
         /* Working file */
+        'credits.data1': 'Aircraft data: ',
+        'credits.data2': ' (LGPL-3.0-or-later) · front views: Goldwolf, DCS Reference Guide, used with permission',
         'wf.label': 'Working file',
         'wf.none':  'No file loaded',
         'wf.load':  'Load .miz',

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <!--
-  Loadout Editor v1.3.0
+  Loadout Editor v1.4.0
   =====================
   Applique en masse un emport existant (et une livrée) à des appareils du même type,
   joueurs et IA, dans un fichier .miz DCS World. Composer un emport pylône par pylône
   n'est pas l'objet de cet outil.
 
-  Version    : 1.3.0
-  Licence    : MIT
+  Version    : 1.4.0
+  Licence    : AGPL-3.0-or-later
   Dépendances: JSZip 3.10.1 — inliné (aucune dépendance externe)
   Usage      : Ouvrir dans Chrome/Firefox, charger un .miz, cocher des appareils, appliquer, sauvegarder.
 
@@ -24,7 +24,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loadout Editor v1.3.0</title>
+  <title>Loadout Editor v1.4.0</title>
   <style>
     /* ── Variables palette ─────────────────────────────────────────────────── */
     :root {
@@ -169,6 +169,8 @@
     .drop-icon { font-size: 48px; margin-bottom: 16px; }
     .drop-title { font-size: 18px; font-weight: 600; color: var(--accent); margin-bottom: 8px; }
     .drop-sub { color: var(--text-dim); font-size: 13px; }
+    .credits { margin-top: 4px; max-width: 100%; text-align: center; font-size: 11px; color: var(--text-dim); overflow-wrap: anywhere; }
+    .credits a { color: inherit; text-decoration: underline; }
     .btn-load {
       background: var(--accent);
       color: #1A1A1A;
@@ -632,7 +634,7 @@
 <header id="app-header">
   <div class="header-logo">L·E</div>
   <div class="header-title" data-i18n="app.title">Loadout Editor</div>
-  <div class="header-version">v1.3.0</div>
+  <div class="header-version">v1.4.0</div>
   <div class="header-miz empty" id="header-miz" data-i18n="header.noFile">Aucun fichier chargé</div>
   <button class="header-lang-btn" id="btn-lang" title="Switch language / Changer de langue"></button>
 </header>
@@ -647,6 +649,7 @@
     <div class="drop-sub" data-i18n="drop.sub">ou cliquer pour parcourir</div>
   </div>
   <button class="btn-load" id="btn-browse" data-i18n="drop.btn">📂 Choisir un fichier .miz</button>
+  <div class="credits">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
   <input type="file" id="file-input" accept=".miz" style="display:none">
 </div>
 
@@ -800,14 +803,14 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script>
 'use strict';
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 // ═══════════════════════════════════════════════════════════════
 // I18N — Internationalisation FR/EN
 // ═══════════════════════════════════════════════════════════════
 const I18N = {
   fr: {
-    'doc.title':                   'Loadout Editor v1.3.0',
+    'doc.title':                   'Loadout Editor v1.4.0',
     'app.title':                   'Loadout Editor',
     'header.noFile':               'Aucun fichier chargé',
     'list.search':                 'Rechercher\u2026',
@@ -947,7 +950,7 @@ const I18N = {
     'spinner.rebuilding':          'Reconstruction du .miz…',
   },
   en: {
-    'doc.title':                   'Loadout Editor v1.3.0',
+    'doc.title':                   'Loadout Editor v1.4.0',
     'app.title':                   'Loadout Editor',
     'header.noFile':               'No file loaded',
     'list.search':                 'Search\u2026',
@@ -7264,7 +7267,7 @@ const AIRCRAFT_PYLONS = {"clsids":[
 
 // ═══════════════════════════════════════════════════════════════
 // VUES DE FACE — type → dessin SVG, viewBox, point d'attache de chaque station, stations hors vue ;
-// dessins de Goldwolf (DCS Reference Guide), utilisés avec son accord, hors licence MIT (data/views/LICENSE.md),
+// dessins de Goldwolf (DCS Reference Guide), utilisés avec son accord, hors licence AGPL du dépôt (data/views/LICENSE.md),
 // data/aircraft_views.json du dépôt. Copie en ligne gardée par build_mission_tools.py.
 // ═══════════════════════════════════════════════════════════════
 /* AIRCRAFT_VIEWS:BEGIN */

@@ -2,7 +2,7 @@
 
 All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.4.0] — 2026-11-08
 
 ### Added
 - **Loadout Editor**: an estimated weight for each Mi-24P, Mi-8MTV2, F-4E and Mirage F1EE — empty weight, fuel and stores, gun not counted, detailed on hover — in orange above the recommended maximum, which stays allowed; the *Compose a loadout* window starts from the loadout of the selected aircraft and adds their take-off weight. Empty and maximum weights from the DCS World aircraft definitions.
@@ -10,11 +10,12 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Comm Plan Editor**: each radio shows its frequency band under its name; a frequency typed outside the band is refused with the band quoted, one already in the mission is shown in orange without blocking the save, and an imported template value outside the band is skipped. Bands from the DCS World mission editor, cross-checked with Chuck's Guide for the Mi-24P; Mi-8MTV2 from Chuck's Guide, Mirage F1EE from the Aerges manual; radios without a known band are unchanged.
 
 ### Changed
+- **Licence**: from this release, DCS Mission Tools is licensed under the GNU AGPL-3.0-or-later instead of MIT: any use, commercial included, must publish its source under the same licence, hosted services included; an additional term (section 7(b)) requires every interface to keep the credit line *Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing*, now shown at the bottom of the board and of each tool's start screen. Releases up to v1.3.0 remain under MIT. The pydcs tables (LGPL-3.0-or-later) and Goldwolf's drawings keep their own terms.
 - **Loadout Editor**: a livery can now be applied to aircraft of any country; the summary warns that the DCS mission editor does not offer it for that country, while the game shows it.
 
 ### Fixed
 - **Comm Plan Editor** and **Ground Unit Swapper**: on a narrow screen the footer wraps instead of pushing the *Save* button off-screen; the Ground Unit Swapper's unit counter follows the language.
-- **Comm Plan Editor**: radio names now follow the DCS World mission editor for the A-10C II, C-130J-30, M-2000C, OH-58D Kiowa Warrior, SA342 Gazelle, F-15E and AV-8B (a single FM radio for the Gazelle, a fourth radio for the Kiowa, a third for the Harrier), and these radios now show their frequency band, except the M-2000C's V/UHF radio.
+- **Comm Plan Editor**: radio names now follow the DCS World mission editor for the A-10C II, C-130J-30, M-2000C, OH-58D Kiowa Warrior, SA342 Gazelle, F-15E and AV-8B (the Gazelle's mission presets belong to its FM radio (its UHF and VHF AM radios have none in the mission), a fourth radio for the Kiowa, a third for the Harrier), and these radios now show their frequency band, except the M-2000C's V/UHF radio.
 - **Loadout Editor**: with *Symmetric* ticked in *Compose a loadout*, the twin station now gets the mirror weapon when it has its own left/right reference (F-4E) or another reference with the same name (Mi-24P), and a station says when its twin has no equivalent — the same rule as Mission Plan's Flight Configurator.
 - **Loadout Editor**: a weapon offered on both sides under the same name now shows its side (*left* / *right*), e.g. the Mi-24P's Kord door guns; choosing the Kord on one door removes it from the other and says so, as it can only be fitted on one door.
 - **All tools**: on a narrow screen (under 560 px) the header now takes two lines — back, tool name and language, then version and file name — instead of running off the right edge; the loaded file name stays readable.
