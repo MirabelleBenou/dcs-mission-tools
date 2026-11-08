@@ -205,6 +205,8 @@ For code contributions: fork, branch, study the build script to understand the a
 
 [GNU AGPL-3.0-or-later](https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE) — free to use, modify and share, commercial use included (a paid service too), **provided the source code of your version is published under the same licence**, hosted services included (section 13). Every interface must keep the credit line “Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing” (an additional term under section 7(b), see `LICENSE`). Releases up to v1.3.0 remain under the MIT licence. Exceptions: the front-view drawings (by Goldwolf, `data/views/LICENSE.md`) and the pydcs-derived tables (LGPL-3.0-or-later, `data/COPYING.LESSER`).
 
+Roboto Mono is embedded under the Apache License 2.0 (Google Fonts).
+
 ## 🙏 Acknowledgments
 
 - Built for the DCS World virtual aviation community
