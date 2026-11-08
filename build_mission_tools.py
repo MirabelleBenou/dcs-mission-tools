@@ -917,9 +917,13 @@ def build_html(module_html_js, tile_uris, versions):
 
         /* Retour à l'accueil avec des modifications non sauvegardées */
         'confirm.leave.title':  "Revenir à l'accueil ?",
-        'confirm.leave.text':   '{{module}} : des modifications ne sont pas sauvegardées.',
-        'confirm.leave.ok':     'Quitter',
-        'confirm.leave.cancel': 'Annuler',
+        'confirm.leave.text':   "Le {{module}} garde vos modifications, mais elles ne passent aux autres outils qu'après « Sauvegarder ». Une sauvegarde faite dans un autre outil les effacera.",
+        'confirm.leave.ok':     "Revenir à l'accueil",
+        'confirm.leave.cancel': "Rester",
+
+        /* Fichier refusé (pas un .miz) ; nom du bouton de langue pour les lecteurs d'écran */
+        'wf.notMiz': "Ce fichier n'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l'éditeur de mission.",
+        'lang.aria': "Changer la langue",
       }},
       en: {{
         tagline:        'DCS World · Mission Suite · v{APP_VERSION}',
@@ -945,9 +949,13 @@ def build_html(module_html_js, tile_uris, versions):
 
         /* Back to the home screen with unsaved changes */
         'confirm.leave.title':  'Back to the home screen?',
-        'confirm.leave.text':   '{{module}}: changes are not saved.',
-        'confirm.leave.ok':     'Leave',
-        'confirm.leave.cancel': 'Cancel',
+        'confirm.leave.text':   "The {{module}} keeps your changes, but they reach the other tools only after Save. Saving in another tool will erase them.",
+        'confirm.leave.ok':     "Go back",
+        'confirm.leave.cancel': "Stay",
+
+        /* Refused file (not a .miz); language button name for screen readers */
+        'wf.notMiz': "This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.",
+        'lang.aria': "Change language",
       }}
     }};
 
@@ -1002,6 +1010,8 @@ def build_html(module_html_js, tile_uris, versions):
         if (val !== key) el.textContent = val;
       }});
       document.documentElement.lang = CURRENT_LANG;
+      const langBtn = document.getElementById('btn-lang');
+      if (langBtn) langBtn.setAttribute('aria-label', t('lang.aria'));
       /* wf-filename : texte "aucun" si pas de fichier */
       updateWfBar();
     }}
@@ -1156,6 +1166,23 @@ def build_html(module_html_js, tile_uris, versions):
       setWorkingFile(null);
     }}
 
+    /* Un fichier n'est gardé comme fichier de travail que si son nom finit par .miz (casse indifférente) et que ses
+       quatre premiers octets sont la signature d'une archive zip (50 4B 03 04). Sinon : toast, fichier de travail inchangé.
+       file == null : aucun fichier au nom en .miz n'a été déposé. */
+    async function acceptWorkingFile(file) {{
+      var ok = false;
+      if (file && file.name.toLowerCase().endsWith('.miz')) {{
+        try {{
+          var head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+          ok = head.length === 4 && head[0] === 0x50 && head[1] === 0x4B && head[2] === 0x03 && head[3] === 0x04;
+        }} catch(e) {{
+          console.error('[M·T] acceptWorkingFile — lecture impossible :', e);
+        }}
+      }}
+      if (!ok) {{ mtbToast(t('wf.notMiz'), 'error'); return; }}
+      setWorkingFile(file);
+    }}
+
     /* ── Handlers boutons wf-bar ── */
     document.addEventListener('DOMContentLoaded', function() {{
       document.getElementById('wf-btn-load').addEventListener('click', function() {{
@@ -1164,7 +1191,7 @@ def build_html(module_html_js, tile_uris, versions):
       document.getElementById('wf-btn-clear').addEventListener('click', clearWorkingFile);
       document.getElementById('wf-file-input').addEventListener('change', function(e) {{
         var f = e.target.files && e.target.files[0];
-        if (f) setWorkingFile(f);
+        if (f) acceptWorkingFile(f);
         /* reset input pour permettre re-sélection du même fichier */
         e.target.value = '';
       }});
@@ -1189,12 +1216,15 @@ def build_html(module_html_js, tile_uris, versions):
         e.preventDefault();
         landing.classList.remove('drag-over');
         var files = e.dataTransfer.files;
+        if (!files || files.length === 0) return;
+        var first = null;
         for (var i = 0; i < files.length; i++) {{
-          if (files[i].name.endsWith('.miz')) {{
-            setWorkingFile(files[i]);
+          if (files[i].name.toLowerCase().endsWith('.miz')) {{
+            first = files[i];
             break;
           }}
         }}
+        acceptWorkingFile(first);
       }});
     }});
 

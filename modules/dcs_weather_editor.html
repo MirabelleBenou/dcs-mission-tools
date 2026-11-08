@@ -500,14 +500,14 @@
 </header>
 
 <div id="preset-absent-banner" class="mtb-banner info hidden" data-i18n="banner.customMode">
-  ℹ Ce .miz est en mode Custom Weather (pas de preset défini). Sélectionner un preset ajoutera la clé "preset" à la sauvegarde. Choisir "Conserver Custom" pour ne rien modifier.
+  ℹ Météo réglée à la main : aucun preset de nuages. En choisir un l'ajoutera à la sauvegarde ; « Conserver Custom » ne change rien.
 </div>
 
 <div id="drop-zone">
   <div class="drop-box" id="drop-box">
     <div class="drop-icon">🌤</div>
-    <div class="drop-title" data-i18n="drop.title">Glissez-déposez votre fichier .miz ici</div>
-    <div class="drop-sub" data-i18n="drop.sub">ou cliquez pour choisir un fichier</div>
+    <div class="drop-title" data-i18n="drop.title">Déposer un fichier .miz ici</div>
+    <div class="drop-sub" data-i18n="drop.sub">ou cliquer pour parcourir</div>
     <button class="btn-load" id="btn-browse" data-i18n="drop.btn">📂 Choisir un fichier .miz</button>
   </div>
   <div class="credits">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
@@ -633,7 +633,7 @@
       </div>
       <div style="margin-top:10px">
         <button id="btn-remove-preset" class="btn-footer hidden" data-i18n-title="tooltip.removePreset" title="Supprimer la clé preset du bloc clouds — DCS utilisera alors les valeurs density/thickness existantes">
-          <span data-i18n="btn.removePreset">🗑 Supprimer le preset (mode custom pur)</span>
+          <span data-i18n="btn.removePreset">🗑 Supprimer le preset (nuages réglés à la main)</span>
         </button>
       </div>
     </div>
@@ -729,8 +729,8 @@ const I18N = {
   fr: {
     'doc.title':               'DCS Weather Editor',
     'header.noFile':           'Aucun fichier chargé',
-    'drop.title':              'Glissez-déposez votre fichier .miz ici',
-    'drop.sub':                'ou cliquez pour choisir un fichier',
+    'drop.title':              'Déposer un fichier .miz ici',
+    'drop.sub':                'ou cliquer pour parcourir',
     'drop.btn':                '📂 Choisir un fichier .miz',
     'section.datetime':        '📅 Date & Heure UTC',
     'label.date':              'Date',
@@ -741,7 +741,7 @@ const I18N = {
     'wind.col.speed':          'Vitesse (m/s)',
     'wind.ground':             'Sol',
     'section.clouds':          '☁ Nuages',
-    'banner.customMode':       'ℹ Ce .miz est en mode Custom Weather (pas de preset défini). Sélectionner un preset ajoutera la clé "preset" à la sauvegarde. Choisir "Conserver Custom" pour ne rien modifier.',
+    'banner.customMode':       'ℹ Météo réglée à la main : aucun preset de nuages. En choisir un l\'ajoutera à la sauvegarde ; « Conserver Custom » ne change rien.',
     'label.cloudPreset':       'Preset nuageux',
     'placeholder.search':      '🔍 Rechercher...',
     'list.search':             'Rechercher\u2026',
@@ -753,7 +753,7 @@ const I18N = {
     'precip.storm':            '⛈ Orage',
     'tooltip.cancel':          'Annuler',
     'tooltip.removePreset':    'Supprimer la clé preset du bloc clouds — DCS utilisera alors les valeurs density/thickness existantes',
-    'btn.removePreset':        '🗑 Supprimer le preset (mode custom pur)',
+    'btn.removePreset':        '🗑 Supprimer le preset (nuages réglés à la main)',
     'section.info':            'ℹ Informations (lecture seule)',
     'label.qnh':               'QNH',
     'label.temp':              'Température',
@@ -765,13 +765,15 @@ const I18N = {
     'count.modification':      'modification',
     'count.modifications':     'modifications',
     'preset.keepCustom':       '(Conserver Custom — pas de preset)',
-    'toast.loadError':         'Erreur de chargement :',
     'toast.saved':             'Sauvegardé :',
-    'toast.saveError':         'Erreur de sauvegarde :',
+    'toast.loaded':            'Météo chargée depuis {file}',
+    'toast.saveError':         'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.fileUnrecognized':  'Fichier non reconnu — glissez un fichier .miz',
     'toast.pickFile':          'Veuillez choisir un fichier .miz',
+    'load.notMiz':             'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
+    'load.unreadable':         'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
     'spinner.loading':         'Chargement\u2026',
-    'confirm.removePreset':    'Cela supprimera la clé "preset" du bloc clouds. DCS utilisera alors les champs density / thickness / base existants.',
+    'confirm.removePreset':    'Les nuages reprendront les réglages manuels de la mission (densité, épaisseur, base).',
     'confirm.removePreset.title':  'Supprimer le preset de nuages ?',
     'confirm.removePreset.ok':     'Supprimer',
     'confirm.removePreset.cancel': 'Annuler',
@@ -788,8 +790,8 @@ const I18N = {
   en: {
     'doc.title':               'DCS Weather Editor',
     'header.noFile':           'No file loaded',
-    'drop.title':              'Drag & drop your .miz file here',
-    'drop.sub':                'or click to choose a file',
+    'drop.title':              'Drop a .miz file here',
+    'drop.sub':                'or click to browse',
     'drop.btn':                '📂 Choose a .miz file',
     'section.datetime':        '📅 Date & Time UTC',
     'label.date':              'Date',
@@ -800,7 +802,7 @@ const I18N = {
     'wind.col.speed':          'Speed (m/s)',
     'wind.ground':             'Ground',
     'section.clouds':          '☁ Clouds',
-    'banner.customMode':       'ℹ This .miz is in Custom Weather mode (no preset defined). Selecting a preset will add the "preset" key to the save. Choose "Keep Custom" to leave it unchanged.',
+    'banner.customMode':       'ℹ Weather set by hand: no cloud preset. Choosing one adds it to the save; “Keep Custom” changes nothing.',
     'label.cloudPreset':       'Cloud preset',
     'placeholder.search':      '🔍 Search...',
     'list.search':             'Search\u2026',
@@ -812,7 +814,7 @@ const I18N = {
     'precip.storm':            '⛈ Thunderstorm',
     'tooltip.cancel':          'Revert',
     'tooltip.removePreset':    'Remove the preset key from the clouds block — DCS will use the existing density/thickness values',
-    'btn.removePreset':        '🗑 Remove preset (pure custom mode)',
+    'btn.removePreset':        '🗑 Remove preset (clouds set by hand)',
     'section.info':            'ℹ Information (read-only)',
     'label.qnh':               'QNH',
     'label.temp':              'Temperature',
@@ -824,13 +826,15 @@ const I18N = {
     'count.modification':      'modification',
     'count.modifications':     'modifications',
     'preset.keepCustom':       '(Keep Custom — no preset)',
-    'toast.loadError':         'Load error:',
     'toast.saved':             'Saved:',
-    'toast.saveError':         'Save error:',
+    'toast.loaded':            'Weather loaded from {file}',
+    'toast.saveError':         'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.fileUnrecognized':  'File not recognized — drop a .miz file',
     'toast.pickFile':          'Please choose a .miz file',
+    'load.notMiz':             'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
+    'load.unreadable':         'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
     'spinner.loading':         'Loading\u2026',
-    'confirm.removePreset':    'This will remove the "preset" key from the clouds block. DCS will then use the existing density / thickness / base fields.',
+    'confirm.removePreset':    'The clouds will go back to the mission\'s manual settings (density, thickness, base).',
     'confirm.removePreset.title':  'Remove the cloud preset?',
     'confirm.removePreset.ok':     'Remove',
     'confirm.removePreset.cancel': 'Cancel',
@@ -1842,13 +1846,17 @@ function showToast(msg, type = 'success') {
 async function loadMizFile(file) {
   const t0 = performance.now();
   mtbSpinner(t('spinner.loading'));
+  // Message d'erreur : une archive illisible ou sans entrée « mission » → load.notMiz ; tout le reste → load.unreadable
+  let loadKey = 'load.unreadable';
   try {
     const arrayBuffer = await file.arrayBuffer();
+    loadKey = 'load.notMiz';
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     // Extraire le fichier "mission"
     const missionEntry = zip.file('mission');
     if (!missionEntry) throw new Error('Fichier "mission" introuvable dans le .miz');
+    loadKey = 'load.unreadable';
 
     const text = await missionEntry.async('string');
 
@@ -1898,9 +1906,10 @@ async function loadMizFile(file) {
     document.getElementById('main-ui').classList.remove('hidden');
     document.getElementById('modifications-bar').classList.remove('hidden');
 
+    showToast(t('toast.loaded').replace('{file}', file.name), 'success');
   } catch (err) {
     console.error('[Load] Erreur :', err);
-    showToast(t('toast.loadError') + ' ' + err.message, 'error');
+    showToast(t(loadKey), 'error');
   } finally {
     mtbSpinnerHide();
   }
@@ -2173,7 +2182,7 @@ async function handleSave() {
 
   } catch (err) {
     console.error('[Save] Erreur :', err);
-    showToast(t('toast.saveError') + ' ' + err.message, 'error');
+    showToast(t('toast.saveError'), 'error');
     btnSave.disabled = false;
   }
 }

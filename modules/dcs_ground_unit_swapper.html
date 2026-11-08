@@ -645,7 +645,7 @@
 
   <!-- Bulk edit bar -->
   <div id="bulk-bar">
-    <span class="bulk-label" data-i18n="bulk.label">Bulk edit :</span>
+    <span class="bulk-label" data-i18n="bulk.label">Modifier en une fois :</span>
     <span class="bulk-label" data-i18n="bulk.replace">Remplacer</span>
     <div id="bulk-type-from" class="combobox" tabindex="0" role="combobox" aria-expanded="false"></div>
     <span class="bulk-label" data-i18n="bulk.by">par</span>
@@ -754,7 +754,7 @@ const I18N = {
     'filter.families.invertBtn':   '↺ Inverser',
     'filter.search':               'Recherche libre',
     'filter.search.ph':            'Groupe / Unité / Type\u2026',
-    'bulk.label':                  'Bulk edit :',
+    'bulk.label':                  'Modifier en une fois :',
     'bulk.replace':                'Remplacer',
     'bulk.by':                     'par',
     'bulk.skill':                  '· Skill =',
@@ -795,11 +795,12 @@ const I18N = {
     'family.unknown': '\u2753 Inconnu',
     // Dynamique
     'toast.unitsLoaded':    '{n} unit\u00e9s charg\u00e9es depuis {file}',
-    'toast.loadError':      'Erreur de chargement :',
-    'toast.bulkApplied':    '{n} unit\u00e9(s) modifi\u00e9e(s) via bulk edit',
+    'toast.bulkApplied':    '{n} unité(s) modifiée(s) en une fois',
     'toast.saved':          '{file} sauvegard\u00e9 ({n} modification(s))',
-    'toast.saveError':      'Erreur de sauvegarde :',
+    'toast.saveError':      'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.pickFile':       'Veuillez choisir un fichier .miz',
+    'load.notMiz':          'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
+    'load.unreadable':      'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
     'toast.exported':       '{file} export\u00e9 ({n} modifications)',
     'toast.loadFirst':      'Chargez un fichier .miz d\'abord',
     'toast.jsonInvalid':    'Fichier JSON invalide',
@@ -880,11 +881,12 @@ const I18N = {
     'family.unknown': '\u2753 Unknown',
     // Dynamic
     'toast.unitsLoaded':    '{n} units loaded from {file}',
-    'toast.loadError':      'Load error:',
     'toast.bulkApplied':    '{n} unit(s) modified via bulk edit',
     'toast.saved':          '{file} saved ({n} modification(s))',
-    'toast.saveError':      'Save error:',
+    'toast.saveError':      'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.pickFile':       'Please choose a .miz file',
+    'load.notMiz':          'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
+    'load.unreadable':      'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
     'toast.exported':       '{file} exported ({n} modifications)',
     'toast.loadFirst':      'Load a .miz file first',
     'toast.jsonInvalid':    'Invalid JSON file',
@@ -2477,13 +2479,17 @@ function escapeRegex(s) {
 // ═══════════════════════════════════════════════════════════════
 async function loadMiz(file) {
   mtbSpinner(t('spinner.loading'));
+  // Message d'erreur : une archive illisible ou sans entrée « mission » → load.notMiz ; tout le reste → load.unreadable
+  let loadKey = 'load.unreadable';
   try {
     const arrayBuffer = await file.arrayBuffer();
+    loadKey = 'load.notMiz';
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     // Lire mission
     const missionEntry = zip.file('mission');
     if (!missionEntry) throw new Error('Fichier "mission" introuvable dans le .miz');
+    loadKey = 'load.unreadable';
     const missionSrc = await missionEntry.async('string');
 
     // Conserver les autres fichiers
@@ -2531,7 +2537,7 @@ async function loadMiz(file) {
     showToast(t('toast.unitsLoaded').replace('{n}', model.units.length).replace('{file}', file.name), 'success');
   } catch (err) {
     console.error('[Load] Erreur :', err);
-    showToast(t('toast.loadError') + ' ' + err.message, 'error');
+    showToast(t(loadKey), 'error');
   } finally {
     mtbSpinnerHide();
   }
@@ -2760,8 +2766,8 @@ function renderTable(rows) {
       <td><input type="checkbox" class="row-chk" data-unit-id="${unit.unitId}" data-row-idx="${idx}" ${isSelected ? 'checked' : ''}></td>
       <td><span class="coal-badge ${coalClass}">${unit.coalition}</span></td>
       <td><span class="fam-badge fam-${famMeta.css}">${t('family.' + unit.family)}</span></td>
-      <td class="readonly" title="Lecture seule — préservé pour scripts mission">${escHtml(unit.groupName)}</td>
-      <td class="readonly" title="Lecture seule — préservé pour scripts mission">${escHtml(unit.name)}</td>
+      <td class="readonly" title="${t('table.readonly.title')}">${escHtml(unit.groupName)}</td>
+      <td class="readonly" title="${t('table.readonly.title')}">${escHtml(unit.name)}</td>
       <td style="white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(unit.type)} <small style="color:var(--text-dim);font-size:10px">${escHtml(getDisplayName(unit.type))}</small></td>
       <td>
         <div style="display:flex;align-items:center;gap:4px">
@@ -3185,7 +3191,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', UI_STATE.edits.size), 'success');
   } catch (err) {
     console.error('[Save] Erreur :', err);
-    showToast(t('toast.saveError') + ' ' + err.message, 'error');
+    showToast(t('toast.saveError'), 'error');
   } finally {
     mtbSpinnerHide();
   }

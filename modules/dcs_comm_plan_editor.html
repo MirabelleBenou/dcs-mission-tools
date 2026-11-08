@@ -659,30 +659,7 @@
       font-size: 13px;
     }
 
-    /* ── Error block ─────────────────────────────────────────────────────── */
-    #error-block {
-      background: rgba(229,57,53,0.1);
-      border: 1px solid var(--error);
-      border-radius: 4px;
-      padding: 12px 16px;
-      margin: 16px 24px;
-      color: #ef9a9a;
-      font-size: 13px;
-      display: none;
-      white-space: pre-wrap;
-    }
-
-    /* ── Modale erreur sauvegarde ───────────────────────────────────────── */
-    #save-error-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-    #save-error-modal.open { display: flex; }
+    /* ── Modale récapitulative (import du plan radio) ──────────────────── */
     .modal-box {
       background: var(--surface);
       border: 1px solid var(--error);
@@ -693,17 +670,6 @@
     }
     .modal-box h2 { font-size: 15px; color: #ef9a9a; margin-bottom: 14px; }
     .modal-box p { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
-    .modal-box .modal-detail {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: #ef9a9a;
-      background: rgba(229,57,53,0.08);
-      border: 1px solid rgba(229,57,53,0.3);
-      border-radius: 3px;
-      padding: 10px 12px;
-      margin: 12px 0;
-      word-break: break-all;
-    }
     .modal-box .modal-footer { display: flex; justify-content: flex-end; margin-top: 20px; }
     #btn-save.saving { opacity: 0.7; cursor: wait; }
 
@@ -734,7 +700,7 @@
   <div class="drop-box" id="drop-box">
     <div class="drop-icon">📡</div>
     <div class="drop-title" data-i18n="drop.title">Déposer un fichier .miz ici</div>
-    <div class="drop-sub">ou cliquer pour parcourir</div>
+    <div class="drop-sub" data-i18n="drop.sub">ou cliquer pour parcourir</div>
   </div>
   <button class="btn-load" id="btn-browse" data-i18n="drop.btn">📂 Choisir un fichier .miz</button>
   <div class="credits">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
@@ -743,9 +709,6 @@
 
 <!-- ── Zone principale défilante ─────────────────────────────────────── -->
 <div id="main-ui" class="hidden">
-<!-- ── Error block ────────────────────────────────────────────────────── -->
-<div id="error-block"></div>
-
 <!-- ── Filtres ────────────────────────────────────────────────────────── -->
 <section id="filters" class="hidden">
   <div class="filter-search">
@@ -805,28 +768,18 @@
 <footer id="modifications-bar" class="hidden">
   <div id="mod-count"></div>
   <button class="btn-footer" id="btn-undo-all" disabled title="Annuler toutes les modifications" data-i18n="footer.undoAll" data-i18n-title="footer.undoAll.title">↶ Annuler tout</button>
-  <button class="btn-load-new" id="btn-load-new" title="Charger un autre .miz" data-i18n="footer.loadNew">📂 Charger un autre .miz</button>
-  <button class="btn-footer" id="btn-export-template" title="Exporter la configuration radio en JSON" data-i18n="footer.exportTpl" data-i18n-title="footer.exportTpl.title" disabled>📤 Exporter template</button>
-  <button class="btn-footer" id="btn-import-template" title="Importer un template JSON" data-i18n="footer.importTpl" data-i18n-title="footer.importTpl.title">📥 Importer template</button>
+  <button class="btn-load-new" id="btn-load-new" title="Charger un autre .miz" data-i18n-title="footer.loadNew.title" data-i18n="footer.loadNew">📂 Charger un autre .miz</button>
+  <button class="btn-footer" id="btn-export-template" title="Exporter le plan radio en JSON" data-i18n="footer.exportTpl" data-i18n-title="footer.exportTpl.title" disabled>📤 Exporter le plan radio</button>
+  <button class="btn-footer" id="btn-import-template" title="Importer un plan radio (JSON)" data-i18n="footer.importTpl" data-i18n-title="footer.importTpl.title">📥 Importer un plan radio</button>
   <input type="file" id="template-file-input" accept=".json" style="display:none">
   <button class="btn-footer primary" id="btn-save" disabled title="Aucune modification à sauvegarder" data-i18n="footer.save" data-i18n-title="footer.save.titleDisabled">💾 Sauvegarder</button>
   <span id="btn-save-note"></span>
 </footer>
 
-<!-- ── Modale erreur sauvegarde ─────────────────────────────────────────── -->
-<div id="save-error-modal" role="dialog" aria-modal="true">
-  <div class="modal-box">
-    <h2 data-i18n="modal.saveError.title">⚠ Erreur de sauvegarde</h2>
-    <p>Le fichier patché n'a pas pu être retokenizé.<br>Le téléchargement est annulé pour ne pas livrer un .miz corrompu.</p>
-    <div class="modal-detail" id="save-error-detail"></div>
-    <p>Les modifications dans l'UI sont conservées.<br>Vous pouvez tenter une nouvelle sauvegarde après ajustement.</p>
-    <div class="modal-footer"><button class="btn amber" id="save-error-close">Fermer</button></div>
-  </div>
-</div>
-<!-- ── Modale récapitulative import template ─────────────────────────────── -->
+<!-- ── Modale récapitulative import du plan radio ───────────────────────── -->
 <div id="import-modal" role="dialog" aria-modal="true" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center">
   <div class="modal-box" style="border-color:var(--amber)">
-    <h2 style="color:var(--amber)" data-i18n="modal.tplImport.title">📥 Template importé</h2>
+    <h2 style="color:var(--amber)" data-i18n="modal.tplImport.title">📥 Plan radio importé</h2>
     <div id="import-summary" style="font-size:13px;color:var(--text-dim);line-height:1.7;margin:12px 0"></div>
     <div class="modal-footer">
       <button class="btn amber" id="import-modal-close">OK</button>
@@ -876,15 +829,16 @@ const I18N = {
     'footer.undoAll':          '↶ Annuler tout',
     'footer.undoAll.title':    'Annuler toutes les modifications',
     'footer.loadNew':          '📂 Charger un autre .miz',
-    'footer.exportTpl':        '📤 Exporter template',
-    'footer.exportTpl.title':  'Exporter la configuration radio en JSON',
-    'footer.importTpl':        '📥 Importer template',
-    'footer.importTpl.title':  'Importer un template JSON',
+    'footer.loadNew.title':    'Charger un autre .miz',
+    'footer.exportTpl':        '📤 Exporter le plan radio',
+    'footer.exportTpl.title':  'Exporter le plan radio en JSON',
+    'footer.importTpl':        '📥 Importer un plan radio',
+    'footer.importTpl.title':  'Importer un plan radio (JSON)',
     'footer.save':             '💾 Sauvegarder',
     'footer.save.titleDisabled': 'Aucune modification à sauvegarder',
-    'modal.saveError.title':   '⚠ Erreur de sauvegarde',
-    'modal.tplImport.title':   '📥 Template importé',
+    'modal.tplImport.title':   '📥 Plan radio importé',
     'drop.title':              'Déposer un fichier .miz ici',
+    'drop.sub':                'ou cliquer pour parcourir',
     'drop.btn':                '📂 Choisir un fichier .miz',
     'card.groupFreqRO':        'FRÉQUENCE GROUPE (LECTURE SEULE)',
     'card.groupFreqNoSync':    'FRÉQUENCE GROUPE (NON SYNCHRONISÉE AVEC UN CANAL)',
@@ -905,19 +859,23 @@ const I18N = {
     'toast.saved':             'Sauvegardé : ',
     'toast.noEffectiveChange': 'Aucune modification effective (valeurs inchangées). Sauvegarde annulée.',
     'toast.pickFile':          'Veuillez choisir un fichier .miz',
+    'toast.loaded':            '{n} appareils jouables chargés depuis {file}',
+    'toast.saveError':         'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
+    'toast.tplInvalid':        'Ce fichier n\'est pas un plan radio lisible (JSON).',
+    'toast.tplUnknownFormat':  'Ce fichier JSON n\'est pas un plan radio du Comm Plan Editor.',
+    'toast.tplNoConfig':       'Ce plan radio ne contient aucune configuration.',
+    'load.notMiz':             'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
+    'load.unreadable':         'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
     'spinner.loading':         'Chargement\u2026',
     'count.pending':           '{n} modification(s) en attente',
     'confirm.pendingLost':     'Les modifications en attente seront perdues.',
     'confirm.pendingLost.title':  'Charger un autre .miz ?',
     'confirm.pendingLost.ok':     'Charger',
     'confirm.pendingLost.cancel': 'Annuler',
-    'modal.tplInvalid':        'Template JSON invalide : ',
-    'modal.tplUnknownFormat':  'Format de template inconnu : "{f}". Attendu : "dcs-comm-plan-template-v1".',
-    'modal.tplNoConfig':       'Template invalide : clé "configurations" manquante.',
-    'import.summaryHead':      '<strong>{n} modification(s) générée(s)</strong> à partir du template.<br><br>',
-    'import.applied':          '• Types du template appliqués au .miz : ',
-    'import.absentMiz':        '• Types du template absents du .miz (ignorés) : ',
-    'import.absentTpl':        '• Types du .miz absents du template (intacts) : ',
+    'import.summaryHead':      '<strong>{n} modification(s) générée(s)</strong> à partir du plan radio.<br><br>',
+    'import.applied':          '• Types du plan radio appliqués au .miz : ',
+    'import.absentMiz':        '• Types du plan radio absents du .miz (ignorés) : ',
+    'import.absentTpl':        '• Types du .miz absents du plan radio (intacts) : ',
     'import.warnValues':       '⚠ {n} valeur(s) invalide(s) ou hors bande ignorée(s)',
     'band.label':              'Bande : {b} MHz',
     'band.refused':            '{v} MHz : hors bande ({b} MHz).',
@@ -939,15 +897,16 @@ const I18N = {
     'footer.undoAll':          '↶ Undo all',
     'footer.undoAll.title':    'Undo all changes',
     'footer.loadNew':          '📂 Load another .miz',
-    'footer.exportTpl':        '📤 Export template',
-    'footer.exportTpl.title':  'Export radio configuration as JSON',
-    'footer.importTpl':        '📥 Import template',
-    'footer.importTpl.title':  'Import a JSON template',
+    'footer.loadNew.title':    'Load another .miz',
+    'footer.exportTpl':        '📤 Export comm plan',
+    'footer.exportTpl.title':  'Export the comm plan as JSON',
+    'footer.importTpl':        '📥 Import a comm plan',
+    'footer.importTpl.title':  'Import a comm plan (JSON)',
     'footer.save':             '💾 Save',
     'footer.save.titleDisabled': 'No changes to save',
-    'modal.saveError.title':   '⚠ Save error',
-    'modal.tplImport.title':   '📥 Template imported',
+    'modal.tplImport.title':   '📥 Comm plan imported',
     'drop.title':              'Drop a .miz file here',
+    'drop.sub':                'or click to browse',
     'drop.btn':                '📂 Choose a .miz file',
     'card.groupFreqRO':        'GROUP FREQUENCY (READ-ONLY)',
     'card.groupFreqNoSync':    'GROUP FREQUENCY (NOT SYNCED TO A CHANNEL)',
@@ -968,19 +927,23 @@ const I18N = {
     'toast.saved':             'Saved: ',
     'toast.noEffectiveChange': 'No effective change (values unchanged). Save cancelled.',
     'toast.pickFile':          'Please choose a .miz file',
+    'toast.loaded':            '{n} player aircraft loaded from {file}',
+    'toast.saveError':         'Saving failed: nothing was downloaded, your changes are kept.',
+    'toast.tplInvalid':        'This file is not a readable comm plan (JSON).',
+    'toast.tplUnknownFormat':  'This JSON file is not a Comm Plan Editor comm plan.',
+    'toast.tplNoConfig':       'This comm plan holds no configuration.',
+    'load.notMiz':             'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
+    'load.unreadable':         'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
     'spinner.loading':         'Loading\u2026',
     'count.pending':           '{n} pending change(s)',
     'confirm.pendingLost':     'Pending changes will be lost.',
     'confirm.pendingLost.title':  'Load another .miz?',
     'confirm.pendingLost.ok':     'Load',
     'confirm.pendingLost.cancel': 'Cancel',
-    'modal.tplInvalid':        'Invalid JSON template: ',
-    'modal.tplUnknownFormat':  'Unknown template format: "{f}". Expected: "dcs-comm-plan-template-v1".',
-    'modal.tplNoConfig':       'Invalid template: "configurations" key missing.',
-    'import.summaryHead':      '<strong>{n} change(s) generated</strong> from template.<br><br>',
-    'import.applied':          '• Template types applied to .miz: ',
-    'import.absentMiz':        '• Template types absent from .miz (ignored): ',
-    'import.absentTpl':        '• .miz types absent from template (intact): ',
+    'import.summaryHead':      '<strong>{n} change(s) generated</strong> from the comm plan.<br><br>',
+    'import.applied':          '• Comm plan types applied to the .miz: ',
+    'import.absentMiz':        '• Comm plan types absent from the .miz (ignored): ',
+    'import.absentTpl':        '• .miz types absent from the comm plan (left intact): ',
     'import.warnValues':       '⚠ {n} invalid or out-of-band value(s) ignored',
     'band.label':              'Band: {b} MHz',
     'band.refused':            '{v} MHz: out of band ({b} MHz).',
@@ -1715,11 +1678,6 @@ function triggerDownload(blob, filename) {
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }
 
-function showSaveErrorModal(message) {
-  document.getElementById('save-error-detail').textContent = message;
-  document.getElementById('save-error-modal').classList.add('open');
-}
-
 function showSaveToast(filename) {
   mtbToast(t('toast.saved') + filename, 'success');
 }
@@ -1907,8 +1865,8 @@ async function handleSave() {
     console.log('[Save] ✓ ' + filename + ' | total ' + Math.round(t5-t0) + ' ms');
 
   } catch (err) {
-    console.error('[Save] ERREUR :', err.message);
-    showSaveErrorModal(err.message);
+    console.error('[Save] ERREUR :', err);
+    mtbToast(t('toast.saveError'), 'error');
   } finally {
     btnSave.classList.remove('saving');
     updateModCount();
@@ -2057,10 +2015,6 @@ window.UI_STATE = UI_STATE;
 // CHARGEMENT .miz (réutilisé Phase 1A, simplifié pour Phase 1B)
 // ════════════════════════════════════════════════════════════════════════════
 const fileInput = document.getElementById('file-input');
-const errBlock  = document.getElementById('error-block');
-
-function showError(msg) { errBlock.style.display = 'block'; errBlock.textContent = msg; }
-function clearError()   { errBlock.style.display = 'none'; }
 
 // Drop-box listeners (pattern GUS)
 const dropBox = document.getElementById('drop-box');
@@ -2136,7 +2090,6 @@ document.getElementById('btn-load-new').addEventListener('click', async function
 });
 
 async function loadMiz(file) {
-  clearError();
   UI_STATE.model     = null;
   UI_STATE.typeViews = [];
   UI_STATE.edits.clear();
@@ -2144,13 +2097,17 @@ async function loadMiz(file) {
 
   console.log('[CPE] Chargement...');
   mtbSpinner(t('spinner.loading'));
+  // Message d'erreur : une archive illisible ou sans entrée « mission » → load.notMiz ; tout le reste → load.unreadable
+  let loadKey = 'load.unreadable';
   try {
     const arrayBuffer = await file.arrayBuffer();
     console.log('[CPE] Décompression...');
+    loadKey = 'load.notMiz';
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     const missionEntry = zip.file('mission');
     if (!missionEntry) throw new Error('Fichier "mission" introuvable dans le .miz');
+    loadKey = 'load.unreadable';
 
     console.log('[CPE] Pipeline...');
     const uint8 = await missionEntry.async('uint8array');
@@ -2192,10 +2149,11 @@ async function loadMiz(file) {
     document.getElementById('cards-container').classList.remove('hidden');
     document.getElementById('modifications-bar').classList.remove('hidden');
     updateExportBtn();
+    mtbToast(t('toast.loaded').replace('{n}', UI_STATE.model.clientGroups.length).replace('{file}', file.name), 'success');
 
   } catch (err) {
-    console.error('[CPE] Erreur chargement.');
-    showError(err.message || String(err));
+    console.error('[CPE] Erreur chargement :', err);
+    mtbToast(t(loadKey), 'error');
   } finally {
     mtbSpinnerHide();
   }
@@ -3081,17 +3039,18 @@ function importTemplate(file) {
     try {
       template = JSON.parse(e.target.result);
     } catch(err) {
-      showSaveErrorModal(t('modal.tplInvalid') + err.message);
+      console.error('[Template import] JSON illisible :', err);
+      mtbToast(t('toast.tplInvalid'), 'error');
       return;
     }
 
     // Validation format
     if (!template.format || template.format !== 'dcs-comm-plan-template-v1') {
-      showSaveErrorModal(t('modal.tplUnknownFormat').replace('{f}', template.format || 'absent'));
+      mtbToast(t('toast.tplUnknownFormat'), 'error');
       return;
     }
     if (!template.configurations || typeof template.configurations !== 'object') {
-      showSaveErrorModal(t('modal.tplNoConfig'));
+      mtbToast(t('toast.tplNoConfig'), 'error');
       return;
     }
 
@@ -3264,8 +3223,6 @@ function updateModCount() {
 }
 
 document.getElementById('btn-save').addEventListener('click', function() { handleSave(); });
-document.getElementById('save-error-close').addEventListener('click', function() { document.getElementById('save-error-modal').classList.remove('open'); });
-document.getElementById('save-error-modal').addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); });
 
 document.getElementById('btn-undo-all').addEventListener('click', () => {
   UI_STATE.edits.clear();

@@ -591,7 +591,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div id="drop-zone">
   <div class="drop-box" id="drop-box">
-    <div class="drop-icon">🎯</div>
+    <div class="drop-icon">✈️</div>
     <div class="drop-title" data-i18n="drop.title">Déposer un fichier .miz ici</div>
     <div class="drop-sub" data-i18n="drop.sub">ou cliquer pour parcourir</div>
   </div>
@@ -846,8 +846,9 @@ const I18N = {
     'confirm.revertAll.ok':        'Tout annuler',
     'confirm.revertAll.cancel':    'Garder',
     'toast.loaded':                '{n} appareils chargés depuis {file}',
-    'toast.loadError':             'Erreur de chargement :',
     'toast.pickFile':              'Veuillez choisir un fichier .miz',
+    'load.notMiz':                 'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
+    'load.unreadable':             'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
     'toast.modified.one':          '{n} appareil modifié',
     'toast.modified.other':        '{n} appareils modifiés',
     'toast.ignored.one':           '{n} ignoré',
@@ -880,8 +881,7 @@ const I18N = {
     'bar.applyN':                  'Appliquer à la sélection ({n})',
     'toast.badValue':              '❌ Valeur invalide : {field}',
     'toast.saved':                 '{file} sauvegardé ({n} appareil(s) modifié(s))',
-    'toast.saveError':             'Erreur de sauvegarde :',
-    'toast.verifyFailed':          'Vérification échouée, rien n\'a été téléchargé :',
+    'toast.saveError':             'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'spinner.loading':             'Chargement…',
     'spinner.parsing':             'Lecture du .miz…',
     'spinner.patching':            'Génération des patches…',
@@ -989,8 +989,9 @@ const I18N = {
     'confirm.revertAll.ok':        'Revert all',
     'confirm.revertAll.cancel':    'Keep',
     'toast.loaded':                '{n} aircraft loaded from {file}',
-    'toast.loadError':             'Load error:',
     'toast.pickFile':              'Please choose a .miz file',
+    'load.notMiz':                 'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
+    'load.unreadable':             'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
     'toast.modified.one':          '{n} aircraft modified',
     'toast.modified.other':        '{n} aircraft modified',
     'toast.ignored.one':           '{n} ignored',
@@ -1023,8 +1024,7 @@ const I18N = {
     'bar.applyN':                  'Apply to selection ({n})',
     'toast.badValue':              '❌ Invalid value: {field}',
     'toast.saved':                 '{file} saved ({n} aircraft modified)',
-    'toast.saveError':             'Save error:',
-    'toast.verifyFailed':          'Verification failed, nothing was downloaded:',
+    'toast.saveError':             'Saving failed: nothing was downloaded, your changes are kept.',
     'spinner.loading':             'Loading…',
     'spinner.parsing':             'Reading the .miz…',
     'spinner.patching':            'Generating patches…',
@@ -8834,14 +8834,18 @@ function setModel(model) {
 
 async function loadMiz(file) {
   mtbSpinner(t('spinner.loading'));
+  // Message d'erreur : une archive illisible ou sans entrée « mission » → load.notMiz ; tout le reste → load.unreadable
+  let loadKey = 'load.unreadable';
   try {
     const arrayBuffer = await file.arrayBuffer();
     const reopened = isLastSaved(arrayBuffer);   // le fichier que ce module vient d'enregistrer : mêmes octets
+    loadKey = 'load.notMiz';
     const zip = await JSZip.loadAsync(arrayBuffer);
 
     // Lire mission
     const missionEntry = zip.file('mission');
     if (!missionEntry) throw new Error('Fichier "mission" introuvable dans le .miz');
+    loadKey = 'load.unreadable';
     const missionSrc = await missionEntry.async('string');
 
     // Conserver les autres fichiers
@@ -8901,7 +8905,7 @@ async function loadMiz(file) {
     else showToast(loadedMsg, 'success');
   } catch (err) {
     console.error('[Load] Erreur :', err);
-    showToast(t('toast.loadError') + ' ' + err.message, 'error');
+    showToast(t(loadKey), 'error');
   } finally {
     mtbSpinnerHide();
   }
@@ -9894,7 +9898,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     catch (err) { verdict = { error: err.message }; }
     if (verdict.error) {
       console.error('[Save] Vérification échouée :', verdict.error);
-      showToast(t('toast.verifyFailed') + ' ' + verdict.error, 'error');
+      showToast(t('toast.saveError'), 'error');
       return;
     }
 
@@ -9951,7 +9955,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', nMod), 'success');
   } catch (err) {
     console.error('[Save] Erreur :', err);
-    showToast(t('toast.saveError') + ' ' + err.message, 'error');
+    showToast(t('toast.saveError'), 'error');
   } finally {
     mtbSpinnerHide();
   }

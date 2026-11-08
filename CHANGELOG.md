@@ -6,6 +6,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ### Changed
 - **All tools**: messages now look and behave the same across the suite — they appear bottom right, just above the bottom bar so they never hide *Save*, marked ✅ ⚠️ ❌ by kind, errors staying 6 s; confirmations open in the suite's own window (Cancel, Escape or a tap outside to back out) instead of the browser's dialog; every tool shows the same loading spinner while a mission is read, and the Weather Editor's custom-weather notice moves under the header, like the Ground Unit Swapper's.
+- **All tools**: messages say what happened in plain words — an unreadable file, a failed save or a wrong comm plan each get one clear sentence instead of a technical error; the Comm Plan Editor and the Weather Editor confirm a loaded mission like the other tools; the home screen refuses a file that is not a mission before keeping it, and leaving a tool says what happens to unsaved changes; every drop zone reads the same, and the Loadout Editor gets its own icon.
 
 ## [1.4.0] — 2026-11-08
 
