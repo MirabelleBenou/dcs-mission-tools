@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Bloc « MESSAGES DE LA SUITE » — une seule source pour les quatre outils et le shell de Mission Tools.
 
-Rend le texte JavaScript du bloc : le toast, la fenêtre de confirmation et le sablier de la suite, et le CSS du bandeau.
+Rend le texte JavaScript du bloc : le toast, la fenêtre de confirmation et le sablier de la suite, le CSS du bandeau, et
+deux gestes communs : le signe de repli (.mtb-chev) et le menu des actions rares de la barre du bas (.mtb-menu-wrap).
 Trois points d'entrée, et rien d'autre de public :
   - mtbToast(msg, type)                       type : success, info (défaut), warn, error ;
   - mtbConfirm({ title, text, ok, cancel })   rend une Promise<boolean> ;
@@ -9,7 +10,11 @@ Trois points d'entrée, et rien d'autre de public :
 Le bloc ne dépend d'aucune fonction de la page : les textes lui sont passés déjà traduits. Le CSS est dans le bloc
 (chaîne injectée en tête du <head>) ; les éléments #mtb-toast, #mtb-modal et #mtb-spinner sont créés par le bloc en fin de
 <body>. L'accent est la variable --accent, que chaque page pose dans son :root. Le bandeau (.mtb-banner.warn / .info) n'est
-que du CSS : la page y pose ses propres éléments.
+que du CSS : la page y pose ses propres éléments. Le signe de repli est lui aussi du CSS seul : la page pose un
+<span class="mtb-chev" aria-hidden="true"></span> en premier enfant de l'élément qui porte aria-expanded (ou du <summary>
+d'un <details>). Le menu est un comportement délégué, sans point d'entrée : un clic sur button.mtb-menu-btn bascule la
+.mtb-menu qui le suit dans son .mtb-menu-wrap ; un clic sur un bouton du menu (qui garde son propre gestionnaire), un clic
+hors du .mtb-menu-wrap ou Échap le ferment.
 Le bloc est identique à l'octet dans les quatre modules et dans le shell construit : build_mission_tools.py le garde
 (build en code 1 sinon).
 
@@ -61,6 +66,24 @@ _JS = r"""
 #mtb-spinner .mtb-anim { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: mtbspin .8s linear infinite; margin: 0 auto 16px; }
 @keyframes mtbspin { to { transform: rotate(360deg); } }
 #mtb-spinner .mtb-smsg { color: var(--text-dim); font-size: 13px; }
+/* ── repli : un seul signe pour la suite ── */
+.mtb-chev { display: inline-block; flex: 0 0 auto; width: 0; height: 0; margin: 0 2px;
+  border-left: 7px solid var(--accent); border-top: 5px solid transparent; border-bottom: 5px solid transparent;
+  transition: transform .15s; }
+[aria-expanded="true"] > .mtb-chev, [aria-expanded="true"] > * > .mtb-chev,
+details[open] > summary > .mtb-chev { transform: rotate(90deg); }
+/* ── menu des actions rares de la barre du bas ── */
+.mtb-menu-wrap { position: relative; display: inline-block; }
+.mtb-menu-btn::after { content: ' \\25B4'; }
+.mtb-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 1400; min-width: 240px;
+  display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+.mtb-menu[hidden] { display: none; }
+.mtb-menu > button { all: unset; box-sizing: border-box; min-height: 44px; padding: 0 14px; display: flex;
+  align-items: center; color: var(--text); font-size: 13px; cursor: pointer; }
+.mtb-menu > button + button { border-top: 1px solid var(--border); }
+.mtb-menu > button:hover, .mtb-menu > button:focus-visible { background: var(--surface-2, rgba(255,255,255,.04)); }
+.mtb-menu > button:disabled { opacity: .4; cursor: default; }
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
   const MTB_MS = { success: 3000, info: 3000, warn: 4500, error: 6000 };
@@ -80,12 +103,16 @@ _JS = r"""
   }
 
   /* Un seul toast à la fois : le nouveau remplace l'ancien et relance la minuterie. Posé au-dessus de la barre du bas
-     quand elle est affichée, à 24 px du bas sinon. Un saut de ligne du texte reste un saut de ligne. */
+     quand elle est affichée (#modifications-bar d'un outil, sinon #wf-bar de l'accueil du shell), à 24 px du bas sinon.
+     Un saut de ligne du texte reste un saut de ligne. */
   function mtbShowToast(msg, type) {
     if (!Object.prototype.hasOwnProperty.call(MTB_MS, type)) type = 'info';
-    const bar = document.getElementById('modifications-bar');
-    const visible = !!bar && !bar.classList.contains('hidden') && bar.offsetHeight > 0;
-    mtbToastEl.style.setProperty('--mtb-bottom', (visible ? bar.offsetHeight + 12 : 24) + 'px');
+    const mod = document.getElementById('modifications-bar');
+    const wf = document.getElementById('wf-bar');
+    let bar = null;
+    if (mod && !mod.classList.contains('hidden') && mod.offsetHeight > 0) bar = mod;
+    else if (wf && !wf.classList.contains('in-module') && wf.offsetHeight > 0) bar = wf;
+    mtbToastEl.style.setProperty('--mtb-bottom', (bar ? bar.offsetHeight + 12 : 24) + 'px');
     mtbToastEl.querySelector('.mtb-ico').textContent = MTB_ICON[type];
     const txt = mtbToastEl.querySelector('.mtb-txt');
     txt.textContent = '';
@@ -144,6 +171,45 @@ _JS = r"""
   function mtbHideSpinner() {
     mtbSpinEl.classList.remove('open');
   }
+
+  /* Menu des actions rares : ouvre ou ferme la .mtb-menu qui suit le bouton dans son .mtb-menu-wrap. À l'ouverture, le
+     focus va au premier bouton du menu qui n'est pas désactivé. */
+  function mtbMenuSet(btn, open) {
+    const wrap = btn.closest('.mtb-menu-wrap');
+    const menu = wrap && wrap.querySelector(':scope > .mtb-menu');
+    if (!menu) return;
+    menu.hidden = !open;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) {
+      const first = Array.prototype.find.call(menu.querySelectorAll(':scope > button'), b => !b.disabled);
+      if (first) first.focus();
+    }
+  }
+  function mtbMenuCloseAll(except) {
+    document.querySelectorAll('button.mtb-menu-btn[aria-expanded="true"]').forEach(b => { if (b !== except) mtbMenuSet(b, false); });
+  }
+  /* Le clic sur un bouton du menu garde son propre gestionnaire : le bloc ne l'arrête pas. */
+  document.addEventListener('click', e => {
+    const tg = e.target && e.target.closest ? e.target : null;
+    if (!tg) return;
+    const btn = tg.closest('button.mtb-menu-btn');
+    if (btn) {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      mtbMenuCloseAll(btn);
+      mtbMenuSet(btn, open);
+      return;
+    }
+    const item = tg.closest('.mtb-menu > button');
+    if (item) { const w = item.closest('.mtb-menu-wrap'); const b = w && w.querySelector(':scope > button.mtb-menu-btn'); if (b) mtbMenuSet(b, false); return; }
+    if (!tg.closest('.mtb-menu-wrap')) mtbMenuCloseAll(null);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const b = document.querySelector('button.mtb-menu-btn[aria-expanded="true"]');
+    if (!b) return;
+    mtbMenuSet(b, false);
+    b.focus();
+  });
 
   if (document.body) mtbMount();
   else document.addEventListener('DOMContentLoaded', mtbMount);
