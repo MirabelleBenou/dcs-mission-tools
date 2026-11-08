@@ -23,6 +23,7 @@ import sys
 
 from radio_block import build_block
 from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
+from messages_block import build_block as build_messages_block, BLOCK_BEGIN as MESSAGES_BEGIN, BLOCK_END as MESSAGES_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '1.4.0'
@@ -214,6 +215,45 @@ def check_listes_block():
         print(f'  [OK] Bloc des listes déroulantes identique à listes_block.py ({mod["src"]})')
 
 
+# Définitions interdites hors du bloc : function mtb…, const|let|var|class MTB…/mtb…, affectation à MTB…/mtb…
+MESSAGES_DEF_RE = re.compile(
+    r'\bfunction\s*\*?\s*(?:mtb|MTB)\w*'
+    r'|\b(?:const|let|var|class)\s+(?:MTB|mtb)\w*'
+    r'|(?<![.\w-])(?:window\.)?(?:MTB|mtb)\w*\s*=(?![=>])')
+
+
+def check_messages_text(text, label):
+    """Le bloc des messages (messages_block.build_block()) doit figurer exactement une fois, tel quel, dans `text`, et
+    rien de mtb…/MTB… ne doit être défini hors de ses marqueurs. Rend le message d'erreur, ou None."""
+    block = build_messages_block()
+    if text.count(block) != 1:
+        return (f'Le bloc des messages de {label} diffère de messages_block.py '
+                f'(attendu : une fois, à l\'identique)')
+    if text.count(MESSAGES_BEGIN) != 1 or text.count(MESSAGES_END) != 1:
+        return f'Un marqueur du bloc des messages figure plusieurs fois dans {label}'
+    redef = MESSAGES_DEF_RE.search(text.replace(block, '', 1))
+    if redef:
+        return f'{label} définit « {redef.group(0).strip()} » hors des marqueurs du bloc des messages'
+    return None
+
+
+def check_messages_block():
+    """Garde d'identité : le bloc des messages doit figurer exactement une fois, tel quel, dans chacun des quatre
+    modules. Sinon le build s'arrête avant toute écriture."""
+    for mod in MODULES:
+        try:
+            with open(os.path.join(SCRIPT_DIR, mod['src']), 'r', encoding='utf-8') as fh:
+                html = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        err = check_messages_text(html, mod['src'])
+        if err:
+            print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        print(f'  [OK] Bloc des messages identique à messages_block.py ({mod["src"]})')
+
+
 def build_module_html_js(modules):
     lines = ['const MODULE_HTML = {']
     for i, mod in enumerate(modules):
@@ -252,6 +292,8 @@ def build_html(module_html_js, tile_uris, versions):
     ver_gu = versions.get('gu', '')
     ver_wx = versions.get('wx', '')
     ver_le = versions.get('le', '')
+
+    messages_block = build_messages_block()
 
     return f'''<!DOCTYPE html>
 <html lang="fr">
@@ -299,6 +341,7 @@ def build_html(module_html_js, tile_uris, versions):
       --font-mono: "Roboto Mono", "Courier New", monospace;
 
       /* Accent shell M·T */
+      --accent:        #7A9EBF;
       --mt-accent:     #7A9EBF;
       --mt-accent-dim: rgba(122,158,191,0.15);
       --mt-accent-glow:rgba(122,158,191,0.25);
@@ -846,6 +889,8 @@ def build_html(module_html_js, tile_uris, versions):
       return new TextDecoder('utf-8').decode(bytes);
     }}
 
+    /* ── Messages de la suite (messages_block.py, identique dans les quatre modules) ── */
+    {messages_block}
     /* ── i18n FR/EN ────────────────────────────────────────── */
     const I18N = {{
       fr: {{
@@ -869,6 +914,12 @@ def build_html(module_html_js, tile_uris, versions):
         'wf.none':  'Aucun fichier chargé',
         'wf.load':  'Charger .miz',
         'wf.clear': 'Vider',
+
+        /* Retour à l'accueil avec des modifications non sauvegardées */
+        'confirm.leave.title':  "Revenir à l'accueil ?",
+        'confirm.leave.text':   '{{module}} : des modifications ne sont pas sauvegardées.',
+        'confirm.leave.ok':     'Quitter',
+        'confirm.leave.cancel': 'Annuler',
       }},
       en: {{
         tagline:        'DCS World · Mission Suite · v{APP_VERSION}',
@@ -891,6 +942,12 @@ def build_html(module_html_js, tile_uris, versions):
         'wf.none':  'No file loaded',
         'wf.load':  'Load .miz',
         'wf.clear': 'Clear',
+
+        /* Back to the home screen with unsaved changes */
+        'confirm.leave.title':  'Back to the home screen?',
+        'confirm.leave.text':   '{{module}}: changes are not saved.',
+        'confirm.leave.ok':     'Leave',
+        'confirm.leave.cancel': 'Cancel',
       }}
     }};
 
@@ -1289,14 +1346,17 @@ def build_html(module_html_js, tile_uris, versions):
       activeModule = id;
     }}
 
-    function goHub() {{
+    async function goHub() {{
       /* Garde : édits non sauvegardées dans le module actif */
       if (activeModule && hasUnsavedEdits(activeModule)) {{
         var modName = (MODULES.find(function(m) {{ return m.id === activeModule; }}) || {{}}).name || activeModule;
-        var msg = CURRENT_LANG === 'fr'
-          ? modName + ' : des modifications ne sont pas sauvegardées. Quitter quand même ?'
-          : modName + ': unsaved changes. Leave anyway?';
-        if (!window.confirm(msg)) return;
+        var leave = await mtbConfirm({{
+          title:  t('confirm.leave.title'),
+          text:   t('confirm.leave.text').replace('{{module}}', modName),
+          ok:     t('confirm.leave.ok'),
+          cancel: t('confirm.leave.cancel')
+        }});
+        if (!leave) return;
       }}
       Object.keys(iframes).forEach(function(iid) {{ iframes[iid].style.display = 'none'; }});
       document.getElementById('module-view').classList.remove('active');
@@ -1336,6 +1396,7 @@ def main():
     check_inline_tables()
     check_radio_block()
     check_listes_block()
+    check_messages_block()
 
     print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
@@ -1345,6 +1406,11 @@ def main():
 
     print(f'\n[4/4] Génération {OUT_FILE}…')
     html = build_html(module_html_js, tile_uris, versions)
+    err = check_messages_text(html.replace(module_html_js, '', 1), 'le shell construit')
+    if err:
+        print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
+        sys.exit(1)
+    print('  [OK] Bloc des messages identique à messages_block.py (shell construit)')
 
     os.makedirs(os.path.dirname(os.path.join(SCRIPT_DIR, OUT_FILE)), exist_ok=True)
     out_path = os.path.join(SCRIPT_DIR, OUT_FILE)

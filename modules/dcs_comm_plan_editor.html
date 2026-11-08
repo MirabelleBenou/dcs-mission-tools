@@ -23,6 +23,7 @@
       --amber-dim:    rgba(255,176,0,0.15);
       --amber-glow:   rgba(255,176,0,0.25);
       --tbm-accent:   var(--amber);
+      --accent:       var(--amber);
 
       /* ── Olive (conservé pour cohérence Mission Suite) ──────────────────── */
       --olive:        #9CAE5A;
@@ -671,7 +672,7 @@
       white-space: pre-wrap;
     }
 
-    /* ── Modale erreur sauvegarde + toast ───────────────────────────────── */
+    /* ── Modale erreur sauvegarde ───────────────────────────────────────── */
     #save-error-modal {
       display: none;
       position: fixed;
@@ -704,22 +705,6 @@
       word-break: break-all;
     }
     .modal-box .modal-footer { display: flex; justify-content: flex-end; margin-top: 20px; }
-    #save-toast {
-      display: none;
-      position: fixed;
-      bottom: 60px;
-      right: 24px;
-      background: var(--surface);
-      border: 1px solid var(--phosphor-dim);
-      border-radius: 4px;
-      padding: 10px 16px;
-      font-size: 13px;
-      color: var(--phosphor);
-      z-index: 500;
-      font-family: var(--font-mono);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    #save-toast.open { display: block; }
     #btn-save.saving { opacity: 0.7; cursor: wait; }
 
     /* ── Utilitaires ─────────────────────────────────────────────────────── */
@@ -848,7 +833,6 @@
     </div>
   </div>
 </div>
-<div id="save-toast"></div>
 
 <script>
 /*!
@@ -918,10 +902,15 @@ const I18N = {
     'empty.noType':            'Aucun type sélectionné — cochez des types dans le sélecteur ci-dessus.',
     'empty.noEdits':           'Aucune modification en cours. Éditez des fréquences pour les voir apparaître ici.',
     'empty.noResult':          'Aucun résultat pour ces filtres.',
-    'toast.saved':             '✓ Sauvegardé : ',
-    'toast.noEffectiveChange': 'ℹ Aucune modification effective (valeurs inchangées). Sauvegarde annulée.',
+    'toast.saved':             'Sauvegardé : ',
+    'toast.noEffectiveChange': 'Aucune modification effective (valeurs inchangées). Sauvegarde annulée.',
+    'toast.pickFile':          'Veuillez choisir un fichier .miz',
+    'spinner.loading':         'Chargement\u2026',
     'count.pending':           '{n} modification(s) en attente',
-    'confirm.pendingLost':     'Des modifications sont en attente et seront perdues. Continuer ?',
+    'confirm.pendingLost':     'Les modifications en attente seront perdues.',
+    'confirm.pendingLost.title':  'Charger un autre .miz ?',
+    'confirm.pendingLost.ok':     'Charger',
+    'confirm.pendingLost.cancel': 'Annuler',
     'modal.tplInvalid':        'Template JSON invalide : ',
     'modal.tplUnknownFormat':  'Format de template inconnu : "{f}". Attendu : "dcs-comm-plan-template-v1".',
     'modal.tplNoConfig':       'Template invalide : clé "configurations" manquante.',
@@ -976,10 +965,15 @@ const I18N = {
     'empty.noType':            'No type selected — check types in the selector above.',
     'empty.noEdits':           'No changes in progress. Edit frequencies to see them appear here.',
     'empty.noResult':          'No results for these filters.',
-    'toast.saved':             '✓ Saved: ',
-    'toast.noEffectiveChange': 'ℹ No effective change (values unchanged). Save cancelled.',
+    'toast.saved':             'Saved: ',
+    'toast.noEffectiveChange': 'No effective change (values unchanged). Save cancelled.',
+    'toast.pickFile':          'Please choose a .miz file',
+    'spinner.loading':         'Loading\u2026',
     'count.pending':           '{n} pending change(s)',
-    'confirm.pendingLost':     'Pending changes will be lost. Continue?',
+    'confirm.pendingLost':     'Pending changes will be lost.',
+    'confirm.pendingLost.title':  'Load another .miz?',
+    'confirm.pendingLost.ok':     'Load',
+    'confirm.pendingLost.cancel': 'Cancel',
     'modal.tplInvalid':        'Invalid JSON template: ',
     'modal.tplUnknownFormat':  'Unknown template format: "{f}". Expected: "dcs-comm-plan-template-v1".',
     'modal.tplNoConfig':       'Invalid template: "configurations" key missing.',
@@ -1727,11 +1721,7 @@ function showSaveErrorModal(message) {
 }
 
 function showSaveToast(filename) {
-  const toast = document.getElementById('save-toast');
-  toast.textContent = t('toast.saved') + filename;
-  toast.style.color = 'var(--phosphor)';
-  toast.classList.add('open');
-  setTimeout(function() { toast.classList.remove('open'); }, 4000);
+  mtbToast(t('toast.saved') + filename, 'success');
 }
 
 function findSlotById(sid) {
@@ -1869,11 +1859,7 @@ async function handleSave() {
     // A : collecte + no-op
     const basePatches = collectPatches(srcText);
     if (basePatches.length === 0) {
-      const toast = document.getElementById('save-toast');
-      toast.textContent = t('toast.noEffectiveChange');
-      toast.style.color = 'var(--text-dim)';
-      toast.classList.add('open');
-      setTimeout(function() { toast.classList.remove('open'); toast.style.color = ''; }, 5000);
+      mtbToast(t('toast.noEffectiveChange'), 'info');
       return;
     }
 
@@ -2095,7 +2081,7 @@ dropBox.addEventListener('drop', function(e) {
   if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
 });
 function handleFile(file) {
-  if (!file || !file.name.toLowerCase().endsWith('.miz')) { showToast(t('toast.pickFile'), 'warn'); return; }
+  if (!file || !file.name.toLowerCase().endsWith('.miz')) { mtbToast(t('toast.pickFile'), 'warn'); return; }
   loadMiz(file);
 }
 
@@ -2110,9 +2096,15 @@ document.addEventListener('drop', function(e) {
 });
 
 // Bouton "Charger un autre .miz"
-document.getElementById('btn-load-new').addEventListener('click', function() {
+document.getElementById('btn-load-new').addEventListener('click', async function() {
   if (UI_STATE.edits.size > 0) {
-    if (!confirm(t('confirm.pendingLost'))) return;
+    const proceed = await mtbConfirm({
+      title:  t('confirm.pendingLost.title'),
+      text:   t('confirm.pendingLost'),
+      ok:     t('confirm.pendingLost.ok'),
+      cancel: t('confirm.pendingLost.cancel')
+    });
+    if (!proceed) return;
   }
   // Reset state
   UI_STATE.edits.clear();
@@ -2151,6 +2143,7 @@ async function loadMiz(file) {
   UI_STATE.cardStates.clear();
 
   console.log('[CPE] Chargement...');
+  mtbSpinner(t('spinner.loading'));
   try {
     const arrayBuffer = await file.arrayBuffer();
     console.log('[CPE] Décompression...');
@@ -2203,6 +2196,8 @@ async function loadMiz(file) {
   } catch (err) {
     console.error('[CPE] Erreur chargement.');
     showError(err.message || String(err));
+  } finally {
+    mtbSpinnerHide();
   }
 }
 
@@ -3284,6 +3279,141 @@ document.getElementById('btn-undo-all').addEventListener('click', () => {
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ===== MESSAGES DE LA SUITE ===== */
+/* Toast, fenêtre de confirmation, sablier : un seul jeu de boîtes pour toute la suite. Réglage de la page : variable
+   --accent dans :root. Les textes arrivent déjà traduits. */
+(function () {
+  const MTB_CSS = `
+/* ── toast de suite ── */
+#mtb-toast { position: fixed; right: 16px; bottom: var(--mtb-bottom, 24px); z-index: 1500;
+  max-width: 440px; display: flex; gap: 10px; align-items: flex-start;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-left: 4px solid var(--mtb-c, var(--accent)); border-radius: 4px;
+  padding: 10px 14px; font-size: 13px; line-height: 1.45; box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; pointer-events: none; }
+#mtb-toast.show { opacity: 1; transform: none; }
+#mtb-toast.success { --mtb-c: var(--success); }
+#mtb-toast.warn    { --mtb-c: var(--warn); }
+#mtb-toast.error   { --mtb-c: var(--error); }
+#mtb-toast .mtb-ico { flex-shrink: 0; }
+@media (max-width: 560px) { #mtb-toast { left: 12px; right: 12px; max-width: none; } }
+/* ── fenêtre de confirmation ── */
+#mtb-modal { position: fixed; inset: 0; z-index: 2500; background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center; padding: 16px; }
+#mtb-modal.open { display: flex; }
+#mtb-modal .mtb-box { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+  border-radius: 4px; width: 100%; max-width: 460px; padding: 20px 22px 16px; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+#mtb-modal h2 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
+#mtb-modal p { font-size: 13px; line-height: 1.55; color: var(--text-2); margin: 0 0 6px; }
+#mtb-modal .mtb-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+#mtb-modal button { min-height: 44px; padding: 0 18px; border-radius: 4px; font: inherit; font-size: 13px; cursor: pointer; }
+#mtb-modal .mtb-cancel { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+#mtb-modal .mtb-ok { background: var(--accent); color: #111; border: 1px solid var(--accent); font-weight: 600; }
+#mtb-modal button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ── bandeau ── */
+.mtb-banner { display: flex; align-items: center; gap: 10px; padding: 6px 20px; font-size: 12px; line-height: 1.4; flex-shrink: 0; }
+.mtb-banner.warn { background: #2A2200; border-bottom: 1px solid #5A4400; color: #FFD54F; }
+.mtb-banner.info { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--text); }
+/* ── sablier ── */
+#mtb-spinner { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; }
+#mtb-spinner.open { display: flex; }
+#mtb-spinner .mtb-sbox { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 32px 48px; text-align: center; }
+#mtb-spinner .mtb-anim { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: mtbspin .8s linear infinite; margin: 0 auto 16px; }
+@keyframes mtbspin { to { transform: rotate(360deg); } }
+#mtb-spinner .mtb-smsg { color: var(--text-dim); font-size: 13px; }
+`;
+  const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
+  const MTB_MS = { success: 3000, info: 3000, warn: 4500, error: 6000 };
+  let mtbTimer = null;
+  let mtbClose = null;   /* ferme la fenêtre ouverte et rend son choix ; null si aucune n'est ouverte */
+  let mtbToastEl = null, mtbModalEl = null, mtbSpinEl = null;
+
+  function mtbMount() {
+    const st = document.createElement('style');
+    st.setAttribute('data-mtb', '');
+    st.textContent = MTB_CSS;
+    document.head.insertBefore(st, document.head.firstChild);
+    const mk = html => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
+    mtbToastEl = document.body.appendChild(mk('<div id="mtb-toast" role="status" aria-live="polite"><span class="mtb-ico"></span><span class="mtb-txt"></span></div>'));
+    mtbModalEl = document.body.appendChild(mk('<div id="mtb-modal" role="dialog" aria-modal="true" aria-labelledby="mtb-modal-title"><div class="mtb-box"><h2 id="mtb-modal-title"></h2><p></p><div class="mtb-actions"><button type="button" class="mtb-cancel"></button><button type="button" class="mtb-ok"></button></div></div></div>'));
+    mtbSpinEl = document.body.appendChild(mk('<div id="mtb-spinner"><div class="mtb-sbox"><div class="mtb-anim"></div><div class="mtb-smsg"></div></div></div>'));
+  }
+
+  /* Un seul toast à la fois : le nouveau remplace l'ancien et relance la minuterie. Posé au-dessus de la barre du bas
+     quand elle est affichée, à 24 px du bas sinon. Un saut de ligne du texte reste un saut de ligne. */
+  function mtbShowToast(msg, type) {
+    if (!Object.prototype.hasOwnProperty.call(MTB_MS, type)) type = 'info';
+    const bar = document.getElementById('modifications-bar');
+    const visible = !!bar && !bar.classList.contains('hidden') && bar.offsetHeight > 0;
+    mtbToastEl.style.setProperty('--mtb-bottom', (visible ? bar.offsetHeight + 12 : 24) + 'px');
+    mtbToastEl.querySelector('.mtb-ico').textContent = MTB_ICON[type];
+    const txt = mtbToastEl.querySelector('.mtb-txt');
+    txt.textContent = '';
+    String(msg == null ? '' : msg).split('\n').forEach((line, i) => {
+      if (i) txt.appendChild(document.createElement('br'));
+      txt.appendChild(document.createTextNode(line));
+    });
+    mtbToastEl.className = 'show ' + type;
+    clearTimeout(mtbTimer);
+    mtbTimer = setTimeout(() => { mtbToastEl.className = ''; }, MTB_MS[type]);
+  }
+
+  /* Annuler, Échap ou un toucher sur le fond rendent false ; l'action rend true. Une fenêtre déjà ouverte rend false. */
+  function mtbShowConfirm(o) {
+    if (mtbClose) mtbClose(false);
+    o = o || {};
+    return new Promise(resolve => {
+      const bOk = mtbModalEl.querySelector('.mtb-ok'), bNo = mtbModalEl.querySelector('.mtb-cancel');
+      const before = document.activeElement;
+      mtbModalEl.querySelector('h2').textContent = o.title || '';
+      mtbModalEl.querySelector('p').textContent = o.text || '';
+      bOk.textContent = o.ok || '';
+      bNo.textContent = o.cancel || '';
+      const done = v => {
+        if (mtbClose !== done) return;
+        mtbClose = null;
+        mtbModalEl.classList.remove('open');
+        document.removeEventListener('keydown', key, true);
+        bOk.onclick = bNo.onclick = mtbModalEl.onclick = null;
+        if (before && before.focus && document.contains(before)) { try { before.focus({ preventScroll: true }); } catch (e) {} }
+        resolve(v);
+      };
+      const key = e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); return; }
+        if (e.key === 'Tab') {   /* le focus reste entre les deux boutons */
+          const a = document.activeElement;
+          if (e.shiftKey && a === bNo) { e.preventDefault(); bOk.focus(); }
+          else if (!e.shiftKey && a === bOk) { e.preventDefault(); bNo.focus(); }
+          else if (a !== bOk && a !== bNo) { e.preventDefault(); bOk.focus(); }
+        }
+      };
+      mtbClose = done;
+      bOk.onclick = () => done(true);
+      bNo.onclick = () => done(false);
+      mtbModalEl.onclick = e => { if (e.target === mtbModalEl) done(false); };
+      document.addEventListener('keydown', key, true);
+      mtbModalEl.classList.add('open');
+      bOk.focus();
+    });
+  }
+
+  function mtbShowSpinner(msg) {
+    mtbSpinEl.querySelector('.mtb-smsg').textContent = msg || '';
+    mtbSpinEl.classList.add('open');
+  }
+  function mtbHideSpinner() {
+    mtbSpinEl.classList.remove('open');
+  }
+
+  if (document.body) mtbMount();
+  else document.addEventListener('DOMContentLoaded', mtbMount);
+  window.mtbToast = mtbShowToast;
+  window.mtbConfirm = mtbShowConfirm;
+  window.mtbSpinner = mtbShowSpinner;
+  window.mtbSpinnerHide = mtbHideSpinner;
+})();
+/* ===== FIN DES MESSAGES ===== */
 
 /* ===== LISTES DEROULANTES AU THEME ===== */
 /* Le <select> reste dans la page (id, options, écouteurs, valeur) mais masqué ; un <button> le remplace et porte le

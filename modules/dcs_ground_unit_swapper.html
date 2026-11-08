@@ -37,6 +37,7 @@
       --amber-dim:    rgba(255,176,0,0.15);
       --amber-glow:   rgba(255,176,0,0.25);
       --tbm-accent:   var(--amber);
+      --accent:       var(--olive);
       --olive:        #9CAE5A;
       --olive-dim:    #6B7A3F;
       --olive-glow:   rgba(156,174,90,0.15);
@@ -194,20 +195,6 @@
     /* ── Main UI ──────────────────────────────────────────────────────────── */
     #main-ui { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; }
     #main-ui.hidden { display: none; }
-
-    /* ── Warn banner ─────────────────────────────────────────────────────── */
-    #warn-banner {
-      background: #2A2200;
-      border-bottom: 1px solid #5A4400;
-      padding: 5px 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: #FFD54F;
-      flex-shrink: 0;
-    }
-    #warn-banner .warn-icon { font-size: 14px; }
 
     /* ── Filters bar ─────────────────────────────────────────────────────── */
     #filters-bar {
@@ -534,58 +521,6 @@
       display: none;
     }
 
-    /* ── Toast ───────────────────────────────────────────────────────────── */
-    #toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 12px 20px;
-      border-radius: 6px;
-      font-size: 13px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      opacity: 0;
-      transform: translateY(8px);
-      transition: opacity 0.2s, transform 0.2s;
-      pointer-events: none;
-      z-index: 1000;
-      max-width: 420px;
-    }
-    #toast.show { opacity: 1; transform: translateY(0); }
-    #toast.toast-success { border-color: var(--olive); }
-    #toast.toast-error   { border-color: var(--error);  }
-    #toast.toast-warn    { border-color: var(--amber);  }
-
-    /* ── Spinner ─────────────────────────────────────────────────────────── */
-    #spinner {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-    }
-    #spinner.hidden { display: none; }
-    .spinner-box {
-      background: var(--surface);
-      border: 1px solid var(--olive);
-      border-radius: 10px;
-      padding: 32px 48px;
-      text-align: center;
-    }
-    .spinner-anim {
-      width: 36px; height: 36px;
-      border: 3px solid var(--border);
-      border-top-color: var(--olive);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 16px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner-msg { color: var(--text-dim); font-size: 13px; }
-
     /* ── Combobox custom : même dessin que les listes du bloc commun (classes tbm-*) ─────────── */
     .combobox {
       position: relative;
@@ -668,7 +603,7 @@
 <div id="main-ui" class="hidden">
 
   <!-- Warn banner -->
-  <div id="warn-banner">
+  <div id="warn-banner" class="mtb-banner warn">
     <span class="warn-icon">⚠️</span>
     <span data-i18n="warn.typesLimited">Les types proposés sont limités aux types existants. Pour un type absent, ajoutez-le avec le ME DCS.</span>
   </div>
@@ -758,17 +693,6 @@
     <div id="empty-state" data-i18n="table.empty">Aucune unité ne correspond aux filtres actifs.</div>
   </div>
 </div>
-
-<!-- Spinner -->
-<div id="spinner" class="hidden">
-  <div class="spinner-box">
-    <div class="spinner-anim"></div>
-    <div class="spinner-msg" id="spinner-msg" data-i18n="spinner.loading">Chargement…</div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div id="toast"></div>
 
 <!-- ── Footer sticky modifications ─────────────────────────────────────── -->
 <footer id="modifications-bar" class="hidden">
@@ -870,19 +794,22 @@ const I18N = {
     'family.infra':   '\uD83C\uDFD7\uFE0F Infra/C2',
     'family.unknown': '\u2753 Inconnu',
     // Dynamique
-    'toast.unitsLoaded':    '\u2705 {n} unit\u00e9s charg\u00e9es depuis {file}',
-    'toast.loadError':      '\u274c Erreur de chargement :',
-    'toast.bulkApplied':    '\u2705 {n} unit\u00e9(s) modifi\u00e9e(s) via bulk edit',
-    'toast.saved':          '\ud83d\udcbe {file} sauvegard\u00e9 ({n} modification(s))',
-    'toast.saveError':      '\u274c Erreur de sauvegarde :',
-    'toast.pickFile':       '\u26a0\ufe0f Veuillez choisir un fichier .miz',
-    'toast.exported':       '\ud83d\udce5 {file} export\u00e9 ({n} modifications)',
-    'toast.loadFirst':      '\u26a0\ufe0f Chargez un fichier .miz d\'abord',
-    'toast.jsonInvalid':    '\u274c Fichier JSON invalide',
-    'toast.jsonUnrecognized': '\u274c Format JSON non reconnu',
-    'toast.importPartial':  '\ud83d\udce4 Import : {a} modif(s) appliqu\u00e9e(s), {i} ignor\u00e9e(s)',
-    'toast.importOk':       '\ud83d\udce4 Import : {a} modification(s) appliqu\u00e9e(s)',
-    'confirm.import':       'Le JSON a \u00e9t\u00e9 export\u00e9 pour "{exported}".\nLe miz actuel est "{current}".\n\nImporter quand m\u00eame ?',
+    'toast.unitsLoaded':    '{n} unit\u00e9s charg\u00e9es depuis {file}',
+    'toast.loadError':      'Erreur de chargement :',
+    'toast.bulkApplied':    '{n} unit\u00e9(s) modifi\u00e9e(s) via bulk edit',
+    'toast.saved':          '{file} sauvegard\u00e9 ({n} modification(s))',
+    'toast.saveError':      'Erreur de sauvegarde :',
+    'toast.pickFile':       'Veuillez choisir un fichier .miz',
+    'toast.exported':       '{file} export\u00e9 ({n} modifications)',
+    'toast.loadFirst':      'Chargez un fichier .miz d\'abord',
+    'toast.jsonInvalid':    'Fichier JSON invalide',
+    'toast.jsonUnrecognized': 'Format JSON non reconnu',
+    'toast.importPartial':  'Import : {a} modif(s) appliqu\u00e9e(s), {i} ignor\u00e9e(s)',
+    'toast.importOk':       'Import : {a} modification(s) appliqu\u00e9e(s)',
+    'confirm.import':       'Ce fichier a \u00e9t\u00e9 export\u00e9 pour \u00ab {exported} \u00bb ; la mission ouverte est \u00ab {current} \u00bb.',
+    'confirm.import.title': 'Importer quand m\u00eame ?',
+    'confirm.import.ok':    'Importer',
+    'confirm.import.cancel':'Annuler',
     'spinner.extracting':   'Extraction des unit\u00e9s\u2026',
     'spinner.patching':     'G\u00e9n\u00e9ration des patches\u2026',
     'info.excluded':        '{n} unit\u00e9(s) pilotable(s) exclue(s)',
@@ -952,19 +879,22 @@ const I18N = {
     'family.infra':   '\uD83C\uDFD7\uFE0F Infra/C2',
     'family.unknown': '\u2753 Unknown',
     // Dynamic
-    'toast.unitsLoaded':    '\u2705 {n} units loaded from {file}',
-    'toast.loadError':      '\u274c Load error:',
-    'toast.bulkApplied':    '\u2705 {n} unit(s) modified via bulk edit',
-    'toast.saved':          '\ud83d\udcbe {file} saved ({n} modification(s))',
-    'toast.saveError':      '\u274c Save error:',
-    'toast.pickFile':       '\u26a0\ufe0f Please choose a .miz file',
-    'toast.exported':       '\ud83d\udce5 {file} exported ({n} modifications)',
-    'toast.loadFirst':      '\u26a0\ufe0f Load a .miz file first',
-    'toast.jsonInvalid':    '\u274c Invalid JSON file',
-    'toast.jsonUnrecognized': '\u274c Unrecognized JSON format',
-    'toast.importPartial':  '\ud83d\udce4 Import: {a} modification(s) applied, {i} ignored',
-    'toast.importOk':       '\ud83d\udce4 Import: {a} modification(s) applied',
-    'confirm.import':       'The JSON was exported for "{exported}".\nThe current miz is "{current}".\n\nImport anyway?',
+    'toast.unitsLoaded':    '{n} units loaded from {file}',
+    'toast.loadError':      'Load error:',
+    'toast.bulkApplied':    '{n} unit(s) modified via bulk edit',
+    'toast.saved':          '{file} saved ({n} modification(s))',
+    'toast.saveError':      'Save error:',
+    'toast.pickFile':       'Please choose a .miz file',
+    'toast.exported':       '{file} exported ({n} modifications)',
+    'toast.loadFirst':      'Load a .miz file first',
+    'toast.jsonInvalid':    'Invalid JSON file',
+    'toast.jsonUnrecognized': 'Unrecognized JSON format',
+    'toast.importPartial':  'Import: {a} modification(s) applied, {i} ignored',
+    'toast.importOk':       'Import: {a} modification(s) applied',
+    'confirm.import':       'This file was exported for "{exported}"; the open mission is "{current}".',
+    'confirm.import.title': 'Import anyway?',
+    'confirm.import.ok':    'Import',
+    'confirm.import.cancel':'Cancel',
     'spinner.extracting':   'Extracting units\u2026',
     'spinner.patching':     'Generating patches\u2026',
     'info.excluded':        '{n} playable unit(s) excluded',
@@ -2534,21 +2464,8 @@ window.FAMILY_META = FAMILY_META;
 // ═══════════════════════════════════════════════════════════════
 // UTILITAIRES UI
 // ═══════════════════════════════════════════════════════════════
-let toastTimer = null;
 function showToast(msg, type = 'info') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'show toast-' + type;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = ''; }, 3500);
-}
-
-function showSpinner(msg) {
-  document.getElementById('spinner-msg').textContent = msg || 'Chargement…';
-  document.getElementById('spinner').classList.remove('hidden');
-}
-function hideSpinner() {
-  document.getElementById('spinner').classList.add('hidden');
+  mtbToast(msg, type);
 }
 
 function escapeRegex(s) {
@@ -2559,7 +2476,7 @@ function escapeRegex(s) {
 // CHARGEMENT MIZ
 // ═══════════════════════════════════════════════════════════════
 async function loadMiz(file) {
-  showSpinner('Extraction du .miz…');
+  mtbSpinner(t('spinner.loading'));
   try {
     const arrayBuffer = await file.arrayBuffer();
     const zip = await JSZip.loadAsync(arrayBuffer);
@@ -2576,7 +2493,6 @@ async function loadMiz(file) {
       otherFilesMap[name] = await entry.async('uint8array');
     }
 
-    showSpinner('Parsing Lua…');
     await new Promise(r => setTimeout(r, 0)); // yield pour afficher le spinner
 
     const t0 = performance.now();
@@ -2587,7 +2503,6 @@ async function loadMiz(file) {
     const ast = DCS_PARSER.parse(tokens);
     console.log('[Load] Parse OK en', Math.round(performance.now() - t0), 'ms');
 
-    showSpinner(t('spinner.extracting'));
     await new Promise(r => setTimeout(r, 0));
 
     const model = extractGroundUnits(ast, missionSrc, file.name, otherFilesMap);
@@ -2618,7 +2533,7 @@ async function loadMiz(file) {
     console.error('[Load] Erreur :', err);
     showToast(t('toast.loadError') + ' ' + err.message, 'error');
   } finally {
-    hideSpinner();
+    mtbSpinnerHide();
   }
 }
 
@@ -3210,7 +3125,7 @@ document.getElementById('btn-bulk-apply').addEventListener('click', () => {
 // ═══════════════════════════════════════════════════════════════
 document.getElementById('btn-save').addEventListener('click', async () => {
   if (!UI_STATE.model || UI_STATE.edits.size === 0) return;
-  showSpinner(t('spinner.patching'));
+  mtbSpinner(t('spinner.patching'));
   try {
     await new Promise(r => setTimeout(r, 0));
 
@@ -3220,13 +3135,13 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     console.log('[Save] Patches :', patches.length);
     patches.forEach(p => console.debug('  @' + p.pos.start.offset + ' → ' + p.newValueStr));
 
-    showSpinner('Application des patches…');
+    mtbSpinner('Application des patches…');
     await new Promise(r => setTimeout(r, 0));
 
     const patchedSrc = applyPatches(srcText, patches);
     retokenizeSafety(patchedSrc); // throw si KO
 
-    showSpinner('Reconstruction du .miz…');
+    mtbSpinner('Reconstruction du .miz…');
     await new Promise(r => setTimeout(r, 0));
 
     const newZip = new JSZip();
@@ -3272,7 +3187,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     console.error('[Save] Erreur :', err);
     showToast(t('toast.saveError') + ' ' + err.message, 'error');
   } finally {
-    hideSpinner();
+    mtbSpinnerHide();
   }
 });
 
@@ -3404,11 +3319,14 @@ document.getElementById('json-file-input').addEventListener('change', async (e) 
   // Vérification mizFilename
   const currentMiz = UI_STATE.model.source.mizFilename;
   if (payload.mizFilename && payload.mizFilename !== currentMiz) {
-    const proceed = confirm(
-      t('confirm.import')
+    const proceed = await mtbConfirm({
+      title:  t('confirm.import.title'),
+      text:   t('confirm.import')
         .replace('{exported}', payload.mizFilename)
-        .replace('{current}', currentMiz)
-    );
+        .replace('{current}', currentMiz),
+      ok:     t('confirm.import.ok'),
+      cancel: t('confirm.import.cancel')
+    });
     if (!proceed) return;
   }
 
@@ -3459,6 +3377,141 @@ window.addEventListener('resize', () => {
   _typePopupsW = window.innerWidth;
   closeTypePopups();
 });
+
+/* ===== MESSAGES DE LA SUITE ===== */
+/* Toast, fenêtre de confirmation, sablier : un seul jeu de boîtes pour toute la suite. Réglage de la page : variable
+   --accent dans :root. Les textes arrivent déjà traduits. */
+(function () {
+  const MTB_CSS = `
+/* ── toast de suite ── */
+#mtb-toast { position: fixed; right: 16px; bottom: var(--mtb-bottom, 24px); z-index: 1500;
+  max-width: 440px; display: flex; gap: 10px; align-items: flex-start;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border);
+  border-left: 4px solid var(--mtb-c, var(--accent)); border-radius: 4px;
+  padding: 10px 14px; font-size: 13px; line-height: 1.45; box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; pointer-events: none; }
+#mtb-toast.show { opacity: 1; transform: none; }
+#mtb-toast.success { --mtb-c: var(--success); }
+#mtb-toast.warn    { --mtb-c: var(--warn); }
+#mtb-toast.error   { --mtb-c: var(--error); }
+#mtb-toast .mtb-ico { flex-shrink: 0; }
+@media (max-width: 560px) { #mtb-toast { left: 12px; right: 12px; max-width: none; } }
+/* ── fenêtre de confirmation ── */
+#mtb-modal { position: fixed; inset: 0; z-index: 2500; background: rgba(0,0,0,.6);
+  display: none; align-items: center; justify-content: center; padding: 16px; }
+#mtb-modal.open { display: flex; }
+#mtb-modal .mtb-box { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
+  border-radius: 4px; width: 100%; max-width: 460px; padding: 20px 22px 16px; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
+#mtb-modal h2 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
+#mtb-modal p { font-size: 13px; line-height: 1.55; color: var(--text-2); margin: 0 0 6px; }
+#mtb-modal .mtb-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+#mtb-modal button { min-height: 44px; padding: 0 18px; border-radius: 4px; font: inherit; font-size: 13px; cursor: pointer; }
+#mtb-modal .mtb-cancel { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+#mtb-modal .mtb-ok { background: var(--accent); color: #111; border: 1px solid var(--accent); font-weight: 600; }
+#mtb-modal button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* ── bandeau ── */
+.mtb-banner { display: flex; align-items: center; gap: 10px; padding: 6px 20px; font-size: 12px; line-height: 1.4; flex-shrink: 0; }
+.mtb-banner.warn { background: #2A2200; border-bottom: 1px solid #5A4400; color: #FFD54F; }
+.mtb-banner.info { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--text); }
+/* ── sablier ── */
+#mtb-spinner { position: fixed; inset: 0; z-index: 2000; background: rgba(0,0,0,.7); display: none; align-items: center; justify-content: center; }
+#mtb-spinner.open { display: flex; }
+#mtb-spinner .mtb-sbox { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 32px 48px; text-align: center; }
+#mtb-spinner .mtb-anim { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: mtbspin .8s linear infinite; margin: 0 auto 16px; }
+@keyframes mtbspin { to { transform: rotate(360deg); } }
+#mtb-spinner .mtb-smsg { color: var(--text-dim); font-size: 13px; }
+`;
+  const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
+  const MTB_MS = { success: 3000, info: 3000, warn: 4500, error: 6000 };
+  let mtbTimer = null;
+  let mtbClose = null;   /* ferme la fenêtre ouverte et rend son choix ; null si aucune n'est ouverte */
+  let mtbToastEl = null, mtbModalEl = null, mtbSpinEl = null;
+
+  function mtbMount() {
+    const st = document.createElement('style');
+    st.setAttribute('data-mtb', '');
+    st.textContent = MTB_CSS;
+    document.head.insertBefore(st, document.head.firstChild);
+    const mk = html => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
+    mtbToastEl = document.body.appendChild(mk('<div id="mtb-toast" role="status" aria-live="polite"><span class="mtb-ico"></span><span class="mtb-txt"></span></div>'));
+    mtbModalEl = document.body.appendChild(mk('<div id="mtb-modal" role="dialog" aria-modal="true" aria-labelledby="mtb-modal-title"><div class="mtb-box"><h2 id="mtb-modal-title"></h2><p></p><div class="mtb-actions"><button type="button" class="mtb-cancel"></button><button type="button" class="mtb-ok"></button></div></div></div>'));
+    mtbSpinEl = document.body.appendChild(mk('<div id="mtb-spinner"><div class="mtb-sbox"><div class="mtb-anim"></div><div class="mtb-smsg"></div></div></div>'));
+  }
+
+  /* Un seul toast à la fois : le nouveau remplace l'ancien et relance la minuterie. Posé au-dessus de la barre du bas
+     quand elle est affichée, à 24 px du bas sinon. Un saut de ligne du texte reste un saut de ligne. */
+  function mtbShowToast(msg, type) {
+    if (!Object.prototype.hasOwnProperty.call(MTB_MS, type)) type = 'info';
+    const bar = document.getElementById('modifications-bar');
+    const visible = !!bar && !bar.classList.contains('hidden') && bar.offsetHeight > 0;
+    mtbToastEl.style.setProperty('--mtb-bottom', (visible ? bar.offsetHeight + 12 : 24) + 'px');
+    mtbToastEl.querySelector('.mtb-ico').textContent = MTB_ICON[type];
+    const txt = mtbToastEl.querySelector('.mtb-txt');
+    txt.textContent = '';
+    String(msg == null ? '' : msg).split('\n').forEach((line, i) => {
+      if (i) txt.appendChild(document.createElement('br'));
+      txt.appendChild(document.createTextNode(line));
+    });
+    mtbToastEl.className = 'show ' + type;
+    clearTimeout(mtbTimer);
+    mtbTimer = setTimeout(() => { mtbToastEl.className = ''; }, MTB_MS[type]);
+  }
+
+  /* Annuler, Échap ou un toucher sur le fond rendent false ; l'action rend true. Une fenêtre déjà ouverte rend false. */
+  function mtbShowConfirm(o) {
+    if (mtbClose) mtbClose(false);
+    o = o || {};
+    return new Promise(resolve => {
+      const bOk = mtbModalEl.querySelector('.mtb-ok'), bNo = mtbModalEl.querySelector('.mtb-cancel');
+      const before = document.activeElement;
+      mtbModalEl.querySelector('h2').textContent = o.title || '';
+      mtbModalEl.querySelector('p').textContent = o.text || '';
+      bOk.textContent = o.ok || '';
+      bNo.textContent = o.cancel || '';
+      const done = v => {
+        if (mtbClose !== done) return;
+        mtbClose = null;
+        mtbModalEl.classList.remove('open');
+        document.removeEventListener('keydown', key, true);
+        bOk.onclick = bNo.onclick = mtbModalEl.onclick = null;
+        if (before && before.focus && document.contains(before)) { try { before.focus({ preventScroll: true }); } catch (e) {} }
+        resolve(v);
+      };
+      const key = e => {
+        if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); done(false); return; }
+        if (e.key === 'Tab') {   /* le focus reste entre les deux boutons */
+          const a = document.activeElement;
+          if (e.shiftKey && a === bNo) { e.preventDefault(); bOk.focus(); }
+          else if (!e.shiftKey && a === bOk) { e.preventDefault(); bNo.focus(); }
+          else if (a !== bOk && a !== bNo) { e.preventDefault(); bOk.focus(); }
+        }
+      };
+      mtbClose = done;
+      bOk.onclick = () => done(true);
+      bNo.onclick = () => done(false);
+      mtbModalEl.onclick = e => { if (e.target === mtbModalEl) done(false); };
+      document.addEventListener('keydown', key, true);
+      mtbModalEl.classList.add('open');
+      bOk.focus();
+    });
+  }
+
+  function mtbShowSpinner(msg) {
+    mtbSpinEl.querySelector('.mtb-smsg').textContent = msg || '';
+    mtbSpinEl.classList.add('open');
+  }
+  function mtbHideSpinner() {
+    mtbSpinEl.classList.remove('open');
+  }
+
+  if (document.body) mtbMount();
+  else document.addEventListener('DOMContentLoaded', mtbMount);
+  window.mtbToast = mtbShowToast;
+  window.mtbConfirm = mtbShowConfirm;
+  window.mtbSpinner = mtbShowSpinner;
+  window.mtbSpinnerHide = mtbHideSpinner;
+})();
+/* ===== FIN DES MESSAGES ===== */
 
 /* ===== LISTES DEROULANTES AU THEME ===== */
 /* Le <select> reste dans la page (id, options, écouteurs, valeur) mais masqué ; un <button> le remplace et porte le
