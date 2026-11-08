@@ -317,7 +317,7 @@ def build_html(module_html_js, tile_uris, versions):
       --amber-dim:    rgba(255,176,0,0.15);
       --amber-glow:   rgba(255,176,0,0.25);
       --olive:        #9CAE5A;
-      --olive-dim:    rgba(156,174,90,0.15);
+      --olive-dim:    #6B7A3F;
       --olive-glow:   rgba(156,174,90,0.25);
       --cyan:         #5AB8C9;
       --cyan-dim:     rgba(90,184,201,0.15);
@@ -1352,9 +1352,9 @@ def build_html(module_html_js, tile_uris, versions):
             var back = doc.createElement('button');
             back.className = 'mt-back-injected';
             back.textContent = '◄ Mission Tools';
-            back.style.cssText = 'font-family:inherit;font-size:11px;cursor:pointer;color:#7A9EBF;'
+            back.style.cssText = 'font-family:"Roboto Mono",monospace;font-size:12px;cursor:pointer;color:#7A9EBF;'
               + 'background:transparent;border:1px solid #7A9EBF;border-radius:3px;padding:4px 10px;'
-              + 'margin-right:12px;letter-spacing:.03em;min-height:36px;flex-shrink:0;';
+              + 'margin-right:12px;letter-spacing:.03em;min-height:44px;flex-shrink:0;';
             back.addEventListener('click', goHub);
             hdr.insertBefore(back, hdr.firstChild);
             var lang = hdr.querySelector('#btn-lang');
