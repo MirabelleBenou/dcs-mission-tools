@@ -152,6 +152,9 @@
       justify-content: center;
       gap: 20px;
       padding: 60px 20px;
+      min-height: 0;
+      overflow-y: auto;
+      justify-content: safe center;
     }
     #drop-zone.hidden { display: none; }
     .drop-box {
@@ -275,12 +278,15 @@
       padding: 5px 10px;
       font-weight: 600;
     }
-    .type-head { display: flex; align-items: center; gap: 8px; }
-    .type-caret {
-      background: none; border: none; color: var(--text-dim); cursor: pointer;
-      font-size: 11px; width: 18px; height: 22px; padding: 0;
+    tr.row-type td[colspan] { padding: 0; }
+    .type-fold {
+      box-sizing: border-box; width: 100%; min-height: 36px; padding: 0 10px;
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
     }
-    .type-caret:hover { color: var(--accent); }
+    .type-fold:hover .type-name { color: var(--accent); }
+    .type-fold:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    @media (max-width: 700px) { .type-fold { min-height: 44px; } }
     .type-name { font-family: var(--font-mono); color: var(--text); }
     .type-meta { font-weight: 400; color: var(--text-dim); font-size: 11px; }
 
@@ -333,13 +339,11 @@
     .panel-sel .warn { color: var(--warn); }
     details.panel-sec { border-bottom: 1px solid var(--border); }
     details.panel-sec > summary {
-      cursor: pointer; list-style: none; padding: 9px 14px;
+      cursor: pointer; list-style: none; padding: 0 14px; min-height: 44px;
       font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
       color: var(--text-2); user-select: none; display: flex; align-items: center; gap: 8px;
     }
     details.panel-sec > summary::-webkit-details-marker { display: none; }
-    details.panel-sec > summary::before { content: '▸'; color: var(--accent); font-size: 10px; }
-    details.panel-sec[open] > summary::before { content: '▾'; }
     .sec-body { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
 
     .ld-card, .lv-card {
@@ -484,6 +488,11 @@
       .filter-group select, .filter-group .tbm-trigger, .filter-group input[type="text"] { width: 100%; min-width: 0; }
       #modifications-bar { padding: 8px 10px; gap: 8px; }
       .drop-box { padding: 36px 24px; }
+    }
+    @media (max-height: 480px) {
+      #drop-zone { padding: 12px 20px; gap: 10px; }
+      .drop-box { padding: 16px 40px; }
+      .drop-icon { font-size: 30px; margin-bottom: 4px; }
     }
 
     /* ── Composer un emport ───────────────────────────────────────────────── */
@@ -679,14 +688,14 @@
         <div class="panel-sel" id="panel-sel"></div>
       </div>
       <details class="panel-sec" open>
-        <summary data-i18n="panel.loadouts">Emports de ce type</summary>
+        <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.loadouts">Emports de ce type</span></summary>
         <div class="sec-body">
           <button type="button" class="btn-apply btn-compose" id="btn-compose" data-i18n="cmp.open">Composer un emport</button>
           <div id="panel-loadouts"></div>
         </div>
       </details>
       <details class="panel-sec" open>
-        <summary data-i18n="panel.settings">Réglages</summary>
+        <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.settings">Réglages</span></summary>
         <div class="sec-body">
           <div class="set-grid">
             <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-slider"><input type="range" id="set-fuel-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-fuel-pct-val">—</span></div><div class="set-note"><span id="max-fuel"></span></div></div>
@@ -698,7 +707,7 @@
         </div>
       </details>
       <details class="panel-sec" open>
-        <summary data-i18n="panel.liveries">Livrées de ce type</summary>
+        <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.liveries">Livrées de ce type</span></summary>
         <div class="sec-body" id="panel-liveries"></div>
       </details>
       <div id="action-bar" aria-live="polite"></div>
@@ -772,7 +781,6 @@ const I18N = {
     'toggle.modified':             'Modifiés uniquement',
     'table.checkAll':              'Cocher/décocher les visibles',
     'table.checkType':             'Cocher/décocher le type',
-    'table.collapse':              'Replier/déplier le type',
     'table.col.group':             'Groupe',
     'table.col.unit':              'Unité',
     'table.col.role':              'Rôle',
@@ -915,7 +923,6 @@ const I18N = {
     'toggle.modified':             'Modified only',
     'table.checkAll':              'Check/uncheck visible',
     'table.checkType':             'Check/uncheck the type',
-    'table.collapse':              'Collapse/expand the type',
     'table.col.group':             'Group',
     'table.col.unit':              'Unit',
     'table.col.role':              'Role',
@@ -9021,12 +9028,13 @@ function renderTable() {
     html += '<tr class="row-type" data-type="' + escHtml(tp) + '"><td class="td-chk">' +
       '<input type="checkbox" class="type-chk" data-type="' + escHtml(tp) + '" title="' + escHtml(t('table.checkType')) + '"' +
         (selN === list.length ? ' checked' : '') + (selN > 0 && selN < list.length ? ' data-indeterminate="1"' : '') + '>' +
-      '</td><td colspan="' + (narrowMQ.matches ? 5 : 7) + '"><div class="type-head">' +
-      '<button class="type-caret" data-type="' + escHtml(tp) + '" title="' + escHtml(t('table.collapse')) + '">' + (collapsed ? '▸' : '▾') + '</button>' +
+      '</td><td colspan="' + (narrowMQ.matches ? 5 : 7) + '">' +
+      '<button type="button" class="type-fold" data-type="' + escHtml(tp) + '" aria-expanded="' + (collapsed ? 'false' : 'true') + '">' +
+      '<span class="mtb-chev" aria-hidden="true"></span>' +
       '<span class="type-name">' + escHtml(tp) + '</span>' +
       '<span class="type-meta">' + escHtml(tn('table.type.count', list.length, list.length === total ? total : list.length + ' / ' + total)) +
         ' · ' + escHtml(t('role.player')) + ' ' + nPlayers + ' · ' + escHtml(t('role.ai')) + ' ' + (list.length - nPlayers) + '</span>' +
-      '</div></td></tr>';
+      '</button></td></tr>';
     if (collapsed) continue;
     const ldInfo = getLoadouts(tp);
     for (const u of list) {
@@ -9260,11 +9268,16 @@ document.getElementById('units-tbody').addEventListener('click', function(e) {
     renderAll();
     return;
   }
-  const caret = e.target.closest('.type-caret');
-  if (caret) {
-    const tp = caret.dataset.type;
+  const fold = e.target.closest('.type-fold');
+  if (fold) {
+    const tp = fold.dataset.type;
     if (UI_STATE.collapsed.has(tp)) UI_STATE.collapsed.delete(tp); else UI_STATE.collapsed.add(tp);
     renderTable();
+    // Le tableau est redessiné : le focus revient sur la ligne qu'on vient de manœuvrer (clavier).
+    if (fold === document.activeElement || !document.activeElement || document.activeElement === document.body) {
+      const again = Array.from(document.querySelectorAll('#units-tbody .type-fold')).find(b => b.dataset.type === tp);
+      if (again) again.focus({ preventScroll: true });
+    }
   }
 });
 

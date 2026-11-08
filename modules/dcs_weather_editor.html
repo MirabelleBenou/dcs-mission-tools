@@ -121,6 +121,9 @@
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
+      min-height: 0;
+      overflow-y: auto;
+      justify-content: safe center;
     }
     #drop-zone.hidden { display: none; }
     .drop-box {
@@ -138,6 +141,11 @@
     .drop-icon  { font-size: 48px; margin-bottom: 16px; }
     .drop-title { font-size: 18px; font-weight: 600; color: var(--cyan); margin-bottom: 8px; }
     .drop-sub   { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+    @media (max-height: 480px) {
+      #drop-zone { padding: 12px 20px; gap: 10px; }
+      .drop-box { padding: 16px 40px; }
+      .drop-icon { font-size: 30px; margin-bottom: 4px; }
+    }
     .credits { margin-top: 24px; max-width: 100%; text-align: center; font-size: 11px; color: var(--text-dim); overflow-wrap: anywhere; }
     .credits a { color: inherit; text-decoration: underline; }
     .btn-load {
@@ -272,7 +280,11 @@
       border-radius: 4px;
     }
     #info-details summary {
-      padding: 8px 14px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px;
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
       font-size: 12px;
@@ -285,12 +297,6 @@
       list-style: none;
     }
     #info-details summary::-webkit-details-marker { display: none; }
-    #info-details summary::before {
-      content: '▶ ';
-      font-size: 10px;
-      color: var(--text-dim);
-    }
-    #info-details[open] summary::before { content: '▼ '; }
     #info-details .wx-section-body {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
@@ -641,7 +647,7 @@
 
   <!-- § Informations (read-only, repliable) -->
   <details id="info-details">
-    <summary data-i18n="section.info">ℹ Informations (lecture seule)</summary>
+    <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="section.info">ℹ Informations (lecture seule)</span></summary>
     <div class="wx-section-body">
       <div class="wx-field"><span class="wx-label" data-i18n="label.qnh">QNH</span><div id="f-qnh" class="wx-value dim"></div></div>
       <div class="wx-field"><span class="wx-label" data-i18n="label.temp">Température</span><div id="f-temp" class="wx-value dim"></div></div>
