@@ -172,6 +172,19 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
     mtbSpinEl.classList.remove('open');
   }
 
+  /* À l'ouverture, le menu s'aligne à gauche de son bouton, sauf si son bord droit dépasserait la fenêtre moins 8 px : il
+     s'aligne alors à droite du bouton ; si son bord gauche passait alors sous 8 px, il se pose à 8 px du bord de la fenêtre,
+     sa largeur au plus la fenêtre moins 16 px. */
+  function mtbMenuPlace(wrap, menu) {
+    menu.style.left = ''; menu.style.right = ''; menu.style.maxWidth = '';
+    const vw = window.innerWidth, wr = wrap.getBoundingClientRect();
+    if (wr.left + menu.offsetWidth <= vw - 8) return;
+    menu.style.left = 'auto'; menu.style.right = '0';
+    if (wr.right - menu.offsetWidth >= 8) return;
+    menu.style.maxWidth = (vw - 16) + 'px';
+    menu.style.right = 'auto';
+    menu.style.left = (8 - wr.left) + 'px';
+  }
   /* Menu des actions rares : ouvre ou ferme la .mtb-menu qui suit le bouton dans son .mtb-menu-wrap. À l'ouverture, le
      focus va au premier bouton du menu qui n'est pas désactivé. */
   function mtbMenuSet(btn, open) {
@@ -181,6 +194,7 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
     menu.hidden = !open;
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) {
+      mtbMenuPlace(wrap, menu);
       const first = Array.prototype.find.call(menu.querySelectorAll(':scope > button'), b => !b.disabled);
       if (first) first.focus();
     }
