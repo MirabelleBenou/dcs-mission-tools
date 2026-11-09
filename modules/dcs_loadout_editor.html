@@ -11915,7 +11915,8 @@ function cmpDraw() {
   svg.innerHTML = out;
 }
 
-// Un choix non vide vide les autres stations de son groupe (payloadOneOfOthers) et le dit sur la station choisie ; « Symétrique » pose aussi sur sa paire l'arme miroir (payloadMirrorClsid) ; si elle n'en a pas, la paire ne bouge pas.
+// Un choix qui entrerait en conflit (payloadRuleConflicts) est refusé : rien ne change.
+// Un choix non vide vide les autres stations de son groupe (payloadOneOfOthers) et le dit sur la station choisie ; « Symétrique » pose aussi sur sa paire l'arme miroir (payloadMirrorClsid) ; si elle n'en a pas, ou si elle y créerait un conflit, la paire ne bouge pas.
 // « Vide » ne vide la paire que si elle portait, juste avant ce choix, le miroir de l'arme que la station portait.
 function cmpChoose(n, c) {
   const prev = CMP.st[n];
