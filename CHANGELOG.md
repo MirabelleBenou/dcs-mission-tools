@@ -5,7 +5,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 ## [Unreleased]
 
 ### Added
-- **Loadout Editor**: the front view now covers 42 aircraft types — every aircraft of Goldwolf's DCS Reference Guide that the editor knows: A-10A/C, AH-64D, AJS37, AV-8B, C-101CC, C-130J, F-100D, F-14A/B, F-15C, F-15E, F-16C, F-5E, F-86F, F/A-18C, J-11A, JF-17, Ka-50, L-39ZA, M-2000C, MB-339, MiG-15, MiG-19, MiG-21, MiG-29, Mirage F1, SA342, Su-25T, Su-27, Su-33 and UH-1H, besides the Mi-24P, Mi-8MT, F-4E and Mirage F1EE; mirrored stations follow the drawing.
+- **Loadout Editor**: the front view now covers 43 aircraft types — every aircraft of Goldwolf's DCS Reference Guide that the editor knows: A-10A/C, AH-64D, AJS37, AV-8B, C-101CC, C-130J, F-100D, F-14A/B, F-15C, F-15E, F-16C, F-5E, F-86F, F/A-18C, J-11A, JF-17, Ka-50, L-39ZA, M-2000C, MB-339, MiG-15, MiG-19, MiG-21, MiG-29, Mirage F1, SA342, Su-25, Su-25T, Su-27, Su-33 and UH-1H, besides the Mi-24P, Mi-8MT, F-4E and Mirage F1EE; mirrored stations follow the drawing.
 
 ### Changed
 - **All tools**: messages now look and behave the same across the suite — they appear bottom right, just above the bottom bar so they never hide *Save*, marked ✅ ⚠️ ❌ by kind, errors staying 6 s; confirmations open in the suite's own window (Cancel, Escape or a tap outside to back out) instead of the browser's dialog; every tool shows the same loading spinner while a mission is read, and the Weather Editor's custom-weather notice moves under the header, like the Ground Unit Swapper's.
@@ -16,6 +16,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 ### Fixed
 - **All tools**: reopening a tool with unsaved changes after the working file has changed — saved in another tool, or another mission picked on the home screen — now asks whether to reload it or keep your changes, instead of erasing them; a mission picked again under the same name is read again; the Ground Unit Swapper, once saved, starts from the saved file like the other tools; its type cell can be opened from the keyboard.
 - **Ground Unit Swapper**: unit names such as the ZSU-23-4 Shilka's "Gun Dish" no longer show stray backslashes.
+- **Loadout Editor**: the F-5E front view is drawn in the theme's colour like the others, and the MiG-21bis attachment points sit on their pylons.
 
 ## [1.4.0] — 2026-11-08
 
