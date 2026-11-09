@@ -3101,8 +3101,10 @@ function updateEditsCount() {
   } else {
     toggleWrap.style.display = 'none';
     if (UI_STATE.showModifiedOnly) {
+      // La case disparaît avec la dernière modification : elle est décochée et le tableau se redessine aussitôt avec les autres filtres.
       UI_STATE.showModifiedOnly = false;
       toggleChk.checked = false;
+      applyFiltersAndRender();
     }
   }
 }
