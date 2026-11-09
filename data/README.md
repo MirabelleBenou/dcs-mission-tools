@@ -74,3 +74,20 @@ Table `DCS aircraft type -> front view`, used by the **Loadout Editor** to show 
 
   The generator writes `stations.json` with each `svg` replaced by the text of the file; running it again rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_VIEWS:BEGIN */` and `/* AIRCRAFT_VIEWS:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_views.json`.
+
+## country_types.json
+
+Table `DCS country -> id, name written by the mission editor, aircraft and helicopter types it can fly, callsign form and lists`, used by the **Loadout Editor** to move a group to another country of its side: the countries offered, the types a country does not fly (greyed out), the name of a country that has no entry in the mission yet, and the callsign rewritten in the form of the new country. A type missing from the table is not checked.
+
+- **Shape**: `{"types": [...], "cat": {...}, "countries": {"<id>": {"name": ..., "cs": "name" | "number", "lists": {...}, "types": [index, ...]}}}`. `types` is the sorted list of the known types and each country lists its types as indexes into it; `cat` gives the callsign category (`AWACS` or `Tankers`) of the types that are not `Air`; `lists` (the `AWACS`, `Tankers` and `Air` callsign names, in order) is present for the countries whose callsign is a name, `cs` is `number` for the others.
+- **Source**: `db_countries.lua` of DCS World (`Scripts/Database/`) and the `dcs/countries.py`, `dcs/planes.py` and `dcs/helicopters.py` modules of [pydcs](https://github.com/pydcs/dcs) **1.0.0** (same wheel as above). From `db_countries.lua`: the countries (a country's id is its rank among the `country:add` and `country:next()` calls), the name written in the `.miz` (third argument) and the `cnt_unit(...)` plane and helicopter types of each `country:get("<KEY>").Units` block, commented lines excluded. From pydcs: the types of each country's `Plane` and `Helicopter` classes, `use_western_callsigns` and the `callsign` lists, and the callsign category of each type. A type is allowed in a country if either source puts it there; `AGGRESSORS`, `CJTF_BLUE`, `CJTF_RED` and `UN_PEACEKEEPERS` take every known type, as the game merges them; service dates are not used.
+- **Licence**: LGPL-3.0-or-later for the part derived from pydcs, as for `weapon_names.json` ([`COPYING.LESSER`](COPYING.LESSER)). `db_countries.lua` is a DCS World file and is not part of this repository: only the facts read from it (which country flies which type) are kept here.
+- **Regenerate** (both files are read as text, not executed; `db_countries.lua` comes from your own DCS World installation):
+
+  ```
+  pip download --no-deps pydcs==1.0.0 -d /tmp/pydcs
+  python3 -I tools/gen_country_types.py "<DCS World>/Scripts/Database/db_countries.lua" /tmp/pydcs/pydcs-1.0.0-py3-none-any.whl
+  ```
+
+  Running it again on the same files rewrites the same bytes.
+- **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* COUNTRY_TYPES:BEGIN */` and `/* COUNTRY_TYPES:END */`. `build_mission_tools.py` stops the build if that copy differs from `country_types.json`.
