@@ -1826,6 +1826,7 @@ async function handleSave() {
   const model    = UI_STATE.model;
   const filename = generateFilename(model.source.miz.filename);
 
+  let downloaded = false;
   try {
     const t0 = performance.now();
 
@@ -1852,6 +1853,7 @@ async function handleSave() {
     const t3 = performance.now();
     console.log('[Save] Zip ' + (blob.size/1024).toFixed(1) + ' KB en ' + Math.round(t3-t2) + ' ms');
     triggerDownload(blob, filename);
+    downloaded = true;
 
     // Greffe MT_onModuleSave (inerte en standalone)
     if (window.parent !== window && window.parent.MT_onModuleSave) {
@@ -1889,7 +1891,7 @@ async function handleSave() {
 
   } catch (err) {
     console.error('[Save] ERREUR :', err);
-    mtbToast(t('toast.saveError'), 'error');
+    mtbToast(t(downloaded ? 'toast.saveCheckError' : 'toast.saveError'), 'error');
   } finally {
     btnSave.classList.remove('saving');
     updateModCount();

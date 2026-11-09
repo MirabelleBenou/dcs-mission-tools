@@ -850,7 +850,7 @@ const I18N = {
     'footer.revertAll.title':      'Annuler toutes les modifications non sauvegardées',
     'footer.save':                 '💾 Sauvegarder',
     'footer.save.titleDisabled':   'Aucune modification à sauvegarder',
-    'footer.save.titleEnabled':    'Sauvegarder {n} appareil(s) modifié(s)',
+    'footer.save.titleEnabled':    'Sauvegarder {n} modification(s)',
     'confirm.revertAll':           'Les modifications non sauvegardées seront perdues.',
     'confirm.revertAll.title':     'Tout annuler ?',
     'confirm.revertAll.ok':        'Tout annuler',
@@ -894,7 +894,7 @@ const I18N = {
     'bar.liverySame':              '« {name} » — déjà portée par les appareils cochés',
     'bar.applyN':                  'Appliquer à la sélection ({n})',
     'toast.badValue':              '❌ Valeur invalide : {field}',
-    'toast.saved':                 '{file} sauvegardé ({n} appareil(s) modifié(s))',
+    'toast.saved':                 '{file} sauvegardé ({n} modification(s))',
     'toast.saveError':             'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.saveCheckError':        'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
     'spinner.loading':             'Chargement…',
@@ -997,7 +997,7 @@ const I18N = {
     'footer.revertAll.title':      'Cancel all unsaved changes',
     'footer.save':                 '💾 Save',
     'footer.save.titleDisabled':   'No changes to save',
-    'footer.save.titleEnabled':    'Save {n} modified aircraft',
+    'footer.save.titleEnabled':    'Save {n} change(s)',
     'confirm.revertAll':           'Unsaved changes will be lost.',
     'confirm.revertAll.title':     'Revert all changes?',
     'confirm.revertAll.ok':        'Revert all',
@@ -1041,7 +1041,7 @@ const I18N = {
     'bar.liverySame':              '“{name}” — already worn by the selected aircraft',
     'bar.applyN':                  'Apply to selection ({n})',
     'toast.badValue':              '❌ Invalid value: {field}',
-    'toast.saved':                 '{file} saved ({n} aircraft modified)',
+    'toast.saved':                 '{file} saved ({n} change(s))',
     'toast.saveError':             'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.saveCheckError':        'The downloaded file could not be checked: do not use it. Your changes are kept.',
     'spinner.loading':             'Loading…',
@@ -9906,6 +9906,7 @@ function verifyWrite(patchedSrc, wanted) {
 document.getElementById('btn-save').addEventListener('click', async () => {
   if (!UI_STATE.model || UI_STATE.edits.size === 0) return;
   mtbSpinner(t('spinner.patching'));
+  let downloaded = false;
   try {
     await new Promise(r => setTimeout(r, 0));
 
@@ -9950,6 +9951,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     a.download = outName;
     document.body.appendChild(a);
     a.click();
+    downloaded = true;
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 
@@ -9987,7 +9989,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', nMod), 'success');
   } catch (err) {
     console.error('[Save] Erreur :', err);
-    showToast(t('toast.saveError'), 'error');
+    showToast(t(downloaded ? 'toast.saveCheckError' : 'toast.saveError'), 'error');
   } finally {
     mtbSpinnerHide();
   }

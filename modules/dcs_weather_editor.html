@@ -2157,6 +2157,7 @@ async function handleSave() {
   const btnSave = document.getElementById('btn-save');
   if (btnSave.disabled) return;
   btnSave.disabled = true;
+  let downloaded = false;
 
   try {
     const { weather, _text, _otherFilesData, _mizFilename } = UI_STATE.model;
@@ -2182,6 +2183,7 @@ async function handleSave() {
     // 5. Déclencher le téléchargement
     const filename = generateSaveFilename(_mizFilename);
     triggerDownload(blob, filename);
+    downloaded = true;
 
     // Greffe MT_onModuleSave (inerte en standalone)
     if (window.parent !== window && window.parent.MT_onModuleSave) {
@@ -2222,7 +2224,7 @@ async function handleSave() {
 
   } catch (err) {
     console.error('[Save] Erreur :', err);
-    showToast(t('toast.saveError'), 'error');
+    showToast(t(downloaded ? 'toast.saveCheckError' : 'toast.saveError'), 'error');
     btnSave.disabled = false;
   }
 }

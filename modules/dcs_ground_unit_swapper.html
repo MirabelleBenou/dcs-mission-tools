@@ -832,6 +832,7 @@ const I18N = {
     'toast.bulkApplied':    '{n} unité(s) modifiée(s) en une fois',
     'toast.saved':          '{file} sauvegard\u00e9 ({n} modification(s))',
     'toast.saveError':      'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
+    'toast.saveCheckError': 'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
     'toast.pickFile':       'Veuillez choisir un fichier .miz',
     'load.notMiz':          'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
     'load.unreadable':      'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
@@ -914,7 +915,7 @@ const I18N = {
     'footer.importJson.title':     'Import a JSON file of changes',
     'footer.save':                 '💾 Save',
     'footer.save.titleDisabled':   'No changes to save',
-    'footer.save.titleEnabled':    'Save {n} modification(s)',
+    'footer.save.titleEnabled':    'Save {n} change(s)',
     'family.armor':   '\uD83D\uDEE1\uFE0F Armor',
     'family.arti':    '\uD83C\uDFAF Artillery',
     'family.sam':     '\uD83D\uDE80 SAM',
@@ -927,8 +928,9 @@ const I18N = {
     // Dynamic
     'toast.unitsLoaded':    '{n} units loaded from {file}',
     'toast.bulkApplied':    '{n} unit(s) modified via bulk edit',
-    'toast.saved':          '{file} saved ({n} modification(s))',
+    'toast.saved':          '{file} saved ({n} change(s))',
     'toast.saveError':      'Saving failed: nothing was downloaded, your changes are kept.',
+    'toast.saveCheckError': 'The downloaded file could not be checked: do not use it. Your changes are kept.',
     'toast.pickFile':       'Please choose a .miz file',
     'load.notMiz':          'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
     'load.unreadable':      'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
@@ -936,8 +938,8 @@ const I18N = {
     'toast.loadFirst':      'Load a .miz file first',
     'toast.jsonInvalid':    'Invalid JSON file',
     'toast.jsonUnrecognized': 'Unrecognized JSON format',
-    'toast.importPartial':  'Import: {a} modification(s) applied, {i} ignored',
-    'toast.importOk':       'Import: {a} modification(s) applied',
+    'toast.importPartial':  'Import: {a} change(s) applied, {i} ignored',
+    'toast.importOk':       'Import: {a} change(s) applied',
     'confirm.pendingLost':  'Pending changes will be lost.',
     'confirm.pendingLost.title':  'Load another .miz?',
     'confirm.pendingLost.ok':     'Load',
@@ -3207,6 +3209,7 @@ document.getElementById('btn-bulk-apply').addEventListener('click', () => {
 document.getElementById('btn-save').addEventListener('click', async () => {
   if (!UI_STATE.model || UI_STATE.edits.size === 0) return;
   mtbSpinner(t('spinner.patching'));
+  let downloaded = false;
   try {
     await new Promise(r => setTimeout(r, 0));
 
@@ -3252,6 +3255,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     a.download = outName;
     document.body.appendChild(a);
     a.click();
+    downloaded = true;
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 5000);
 
@@ -3263,7 +3267,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', UI_STATE.edits.size), 'success');
   } catch (err) {
     console.error('[Save] Erreur :', err);
-    showToast(t('toast.saveError'), 'error');
+    showToast(t(downloaded ? 'toast.saveCheckError' : 'toast.saveError'), 'error');
   } finally {
     mtbSpinnerHide();
   }
@@ -3300,6 +3304,7 @@ document.getElementById('btn-load-new').addEventListener('click', async () => {
     if (!proceed) return;
   }
   UI_STATE.model = null;
+  UI_STATE.edits = new Map(); UI_STATE.selected = new Set();
   // Détruire les comboboxes pour réinitialisation au prochain chargement
   if (UI_STATE.bulkFromCombobox) { UI_STATE.bulkFromCombobox.destroy(); UI_STATE.bulkFromCombobox = null; }
   if (UI_STATE.bulkToCombobox)   { UI_STATE.bulkToCombobox.destroy();   UI_STATE.bulkToCombobox   = null; }
