@@ -10616,6 +10616,25 @@ function lxWalkAircraft(ast, struct) {
   return out;
 }
 
+// Le nom écrit par chaque entrée de pays du fichier : { blue: { <id>: nom }, red: {…}, neutrals: {…} } (le nom de la donnée ne vaut que
+// pour une entrée neuve : un autre outil peut écrire « Combined Joint Task Forces Blue » là où la donnée dit « CJTF Blue »).
+function lxEntryNames(ast) {
+  const mission = ast.kind === 'assignment' ? ast.value : ast;
+  const res = { blue: {}, red: {}, neutrals: {} };
+  const coalNode = lxGet(mission, 'coalition');
+  if (!coalNode) return res;
+  for (const key of ['blue', 'red', 'neutrals']) {
+    const side = lxGet(coalNode, key);
+    const countries = side ? lxGet(side, 'country') : null;
+    if (!countries || countries.kind !== 'table') continue;
+    for (const ce of countries.entries) {
+      const id = lxScalar(lxGet(ce.value, 'id')), name = lxScalar(lxGet(ce.value, 'name'));
+      if (typeof id === 'number' && typeof name === 'string' && res[key][id] === undefined) res[key][id] = name;
+    }
+  }
+  return res;
+}
+
 // Les id de pays de chaque camp (mission.coalitions) : { blue: [...], red: [...], neutrals: [...] }
 function lxCoalitions(ast) {
   const mission = ast.kind === 'assignment' ? ast.value : ast;
@@ -10667,7 +10686,8 @@ function cntCategory(type) {
 // Les pays proposés pour un camp : ids = mission.coalitions du camp ; types = les types à voler (appareils du groupe qui passe) ;
 // current = les id de pays actuels des appareils cochés. Rend [{ id, name, reason }] triés par nom ; reason : null, 'current'
 // (tous les appareils cochés sont déjà de ce pays) ou 'noType' (le pays n'a pas l'un des types). Un id absent de la table est écarté.
-function cntOptions(ids, types, current) {
+// names (facultatif) : { <id>: nom } des entrées du fichier ; le nom d'une entrée existante l'emporte sur celui de la table.
+function cntOptions(ids, types, current, names) {
   const out = [], seen = new Set();
   for (const id of ids) {
     if (seen.has(id)) continue;
@@ -10677,7 +10697,7 @@ function cntOptions(ids, types, current) {
     let reason = null;
     if (current.length > 0 && current.every(x => x === id)) reason = 'current';
     else if (types.some(tp => !cntFlies(id, tp))) reason = 'noType';
-    out.push({ id, name: c.name, reason });
+    out.push({ id, name: (names && typeof names[id] === 'string') ? names[id] : c.name, reason });
   }
   out.sort((a, b) => {
     const x = a.name.toLowerCase(), y = b.name.toLowerCase();
@@ -10762,6 +10782,7 @@ const UI_STATE = {
   loadoutDefs:   new Map(),   // type → [{ letter, sig, source, n0 }] : lettres fixes, données à l'ouverture
   choice:        { type: null, loadout: null, livery: null, country: null },   // carte d'emport / de livrée, pays choisi
   coalitions:    { blue: [], red: [], neutrals: [] },   // mission.coalitions : les id de pays de chaque camp
+  entryNames:    { blue: {}, red: {}, neutrals: {} },   // le nom écrit par chaque entrée de pays du fichier, par id
   byGroup:       new Map(),   // rang du groupe → ses appareils (ordre du groupe)
   dupIds:        new Set(),   // unitId portés par plusieurs appareils (ou absents) : aucune modification
   tab:           'list',      // onglet courant sous 768 px : 'list' | 'panel'
@@ -11521,6 +11542,10 @@ function setCountry(u, to, callsign) {
     if (callsign !== undefined && !deepEqValues(callsign, u.callsign)) e.callsign = callsign; else delete e.callsign;
   });
 }
+// Écrit en attente le pays d'arrivée et les indicatifs du plan, groupe après groupe.
+function applyCountryPlan(cp) {
+  for (const g of cp.groups) g.members.forEach((m, i) => setCountry(m, { id: cp.toId, name: cp.toName }, g.callsigns[i]));
+}
 // Annuler le pays d'une ligne l'annule pour tout son groupe (les emports et livrées des autres lignes restent).
 function revertCountryOfGroup(u) {
   for (const m of groupMembers(u)) touchEdit(m, e => { delete e.country; delete e.callsign; });
@@ -11765,23 +11790,39 @@ function fmtSetting(v) {
 // leurs appareils, et les indicatifs réécrits (attribués groupe après groupe, ceux du camp pris en compte, en attente compris).
 function countryPlan(type, toId, checked, visSet) {
   const to = cntCountry(toId);
-  const plan = { to, toId, groups: [], allUnits: new Set(), checkedChanging: new Set(), dragged: 0, nCallsign: 0 };
+  const plan = { to, toId, toName: to ? to.name : '', groups: [], allUnits: new Set(), checkedChanging: new Set(), dragged: 0, nCallsign: 0 };
   if (to === null) return plan;
   const eligible = checked.filter(u => !skipReason(u, type, visSet, 'country'));
+  // le nom d'une entrée de pays déjà dans le fichier (cas A) est celui du fichier ; le nom de la table ne sert qu'à une entrée neuve (cas B)
+  if (eligible.length) {
+    const fileName = (UI_STATE.entryNames[eligible[0].coalition] || {})[toId];
+    if (typeof fileName === 'string') plan.toName = fileName;
+  }
   const order = [], seen = new Set();
   for (const u of eligible) if (!seen.has(u.gk)) { seen.add(u.gk); order.push(u.gk); }
-  const groups = [], moving = new Set();
+  const groups = [];
   for (const gk of order) {
     const members = UI_STATE.byGroup.get(gk) || [];
     if (!members.length || curCountry(members[0]).id === toId) continue;
     groups.push({ gk, members });
-    members.forEach(m => moving.add(m.unitId));
   }
+  // Les indicatifs pris dans un camp : TOUS ses appareils (ceux qui bougent aussi : un appareil qui garde son indicatif le garde réservé),
+  // et l'indicatif d'ORIGINE de tout appareil qui a un pays en attente (l'annuler ou revenir au pays d'origine le rend alors toujours libre).
+  const takenOf = camp => {
+    const t = cntTaken([]);
+    for (const a of UI_STATE.aircraft) {
+      if (a.coalition !== camp) continue;
+      cntTakenAdd(t, [curCallsign(a)]);
+      const ed = UI_STATE.edits.get(a.unitId);
+      if (ed && ed.country) cntTakenAdd(t, [a.callsign]);
+    }
+    return t;
+  };
   const checkedIds = new Set(checked.map(u => u.unitId));
   const taken = {};
-  for (const g of groups) {
+  for (const g of groups) {    // dans l'ordre du .miz ; chaque valeur attribuée est réservée avant le groupe suivant
     const camp = g.members[0].coalition;
-    if (!taken[camp]) taken[camp] = cntTaken(UI_STATE.aircraft.filter(a => a.coalition === camp && !moving.has(a.unitId)).map(curCallsign));
+    if (!taken[camp]) taken[camp] = takenOf(camp);
     const cur = g.members.map(curCallsign);
     let next;
     if (g.members.every(m => m.countryId === toId)) next = g.members.map(m => m.callsign);   // retour au pays d'origine : indicatifs d'origine
@@ -11796,7 +11837,8 @@ function countryPlan(type, toId, checked, visSet) {
     plan.groups.push(g);
     for (const m of g.members) {
       plan.allUnits.add(m.unitId);
-      if (checkedIds.has(m.unitId)) plan.checkedChanging.add(m.unitId); else plan.dragged++;
+      if (checkedIds.has(m.unitId)) plan.checkedChanging.add(m.unitId);
+      if (!UI_STATE.selected.has(m.unitId)) plan.dragged++;   // « non coché(s) » : absents de la sélection, rien d'autre
     }
   }
   return plan;
@@ -11882,7 +11924,7 @@ function applyToSelection() {
   if (plan.country) {
     // le groupe entier change de pays : les appareils non cochés (ou masqués) du groupe aussi ; ils ne sont pas dans la boucle ci-dessus
     for (const id of plan.country.allUnits) if (!UI_STATE.selected.has(id)) modified++;
-    for (const g of plan.country.groups) g.members.forEach((m, i) => setCountry(m, { id: plan.country.toId, name: plan.country.to.name }, g.callsigns[i]));
+    applyCountryPlan(plan.country);
   }
   UI_STATE.choice = { type, loadout: null, livery: null, country: null };
   afterEdit();
@@ -11904,6 +11946,7 @@ function setModel(model) {
   }
   UI_STATE.byType = byType;
   UI_STATE.coalitions = model.coalitions || { blue: [], red: [], neutrals: [] };
+  UI_STATE.entryNames = model.entryNames || { blue: {}, red: {}, neutrals: {} };
   const byGroup = new Map();
   for (const u of model.aircraft) {
     if (!byGroup.has(u.gk)) byGroup.set(u.gk, []);
@@ -11947,6 +11990,7 @@ async function loadMiz(file) {
     const extracted = DCS_EXTRACTOR.extract(ast, missionSrc, file.name, otherFilesMap, missionSrc.split('\n'));
     const aircraft = lxWalkAircraft(ast);
     const coalitions = lxCoalitions(ast);
+    const entryNames = lxEntryNames(ast);
     const nPlayers = aircraft.filter(u => u.role === 'player').length;
     if (nPlayers !== extracted.clientGroups.length) {
       console.warn('[Load] Joueurs : parcours', nPlayers, '≠ extracteur', extracted.clientGroups.length);
@@ -11968,7 +12012,7 @@ async function loadMiz(file) {
     UI_STATE.collapsed = new Set();
     UI_STATE.filters = { coalition: '', type: '', role: '', search: '' };
     UI_STATE.showModifiedOnly = false;
-    setModel({ source: extracted.source, aircraft, coalitions });
+    setModel({ source: extracted.source, aircraft, coalitions, entryNames });
     buildLoadoutDefs();
     if (reopened) restoreLoadoutDefs(UI_STATE.lastSaved.defs);
     UI_STATE.choice = { type: null, loadout: null, livery: null, country: null };
@@ -12235,7 +12279,7 @@ function renderCountry(type) {
   if (state === 'ok') {
     const types = new Set();
     for (const u of checked) for (const m of groupMembers(u)) types.add(m.type);
-    opts = cntOptions(UI_STATE.coalitions[checked[0].coalition] || [], [...types], checked.map(u => curCountry(u).id));
+    opts = cntOptions(UI_STATE.coalitions[checked[0].coalition] || [], [...types], checked.map(u => curCountry(u).id), UI_STATE.entryNames[checked[0].coalition]);
   }
   if (UI_STATE.choice.country != null) {
     const o = opts.find(x => x.id === UI_STATE.choice.country);
@@ -12294,7 +12338,7 @@ function renderActionBar(type) {
   }
   if (plan.country) {
     const c = plan.country;
-    const k = (txt, g, n) => txt.replace('{to}', c.to ? c.to.name : '').replace('{g}', g).replace('{n}', n);
+    const k = (txt, g, n) => txt.replace('{to}', c.to ? c.toName : '').replace('{g}', g).replace('{n}', n);
     let v = k(t('bar.country'), c.groups.length, c.allUnits.size);
     if (c.groups.length && c.dragged) v += t('bar.countryDragged').replace('{m}', c.dragged);
     if (c.nCallsign) v += t('bar.countryCallsign').replace('{k}', c.nCallsign);
@@ -13187,8 +13231,11 @@ function lxCountryPatches(src, moves, patches, wanted) {
   wanted.lists = [];           // { camp, id, cat, count } : tables `group` attendues
   for (const [camp, list] of byCamp) lxCampPatches(src, struct[camp], camp, list, where, patches, wanted);
   for (const mv of moves) {
+    // une entrée existante garde son nom : c'est celui que la vérification attend ; le nom de la table n'est écrit que pour une entrée neuve
+    const ex = struct[mv.camp] ? struct[mv.camp].entries.find(en => en.id === mv.toId) : null;
+    const wantName = ex && typeof ex.name === 'string' ? ex.name : mv.toName;
     mv.members.forEach((u, i) => {
-      wanted.country.set(u.unitId, { id: mv.toId, name: mv.toName, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign });
+      wanted.country.set(u.unitId, { id: mv.toId, name: wantName, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign });
     });
   }
 }
@@ -13489,7 +13536,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     }
     UI_STATE.edits = new Map();
     rememberSaved(savedBytes, UI_STATE.loadoutDefs);
-    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast) });
+    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast), entryNames: lxEntryNames(verdict.ast) });
     renderAll();
 
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', nMod), 'success');
