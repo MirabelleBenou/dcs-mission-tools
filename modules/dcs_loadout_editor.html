@@ -315,6 +315,7 @@
     .ld-badge.warn { border-color: var(--warn); color: var(--warn); }
     .ld-badge.changed { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
     td.cell-livery.changed { color: var(--accent); }
+    td.c-country.changed, .narrow-only .changed { color: var(--accent); }
     .none { color: var(--text-dim); font-style: italic; }
     td.c-mass { white-space: nowrap; font-family: var(--font-mono); font-size: 12px; }
     .mass-over, .cmp-tot .cmp-over, .bar-v .lv-other { color: #E0B04C; }
@@ -413,6 +414,12 @@
     .set-slider input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
     .set-slider input[type="range"]:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
     .set-pct { flex: 0 0 auto; min-width: 40px; text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text); }
+
+    #panel-country .set-field label { overflow-wrap: anywhere; }
+    #panel-country .tbm-trigger { width: 100%; min-width: 0; min-height: 34px; }
+    #panel-country .set-hint { overflow-wrap: anywhere; }
+    #panel-country .set-hint[hidden] { display: none; }
+    @media (pointer: coarse), (max-width: 768px) { #panel-country .tbm-trigger { min-height: 44px; } }
 
     /* ── Footer sticky modifications ──────────────────────────────────────── */
     #modifications-bar {
@@ -712,6 +719,14 @@
         <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.liveries">Livrées de ce type</span></summary>
         <div class="sec-body" id="panel-liveries"></div>
       </details>
+      <details class="panel-sec" open id="sec-country">
+        <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.country">Pays de ce type</span></summary>
+        <div class="sec-body" id="panel-country">
+          <div class="set-field"><label for="country-select" data-i18n="country.label">Passer au pays</label><select id="country-select"></select></div>
+          <div class="set-hint" id="country-note" hidden></div>
+          <div class="set-hint" data-i18n="country.hint">Tout le groupe change de pays ; son indicatif est réécrit si le pays d'arrivée l'écrit autrement (nom ou numéro).</div>
+        </div>
+      </details>
       <div id="action-bar" aria-live="polite"></div>
     </aside>
   </div>
@@ -804,6 +819,14 @@ const I18N = {
     'panel.loadouts':              'Emports de ce type',
     'panel.settings':              'Réglages',
     'panel.liveries':              'Livrées de ce type',
+    'panel.country':               'Pays de ce type',
+    'country.label':               'Passer au pays',
+    'country.keep':                '— inchangé —',
+    'country.current':             'pays actuel',
+    'country.noType':              'n\'a pas ce type',
+    'country.mixed':               'Appareils cochés de camps différents : cochez-en d\'un seul camp pour changer de pays.',
+    'country.none':                'Cochez des appareils de ce type pour changer leur pays.',
+    'country.hint':                'Tout le groupe change de pays ; son indicatif est réécrit si le pays d\'arrivée l\'écrit autrement (nom ou numéro).',
     'panel.apply':                 'Appliquer à la sélection',
     'panel.count.one':             '{n} appareil',
     'panel.count.other':           '{n} appareils',
@@ -889,6 +912,10 @@ const I18N = {
     'bar.k.loadout':               'Emport',
     'bar.k.settings':              'Réglages',
     'bar.k.livery':                'Livrée',
+    'bar.k.country':               'Pays',
+    'bar.country':                 '→ {to} · {g} groupe(s) · {n} appareil(s)',
+    'bar.countryDragged':          ' (dont {m} non coché(s), du même groupe)',
+    'bar.countryCallsign':         ' ; indicatif réécrit pour {k} groupe(s)',
     'bar.cur':                     ' (actuellement {cur})',
     'bar.loadoutSame':             '{l} — déjà porté par les appareils cochés',
     'bar.set.fuel':                'carburant {v} kg',
@@ -957,6 +984,14 @@ const I18N = {
     'panel.loadouts':              'Loadouts of this type',
     'panel.settings':              'Settings',
     'panel.liveries':              'Liveries of this type',
+    'panel.country':               'Country of this type',
+    'country.label':               'Move to country',
+    'country.keep':                '— unchanged —',
+    'country.current':             'current country',
+    'country.noType':              'does not fly this type',
+    'country.mixed':               'Checked aircraft from different sides: check aircraft from one side only to change country.',
+    'country.none':                'Check aircraft of this type to change their country.',
+    'country.hint':                'The whole group changes country; its callsign is rewritten if the new country writes it differently (name or number).',
     'panel.apply':                 'Apply to selection',
     'panel.count.one':             '{n} aircraft',
     'panel.count.other':           '{n} aircraft',
@@ -1042,6 +1077,10 @@ const I18N = {
     'bar.k.loadout':               'Loadout',
     'bar.k.settings':              'Settings',
     'bar.k.livery':                'Livery',
+    'bar.k.country':               'Country',
+    'bar.country':                 '→ {to} · {g} group(s) · {n} aircraft',
+    'bar.countryDragged':          ' (including {m} unchecked, same group)',
+    'bar.countryCallsign':         '; callsign rewritten for {k} group(s)',
     'bar.cur':                     ' (currently {cur})',
     'bar.loadoutSame':             '{l} — already carried by the selected aircraft',
     'bar.set.fuel':                'fuel {v} kg',
@@ -10484,48 +10523,86 @@ function lxScalar(node) {
   return undefined;
 }
 
-function lxWalkAircraft(ast) {
+// L'entrée (clé et valeur) de la table `table` dont la clé est `key`, ou undefined.
+function lxEntryOf(table, key) {
+  if (!table || table.kind !== 'table') return undefined;
+  for (const e of table.entries) {
+    if (e.key && (e.key.kind === 'ident' || e.key.kind === 'string') && e.key.value === key) return e;
+  }
+  return undefined;
+}
+
+// `struct`, quand il est donné, reçoit la structure des pays (nœuds de l'arbre) pour l'écriture : par camp, la table `country`
+// et, par entrée de pays, ses catégories `plane` / `helicopter` avec la table `group` et la liste de ses groupes.
+function lxWalkAircraft(ast, struct) {
   const mission = ast.kind === 'assignment' ? ast.value : ast;
   const out = [];
   const coalNode = lxGet(mission, 'coalition');
   if (!coalNode) return out;
+  let gk = 0;   // rang du groupe dans le parcours (les groupes sans table `units` n'en ont pas)
   for (const coalKey of ['blue', 'red', 'neutrals']) {
     const side = lxGet(coalNode, coalKey);
     if (!side) continue;
     const countries = lxGet(side, 'country');
     if (!countries || countries.kind !== 'table') continue;
+    const sInfo = struct ? (struct[coalKey] = { table: countries, entries: [] }) : null;
     for (const ce of countries.entries) {
       const country = lxScalar(lxGet(ce.value, 'name'));
+      const countryId = lxScalar(lxGet(ce.value, 'id'));
+      let eInfo = null;
+      if (sInfo) {
+        eInfo = { ce, id: countryId, name: country, cats: {}, otherGroups: 0 };
+        sInfo.entries.push(eInfo);
+        if (ce.value.kind === 'table') {
+          for (const oe of ce.value.entries) {
+            if (!oe.key || oe.key.kind !== 'string' || oe.key.value === 'plane' || oe.key.value === 'helicopter') continue;
+            const og = lxGet(oe.value, 'group');
+            if (og && og.kind === 'table') eInfo.otherGroups += og.entries.length;
+          }
+        }
+      }
       for (const category of ['plane', 'helicopter']) {
         const catNode = lxGet(ce.value, category);
         if (!catNode) continue;
         const groups = lxGet(catNode, 'group');
+        const cInfo = eInfo ? (eInfo.cats[category] = { catNode, catEntry: lxEntryOf(ce.value, category), groups: (groups && groups.kind === 'table') ? groups : null, list: [] }) : null;
         if (!groups || groups.kind !== 'table') continue;
         for (const ge of groups.entries) {
           const groupNode = ge.value;
+          const item = cInfo ? { ge, gk: null } : null;
+          if (item) cInfo.list.push(item);
           const groupName = lxScalar(lxGet(groupNode, 'name'));
           const groupId = lxScalar(lxGet(groupNode, 'groupId'));
           const units = lxGet(groupNode, 'units');
           if (!units || units.kind !== 'table') continue;
+          const myGk = gk++;
+          if (item) item.gk = myGk;
+          let rank = 0;
           for (const ue of units.entries) {
             const un = ue.value;
             if (!un || un.kind !== 'table') continue;
             const skill = lxScalar(lxGet(un, 'skill'));
             const liveryNode = lxGet(un, 'livery_id');
             const payloadNode = lxGet(un, 'payload');
+            const csNode = lxGet(un, 'callsign');
             out.push({
               unitId:     lxScalar(lxGet(un, 'unitId')),
               name:       lxScalar(lxGet(un, 'name')),
               type:       lxScalar(lxGet(un, 'type')),
               coalition:  coalKey,
               country,
+              countryId,
               category,
               groupId,
               groupName,
+              gk:         myGk,
+              rank:       rank++,
               skill,
               role:       (skill === 'Client' || skill === 'Player') ? 'player' : 'ai',
               livery:     (liveryNode && liveryNode.kind === 'string') ? liveryNode.value : undefined,
               liveryPos:  (liveryNode && liveryNode.kind === 'string') ? liveryNode.pos : null,
+              callsign:   csNode ? (csNode.kind === 'number' ? csNode.value : csNode.kind === 'table' ? astToValue(csNode) : undefined) : undefined,
+              callsignPos: (csNode && (csNode.kind === 'number' || csNode.kind === 'table')) ? csNode.pos : null,
               payload:    payloadNode ? astToValue(payloadNode) : undefined,
               payloadPos: payloadNode ? payloadNode.pos : null,
               payloadTable: !!(payloadNode && payloadNode.kind === 'table'),
@@ -10539,6 +10616,135 @@ function lxWalkAircraft(ast) {
   return out;
 }
 
+// Les id de pays de chaque camp (mission.coalitions) : { blue: [...], red: [...], neutrals: [...] }
+function lxCoalitions(ast) {
+  const mission = ast.kind === 'assignment' ? ast.value : ast;
+  const res = { blue: [], red: [], neutrals: [] };
+  const node = lxGet(mission, 'coalitions');
+  if (!node || node.kind !== 'table') return res;
+  for (const key of ['blue', 'red', 'neutrals']) {
+    const side = lxGet(node, key);
+    if (!side || side.kind !== 'table') continue;
+    for (const e of side.entries) if (e.value && e.value.kind === 'number') res[key].push(e.value.value);
+  }
+  return res;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PAYS — FONCTIONS PURES (ni DOM, ni t(), ni stockage) : début
+// Table COUNTRY_TYPES : id, nom écrit par l'éditeur, types permis, forme et listes d'indicatifs.
+// ═══════════════════════════════════════════════════════════════
+let CNT_CACHE = null;
+function cntIndex() {
+  if (CNT_CACHE) return CNT_CACHE;
+  const byId = new Map();
+  for (const key of Object.keys(COUNTRY_TYPES.countries)) {
+    const c = COUNTRY_TYPES.countries[key];
+    byId.set(Number(key), { id: Number(key), name: c.name, cs: c.cs, lists: c.lists || {}, types: new Set(c.types.map(i => COUNTRY_TYPES.types[i])) });
+  }
+  CNT_CACHE = { byId, known: new Set(COUNTRY_TYPES.types) };
+  return CNT_CACHE;
+}
+
+// Le pays de l'id donné dans la table, ou null.
+function cntCountry(id) {
+  const c = cntIndex().byId.get(id);
+  return c === undefined ? null : c;
+}
+
+// Le pays vole-t-il ce type ? Un type absent de la table, ou un pays absent de la table, n'est pas contrôlé : oui.
+function cntFlies(id, type) {
+  const c = cntCountry(id);
+  if (c === null || !cntIndex().known.has(type)) return true;
+  return c.types.has(type);
+}
+
+// Catégorie d'indicatif d'un type : 'Air', 'AWACS' ou 'Tankers'.
+function cntCategory(type) {
+  return Object.prototype.hasOwnProperty.call(COUNTRY_TYPES.cat, type) ? COUNTRY_TYPES.cat[type] : 'Air';
+}
+
+// Les pays proposés pour un camp : ids = mission.coalitions du camp ; types = les types à voler (appareils du groupe qui passe) ;
+// current = les id de pays actuels des appareils cochés. Rend [{ id, name, reason }] triés par nom ; reason : null, 'current'
+// (tous les appareils cochés sont déjà de ce pays) ou 'noType' (le pays n'a pas l'un des types). Un id absent de la table est écarté.
+function cntOptions(ids, types, current) {
+  const out = [], seen = new Set();
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const c = cntCountry(id);
+    if (c === null) continue;
+    let reason = null;
+    if (current.length > 0 && current.every(x => x === id)) reason = 'current';
+    else if (types.some(tp => !cntFlies(id, tp))) reason = 'noType';
+    out.push({ id, name: c.name, reason });
+  }
+  out.sort((a, b) => {
+    const x = a.name.toLowerCase(), y = b.name.toLowerCase();
+    return x < y ? -1 : x > y ? 1 : a.id - b.id;
+  });
+  return out;
+}
+
+// Forme d'un indicatif lu dans le .miz : 'number' (110), 'name' ({ 1, 2, 3, name }) ou null (absent, illisible).
+function cntForm(value) {
+  if (typeof value === 'number') return 'number';
+  if (value !== null && typeof value === 'object' && typeof value.name === 'string') return 'name';
+  return null;
+}
+
+// Les indicatifs déjà portés : { numbers: Set<nombre>, flights: Set<'<nom>|<n>'> }. Un indicatif à nom « Enfield111 » porte le nom
+// « Enfield », le vol 11 (le nom est suivi du numéro de vol puis du rang). Fonction pure sur des valeurs.
+function cntTakenAdd(taken, values) {
+  for (const v of values) {
+    const f = cntForm(v);
+    if (f === 'number') taken.numbers.add(v);
+    else if (f === 'name' && v['2'] !== undefined) {
+      const suffix = String(v['2']) + String(v['3']);
+      const base = v['3'] !== undefined && v.name.endsWith(suffix) ? v.name.slice(0, v.name.length - suffix.length) : v.name.replace(/\d+$/, '');
+      taken.flights.add(base + '|' + v['2']);
+    }
+  }
+  return taken;
+}
+function cntTaken(values) {
+  return cntTakenAdd({ numbers: new Set(), flights: new Set() }, values);
+}
+
+// Indicatifs d'un groupe qui passe au pays `toId`. units : [{ type, callsign }] dans l'ordre du groupe ; taken : les indicatifs des
+// autres appareils du camp, en attente compris (complété ici par ceux que la fonction attribue). Rend { values, rewritten } :
+// values[i] vaut null (indicatif inchangé) ou la nouvelle valeur. Un indicatif déjà dans la forme du pays d'arrivée ne change pas ;
+// vers un pays à nombres : le plus petit entier ≥ 100 libre dans le camp ; vers un pays à noms : le premier nom de la liste du pays
+// pour la catégorie du type, le plus petit numéro de vol ≥ 1 libre pour ce nom, et le rang de l'appareil dans le groupe.
+function cntCallsigns(units, toId, taken) {
+  const to = cntCountry(toId);
+  const values = units.map(() => null);
+  if (to === null) return { values, rewritten: false };
+  const need = units.map(u => { const f = cntForm(u.callsign); return f !== null && f !== to.cs; });
+  if (!need.some(Boolean)) return { values, rewritten: false };
+  if (to.cs === 'number') {
+    let n = 99;
+    units.forEach((u, i) => {
+      if (!need[i]) return;
+      do { n++; } while (taken.numbers.has(n));
+      taken.numbers.add(n);
+      values[i] = n;
+    });
+  } else {
+    const list = to.lists[cntCategory(units[0].type)] || to.lists.Air || [];
+    if (list.length === 0) return { values, rewritten: false };
+    const base = list[0];
+    let flight = 1;
+    while (taken.flights.has(base + '|' + flight)) flight++;
+    taken.flights.add(base + '|' + flight);
+    units.forEach((u, i) => {
+      if (need[i]) values[i] = { '1': 1, '2': flight, '3': i + 1, name: base + flight + (i + 1) };
+    });
+  }
+  return { values, rewritten: true };
+}
+// ═══ PAYS — FONCTIONS PURES : fin ═══
+
 // ═══════════════════════════════════════════════════════════════
 // ÉTAT
 // ═══════════════════════════════════════════════════════════════
@@ -10547,14 +10753,16 @@ const UI_STATE = {
   aircraft:      [],
   byId:          new Map(),
   byType:        new Map(),   // type → [aircraft] (ordre du .miz)
-  edits:         new Map(),   // unitId → { payload?: valeur, livery?: texte }
+  edits:         new Map(),   // unitId → { payload?: valeur, livery?: texte, country?: { id, name }, callsign?: valeur }
   selected:      new Set(),   // unitId, dans l'ordre où les cases ont été cochées
   collapsed:     new Set(),   // types repliés
   filters:       { coalition: '', type: '', role: '', search: '' },
   showModifiedOnly: false,
   lastSaved:     null,         // { bytes, defs } du dernier fichier enregistré par ce module
   loadoutDefs:   new Map(),   // type → [{ letter, sig, source, n0 }] : lettres fixes, données à l'ouverture
-  choice:        { type: null, loadout: null, livery: null },   // carte d'emport / de livrée choisie
+  choice:        { type: null, loadout: null, livery: null, country: null },   // carte d'emport / de livrée, pays choisi
+  coalitions:    { blue: [], red: [], neutrals: [] },   // mission.coalitions : les id de pays de chaque camp
+  byGroup:       new Map(),   // rang du groupe → ses appareils (ordre du groupe)
   dupIds:        new Set(),   // unitId portés par plusieurs appareils (ou absents) : aucune modification
   tab:           'list',      // onglet courant sous 768 px : 'list' | 'panel'
   rev:           0,           // incrémenté à chaque modification (invalide les caches)
@@ -10600,6 +10808,18 @@ function curLivery(u) {
   const e = UI_STATE.edits.get(u.unitId);
   return (e && e.livery !== undefined) ? e.livery : u.livery;
 }
+
+// Le pays et l'indicatif d'un appareil, pris en compte ceux en attente (partout : livrées, barre, tableau).
+function curCountry(u) {
+  const e = UI_STATE.edits.get(u.unitId);
+  return (e && e.country) ? e.country : { id: u.countryId, name: u.country };
+}
+function curCallsign(u) {
+  const e = UI_STATE.edits.get(u.unitId);
+  return (e && e.callsign !== undefined) ? e.callsign : u.callsign;
+}
+function groupMembers(u) { return UI_STATE.byGroup.get(u.gk) || [u]; }
+function groupHasDup(u) { return groupMembers(u).some(m => UI_STATE.dupIds.has(m.unitId)); }
 
 function cachedBy(key, build) {
   const c = UI_STATE._cache.get(key);
@@ -11260,9 +11480,10 @@ function getLiveries(type) {
     for (const u of (UI_STATE.byType.get(type) || [])) {
       const lv = curLivery(u);
       if (lv === undefined) continue;
-      const key = u.country + '\u0000' + String(lv).toLowerCase();
+      const cn = curCountry(u).name;
+      const key = cn + '\u0000' + String(lv).toLowerCase();
       let e = map.get(key);
-      if (!e) { e = { key, country: u.country, forms: new Map(), count: 0 }; map.set(key, e); }
+      if (!e) { e = { key, country: cn, forms: new Map(), count: 0 }; map.set(key, e); }
       e.forms.set(lv, (e.forms.get(lv) || 0) + 1);
       e.count++;
     }
@@ -11284,6 +11505,8 @@ function touchEdit(u, mutate) {
   mutate(e);
   if (e.payload !== undefined && u.payload !== undefined && deepEqValues(e.payload, u.payload)) delete e.payload;
   if (e.livery !== undefined && e.livery === u.livery) delete e.livery;
+  if (e.country !== undefined && e.country.id === u.countryId) { delete e.country; delete e.callsign; }
+  if (e.country === undefined) delete e.callsign;
   if (Object.keys(e).length === 0) UI_STATE.edits.delete(u.unitId);
   else UI_STATE.edits.set(u.unitId, e);
   UI_STATE.rev++;
@@ -11291,6 +11514,17 @@ function touchEdit(u, mutate) {
 
 function setPayload(u, value) { touchEdit(u, e => { e.payload = value; }); }
 function setLivery(u, value)  { touchEdit(u, e => { e.livery = value; }); }
+// Le pays d'un appareil (to : { id, name }) et, s'il change, son indicatif (une valeur identique à celle du fichier ne s'écrit pas).
+function setCountry(u, to, callsign) {
+  touchEdit(u, e => {
+    e.country = { id: to.id, name: to.name };
+    if (callsign !== undefined && !deepEqValues(callsign, u.callsign)) e.callsign = callsign; else delete e.callsign;
+  });
+}
+// Annuler le pays d'une ligne l'annule pour tout son groupe (les emports et livrées des autres lignes restent).
+function revertCountryOfGroup(u) {
+  for (const m of groupMembers(u)) touchEdit(m, e => { delete e.country; delete e.callsign; });
+}
 
 // Le type du panneau : celui de la première case cochée
 function panelType() {
@@ -11320,11 +11554,12 @@ function afterEdit() {
 }
 
 // Motif pour lequel un appareil coché ne prend pas une modification (null : il la prend).
-// kind : 'payload' (emport, réglages) ou 'livery'.
+// kind : 'payload' (emport, réglages), 'livery' ou 'country' (le groupe entier : un identifiant en double dans le groupe l'écarte).
 function skipReason(u, type, visSet, kind) {
   if (u.type !== type) return 'type';
   if (!visSet.has(u.unitId)) return 'hidden';
   if (UI_STATE.dupIds.has(u.unitId)) return 'duplicate';
+  if (kind === 'country') return groupHasDup(u) ? 'duplicate' : null;
   if (kind === 'payload') {
     if (u.payloadPos === null || !u.payloadTable) return 'noPayload';
     if (!u.reproducible) return 'notRepro';
@@ -11526,11 +11761,52 @@ function fmtSetting(v) {
 
 // Ce que « Appliquer à la sélection » ferait, par part : { loadout, settings, livery } (null : part non choisie).
 // Chaque part porte ses appareils modifiés (targets) ; settings porte aussi une erreur éventuelle.
+// Ce que le changement de pays ferait : les groupes des appareils cochés (visibles, du type) qui ne sont pas déjà du pays `toId`, tous
+// leurs appareils, et les indicatifs réécrits (attribués groupe après groupe, ceux du camp pris en compte, en attente compris).
+function countryPlan(type, toId, checked, visSet) {
+  const to = cntCountry(toId);
+  const plan = { to, toId, groups: [], allUnits: new Set(), checkedChanging: new Set(), dragged: 0, nCallsign: 0 };
+  if (to === null) return plan;
+  const eligible = checked.filter(u => !skipReason(u, type, visSet, 'country'));
+  const order = [], seen = new Set();
+  for (const u of eligible) if (!seen.has(u.gk)) { seen.add(u.gk); order.push(u.gk); }
+  const groups = [], moving = new Set();
+  for (const gk of order) {
+    const members = UI_STATE.byGroup.get(gk) || [];
+    if (!members.length || curCountry(members[0]).id === toId) continue;
+    groups.push({ gk, members });
+    members.forEach(m => moving.add(m.unitId));
+  }
+  const checkedIds = new Set(checked.map(u => u.unitId));
+  const taken = {};
+  for (const g of groups) {
+    const camp = g.members[0].coalition;
+    if (!taken[camp]) taken[camp] = cntTaken(UI_STATE.aircraft.filter(a => a.coalition === camp && !moving.has(a.unitId)).map(curCallsign));
+    const cur = g.members.map(curCallsign);
+    let next;
+    if (g.members.every(m => m.countryId === toId)) next = g.members.map(m => m.callsign);   // retour au pays d'origine : indicatifs d'origine
+    else {
+      const res = cntCallsigns(g.members.map((m, i) => ({ type: m.type, callsign: cur[i] })), toId, taken[camp]);
+      next = res.values.map((v, i) => v === null ? cur[i] : v);
+    }
+    cntTakenAdd(taken[camp], next);
+    g.callsigns = next;
+    g.rewritten = next.some((v, i) => !deepEqValues(v, cur[i]));
+    if (g.rewritten) plan.nCallsign++;
+    plan.groups.push(g);
+    for (const m of g.members) {
+      plan.allUnits.add(m.unitId);
+      if (checkedIds.has(m.unitId)) plan.checkedChanging.add(m.unitId); else plan.dragged++;
+    }
+  }
+  return plan;
+}
+
 function applyPlan(type) {
   const ch = UI_STATE.choice;
   const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
   const checked = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && visSet.has(u.unitId));
-  const plan = { type, visSet, checked, loadout: null, settings: null, livery: null };
+  const plan = { type, visSet, checked, loadout: null, settings: null, livery: null, country: null };
   const def = ch.loadout ? getLoadouts(type).list.find(d => d.letter === ch.loadout) : null;
   if (def) plan.loadout = { def, targets: loadoutTargets(type, def), eligible: checked.some(u => !skipReason(u, type, visSet, 'payload')) };
   const rs = readSettings();
@@ -11554,8 +11830,10 @@ function applyPlan(type) {
   }
   const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
   if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv), eligible: checked.some(u => !skipReason(u, type, visSet, 'livery')) };
+  if (ch.country != null) plan.country = countryPlan(type, ch.country, checked, visSet);
   const all = new Set();
   for (const k of ['loadout', 'settings', 'livery']) if (plan[k]) plan[k].targets.forEach(u => all.add(u.unitId));
+  if (plan.country) plan.country.allUnits.forEach(id => all.add(id));
   plan.total = all.size;
   return plan;
 }
@@ -11567,7 +11845,7 @@ function applyToSelection() {
   if (type === null) return;
   const plan = applyPlan(type);
   if (plan.settings && plan.settings.error) return;
-  if (!plan.loadout && !plan.settings && !plan.livery) return;
+  if (!plan.loadout && !plan.settings && !plan.livery && !plan.country) return;
   const visSet = plan.visSet;
   let modified = 0;
   const ignored = {};
@@ -11597,10 +11875,16 @@ function applyToSelection() {
       setLivery(u, plan.livery.entry.livery);
       return true;
     });
-    if (changed) modified++;
+    if (plan.country) part('country', () => plan.country.checkedChanging.has(u.unitId));
+    if (changed || (plan.country && plan.country.allUnits.has(u.unitId))) modified++;
     else if (!reached && firstWhy) ignored[firstWhy] = (ignored[firstWhy] || 0) + 1;
   }
-  UI_STATE.choice = { type, loadout: null, livery: null };
+  if (plan.country) {
+    // le groupe entier change de pays : les appareils non cochés (ou masqués) du groupe aussi ; ils ne sont pas dans la boucle ci-dessus
+    for (const id of plan.country.allUnits) if (!UI_STATE.selected.has(id)) modified++;
+    for (const g of plan.country.groups) g.members.forEach((m, i) => setCountry(m, { id: plan.country.toId, name: plan.country.to.name }, g.callsigns[i]));
+  }
+  UI_STATE.choice = { type, loadout: null, livery: null, country: null };
   afterEdit();
   resetSettings();
   resultToast(modified, ignored);
@@ -11619,6 +11903,13 @@ function setModel(model) {
     byType.get(u.type).push(u);
   }
   UI_STATE.byType = byType;
+  UI_STATE.coalitions = model.coalitions || { blue: [], red: [], neutrals: [] };
+  const byGroup = new Map();
+  for (const u of model.aircraft) {
+    if (!byGroup.has(u.gk)) byGroup.set(u.gk, []);
+    byGroup.get(u.gk).push(u);
+  }
+  UI_STATE.byGroup = byGroup;
   UI_STATE.rev++;
   UI_STATE._cache.clear();
 }
@@ -11655,6 +11946,7 @@ async function loadMiz(file) {
 
     const extracted = DCS_EXTRACTOR.extract(ast, missionSrc, file.name, otherFilesMap, missionSrc.split('\n'));
     const aircraft = lxWalkAircraft(ast);
+    const coalitions = lxCoalitions(ast);
     const nPlayers = aircraft.filter(u => u.role === 'player').length;
     if (nPlayers !== extracted.clientGroups.length) {
       console.warn('[Load] Joueurs : parcours', nPlayers, '≠ extracteur', extracted.clientGroups.length);
@@ -11676,10 +11968,10 @@ async function loadMiz(file) {
     UI_STATE.collapsed = new Set();
     UI_STATE.filters = { coalition: '', type: '', role: '', search: '' };
     UI_STATE.showModifiedOnly = false;
-    setModel({ source: extracted.source, aircraft });
+    setModel({ source: extracted.source, aircraft, coalitions });
     buildLoadoutDefs();
     if (reopened) restoreLoadoutDefs(UI_STATE.lastSaved.defs);
-    UI_STATE.choice = { type: null, loadout: null, livery: null };
+    UI_STATE.choice = { type: null, loadout: null, livery: null, country: null };
     resetFilterControls();
 
     renderAll();
@@ -11826,14 +12118,16 @@ function renderTable() {
       const pChanged = !!(ed && ed.payload !== undefined);
       const lChanged = !!(ed && ed.livery !== undefined);
       const lv = curLivery(u);
+      const cc = curCountry(u);
+      const cChanged = !!(ed && ed.country);
       const roleTxt = t(u.role === 'player' ? 'role.player' : 'role.ai');
       html += '<tr class="row-unit' + (ed ? ' row-modified' : '') + '" data-id="' + u.unitId + '">' +
         '<td class="td-chk"><input type="checkbox" class="row-chk" data-id="' + u.unitId + '"' + (UI_STATE.selected.has(u.unitId) ? ' checked' : '') + '></td>' +
         '<td class="c-group">' + escHtml(u.groupName) + '</td>' +
         '<td class="c-unit">' + escHtml(u.name) +
-          '<span class="narrow-only">' + escHtml(roleTxt) + ' · ' + escHtml(u.country) + '</span></td>' +
+          '<span class="narrow-only">' + escHtml(roleTxt) + ' · <span' + (cChanged ? ' class="changed"' : '') + '>' + escHtml(cc.name) + '</span></span></td>' +
         '<td class="c-role"><span class="role-badge role-' + u.role + '">' + escHtml(roleTxt) + '</span></td>' +
-        '<td class="c-country"><span class="coal-dot ' + u.coalition + '"></span>' + escHtml(u.country) + '</td>' +
+        '<td class="c-country' + (cChanged ? ' changed' : '') + '"><span class="coal-dot ' + u.coalition + '"></span>' + escHtml(cc.name) + '</td>' +
         '<td class="td-ld cell-loadout">' + (ldInfo.cur.has(u.unitId)
           ? '<span class="ld-badge' + (ldInfo.orig.get(u.unitId) !== ldInfo.cur.get(u.unitId) ? ' changed ld-arrow' : (pChanged ? ' changed' : '')) + '">' +
               escHtml(ldInfo.orig.get(u.unitId) !== ldInfo.cur.get(u.unitId) ? (ldInfo.orig.get(u.unitId) || '—') + ' → ' + ldInfo.cur.get(u.unitId) : ldInfo.cur.get(u.unitId)) + '</span>'
@@ -11884,7 +12178,7 @@ function renderPanel() {
 
   // Choix : valable pour le type du panneau seulement
   if (UI_STATE.choice.type !== type) {
-    UI_STATE.choice = { type, loadout: null, livery: null };
+    UI_STATE.choice = { type, loadout: null, livery: null, country: null };
     SET_TOUCH.clear();
   }
 
@@ -11919,12 +12213,46 @@ function renderPanel() {
       '</div>';
   });
   document.getElementById('panel-liveries').innerHTML = lhtml || '<div class="none">' + escHtml(t('panel.noLiveries')) + '</div>';
+  renderCountry(type);
   renderActionBar(type);
   renderSettingsInfo(type);
   const bc = document.getElementById('btn-compose');
   const canCompose = cmpPylonsOf(type) !== null;
   bc.disabled = !canCompose;
   bc.title = canCompose ? '' : t('cmp.open.none');
+}
+
+// La section « Pays de ce type » : la liste des pays du camp des appareils cochés (visibles, du type), ceux qui ne conviennent pas
+// grisés avec leur raison ; désactivée si les cochés sont de camps différents ou s'il n'y en a aucun.
+function renderCountry(type) {
+  const sel = document.getElementById('country-select');
+  const note = document.getElementById('country-note');
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  const checked = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && visSet.has(u.unitId));
+  const camps = new Set(checked.map(u => u.coalition));
+  const state = checked.length === 0 ? 'none' : camps.size > 1 ? 'mixed' : 'ok';
+  let opts = [];
+  if (state === 'ok') {
+    const types = new Set();
+    for (const u of checked) for (const m of groupMembers(u)) types.add(m.type);
+    opts = cntOptions(UI_STATE.coalitions[checked[0].coalition] || [], [...types], checked.map(u => curCountry(u).id));
+  }
+  if (UI_STATE.choice.country != null) {
+    const o = opts.find(x => x.id === UI_STATE.choice.country);
+    if (!o || o.reason !== null) UI_STATE.choice.country = null;
+  }
+  let html = '<option value="">' + escHtml(t('country.keep')) + '</option>';
+  for (const o of opts) {
+    html += '<option value="' + o.id + '"' + (o.reason ? ' disabled' : '') + '>' +
+      escHtml(o.name + (o.reason ? ' — ' + t(o.reason === 'current' ? 'country.current' : 'country.noType') : '')) + '</option>';
+  }
+  sel.innerHTML = html;
+  sel.setAttribute('aria-label', t('country.label'));
+  sel.value = UI_STATE.choice.country == null ? '' : String(UI_STATE.choice.country);
+  sel.disabled = state !== 'ok';
+  const msg = state === 'mixed' ? t('country.mixed') : state === 'none' ? t('country.none') : '';
+  note.textContent = msg;
+  note.hidden = msg === '';
 }
 
 // « A ×2, C ×1 » : les lettres actuelles des appareils visés, dans l'ordre des lettres
@@ -11958,11 +12286,19 @@ function renderActionBar(type) {
   }
   if (plan.livery) {
     const { entry, targets } = plan.livery;
-    const nOther = targets.filter(u => u.country !== entry.country).length;
+    const nOther = targets.filter(u => curCountry(u).name !== entry.country).length;
     let v, cls = '';
     if (!targets.length) { v = plan.livery.eligible ? t('bar.liverySame').replace('{name}', entry.livery) : t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', 0)); cls = 'off'; }
     else v = t('bar.livery').replace('{name}', entry.livery).replace('{n}', tn('panel.count', targets.length));
     rows.push([t('bar.k.livery'), escHtml(v) + (targets.length && nOther ? '<span class="lv-other">' + escHtml(t('bar.liveryOther').replace('{m}', nOther)) + '</span>' : ''), cls]);
+  }
+  if (plan.country) {
+    const c = plan.country;
+    const k = (txt, g, n) => txt.replace('{to}', c.to ? c.to.name : '').replace('{g}', g).replace('{n}', n);
+    let v = k(t('bar.country'), c.groups.length, c.allUnits.size);
+    if (c.groups.length && c.dragged) v += t('bar.countryDragged').replace('{m}', c.dragged);
+    if (c.nCallsign) v += t('bar.countryCallsign').replace('{k}', c.nCallsign);
+    rows.push([t('bar.k.country'), escHtml(v), c.groups.length ? '' : 'off']);
   }
   const blocked = !!(plan.settings && plan.settings.error);
   const can = plan.total > 0 && !blocked;
@@ -11979,7 +12315,7 @@ function renderActionBar(type) {
 function chooseCard(kind, value) {
   const type = panelType();
   if (type === null) return;
-  if (UI_STATE.choice.type !== type) UI_STATE.choice = { type, loadout: null, livery: null };
+  if (UI_STATE.choice.type !== type) UI_STATE.choice = { type, loadout: null, livery: null, country: null };
   UI_STATE.choice[kind] = (UI_STATE.choice[kind] === value) ? null : value;
   const sel = kind === 'loadout' ? '#panel-loadouts .ld-card' : '#panel-liveries .lv-card';
   const lvs = kind === 'livery' ? getLiveries(type) : null;
@@ -12047,6 +12383,8 @@ document.getElementById('units-tbody').addEventListener('click', function(e) {
   const undo = e.target.closest('.btn-undo-cell');
   if (undo) {
     const id = Number(undo.dataset.id);
+    const ru = UI_STATE.byId.get(id);
+    if (ru) revertCountryOfGroup(ru);
     UI_STATE.edits.delete(id);
     UI_STATE.rev++;
     renderAll();
@@ -12089,6 +12427,14 @@ document.getElementById('chk-all').addEventListener('change', function() {
     if (this.checked) UI_STATE.selected.add(u.unitId); else UI_STATE.selected.delete(u.unitId);
   }
   onSelectionChange();
+});
+
+// Pays choisi (comme une livrée : il entre dans le plan, la barre l'affiche)
+document.getElementById('country-select').addEventListener('change', function() {
+  const type = panelType();
+  if (type === null) return;
+  UI_STATE.choice.country = this.value === '' ? null : Number(this.value);
+  renderActionBar(type);
 });
 
 // Filtres
@@ -12686,10 +13032,298 @@ function lxIndentAt(src, offset) {
   return n;
 }
 
-// Un patch par valeur : le payload est remplacé en entier, la livrée par son texte.
+// ── Pays : déplacer des groupes d'un pays à l'autre (écriture) ──────────────────────────────────────────────
+// Le moteur patche par positions (applyPatches) : un déplacement s'exprime en patches qui ne se recouvrent pas — la table `group`
+// d'un pays réécrite en entier (clés 1…m), une catégorie ou une entrée de pays retirée, une entrée neuve ajoutée à la fin, les
+// clés des entrées de pays renumérotées. Les patches d'emport, de livrée et d'indicatif d'un groupe sont appliqués à son texte
+// avant qu'il change de place.
+function lxLineStart(src, offset) { return src.lastIndexOf('\n', offset - 1) + 1; }
+function lxTabs(n) { return '\t'.repeat(n); }
+function lxRange(a, b, str) { return { pos: { start: { offset: a }, end: { offset: b } }, newValueStr: str }; }
+
+// Bornes d'une entrée de table : du début de sa ligne (clé précédée de tabulations seulement) à la fin de la ligne de fermeture,
+// retour à la ligne compris ; `digits` : la place du numéro de « -- end of [n] », s'il y en a un.
+function lxEntryExtent(src, entry) {
+  if (!entry || !entry.keyPos) throw new Error('entrée sans clé');
+  const ks = entry.keyPos.start.offset;
+  const ls = lxLineStart(src, ks);
+  if (!/^\t*$/.test(src.slice(ls, ks))) throw new Error('début d\'entrée : ligne inattendue');
+  const ve = entry.value.pos.end.offset;
+  const tail = src.slice(ve, ve + 400);
+  const m = /^,[ \t]*(?:--[^\r\n]*)?\r?\n/.exec(tail);
+  if (!m) throw new Error('fin d\'entrée : ligne inattendue');
+  let digits = null;
+  const d = /-- end of \[(\d+)\]/.exec(m[0]);
+  if (d) {
+    const from = ve + d.index + d[0].indexOf(d[1]);
+    digits = { start: from, end: from + d[1].length };
+  }
+  return { start: ls, end: ve + m[0].length, digits };
+}
+
+// Début de la ligne qui ferme une table (son « } » n'est précédé que de tabulations) : le point où ajouter une entrée à la fin.
+function lxCloseLine(src, table) {
+  const close = table.pos.end.offset - 1;
+  const ls = lxLineStart(src, close);
+  if (src[close] !== '}' || !/^\t*$/.test(src.slice(ls, close))) throw new Error('fermeture de table : ligne inattendue');
+  return ls;
+}
+
+// Retire de `patches` ceux qui tombent dans [a, b) et les rend ; un patch à cheval sur une borne est une erreur.
+function lxTake(patches, a, b) {
+  const inner = [];
+  for (let i = patches.length - 1; i >= 0; i--) {
+    const p = patches[i];
+    const s = p.pos.start.offset, e = p.pos.end.offset;
+    if (s >= a && e <= b) { inner.push(p); patches.splice(i, 1); }
+    else if (s < b && e > a) throw new Error('patch à cheval sur un groupe');
+  }
+  return inner;
+}
+
+// Le texte [a, b) de src avec les patches `inner` (positions absolues) appliqués.
+function lxSlice(src, a, b, inner) {
+  let s = src.slice(a, b);
+  for (const p of inner.slice().sort((x, y) => y.pos.start.offset - x.pos.start.offset)) {
+    s = s.slice(0, p.pos.start.offset - a) + p.newValueStr + s.slice(p.pos.end.offset - a);
+  }
+  return s;
+}
+
+// La table `group` d'un pays : ses groupes dans l'ordre voulu, clés 1…m, dans la forme du jeu. `ind` : retrait de la ligne de la table.
+function lxGroupsText(ind, bodies) {
+  let out = '{\n';
+  bodies.forEach((b, i) => {
+    out += lxTabs(ind + 1) + '[' + (i + 1) + '] = \n' + lxTabs(ind + 1) + b + ', -- end of [' + (i + 1) + ']\n';
+  });
+  return out + lxTabs(ind) + '}';
+}
+
+// Une catégorie neuve (`plane` ou `helicopter`) et sa table `group` ; `c` : retrait de la ligne de la catégorie.
+function lxCatText(c, cat, bodies) {
+  return lxTabs(c) + '["' + cat + '"] = \n' + lxTabs(c) + '{\n' +
+    lxTabs(c + 1) + '["group"] = \n' + lxTabs(c + 1) + lxGroupsText(c + 1, bodies) + ', -- end of ["group"]\n' +
+    lxTabs(c) + '}, -- end of ["' + cat + '"]\n';
+}
+
+// Une entrée de pays neuve : id, nom, puis ses catégories. `ci` : retrait de la ligne de l'entrée.
+function lxNewEntryText(ci, key, id, name, cats) {
+  let s = lxTabs(ci) + '[' + key + '] = \n' + lxTabs(ci) + '{\n' +
+    lxTabs(ci + 1) + '["id"] = ' + id + ',\n' + lxTabs(ci + 1) + '["name"] = ' + serializeLua(String(name)) + ',\n';
+  for (const [cat, bodies] of cats) s += lxCatText(ci + 1, cat, bodies);
+  return s + lxTabs(ci) + '}, -- end of [' + key + ']\n';
+}
+
+// Patch qui réécrit l'indicatif d'un appareil : de après le « = » jusqu'à la virgule et au commentaire de fin compris.
+// Un nombre s'écrit « 110, », un nom comme le jeu : table à [1], [2], ["name"], [3].
+function lxCallsignPatch(src, u, value) {
+  const pos = u.callsignPos;
+  if (!pos) throw new Error('callsign sans position : ' + u.name);
+  let i = pos.start.offset - 1;
+  while (i >= 0 && /\s/.test(src[i])) i--;
+  if (src[i] !== '=') throw new Error('callsign : « = » introuvable');
+  const e = pos.end.offset;
+  const tail = /^,[ \t]*(?:-- end of \["callsign"\])?/.exec(src.slice(e, e + 80));
+  if (!tail) throw new Error('callsign : virgule introuvable');
+  const t = lxIndentAt(src, pos.start.offset);
+  let str;
+  if (typeof value === 'number') str = ' ' + String(value) + ',';
+  else str = ' \n' + lxTabs(t) + '{\n' + lxTabs(t + 1) + '[1] = ' + value['1'] + ',\n' + lxTabs(t + 1) + '[2] = ' + value['2'] + ',\n' +
+    lxTabs(t + 1) + '["name"] = ' + serializeLua(String(value.name)) + ',\n' + lxTabs(t + 1) + '[3] = ' + value['3'] + ',\n' +
+    lxTabs(t) + '}, -- end of ["callsign"]';
+  return lxRange(i + 1, e + tail[0].length, str);
+}
+
+// Les groupes à déplacer, d'après les modifications en attente : [{ gk, camp, category, toId, toName, members, callsigns }] par gk.
+function lxCollectMoves() {
+  const gks = new Set();
+  for (const [id, ed] of UI_STATE.edits) {
+    if (!ed.country) continue;
+    const u = UI_STATE.byId.get(id);
+    if (!u) throw new Error('unitId ' + id + ' introuvable');
+    gks.add(u.gk);
+  }
+  const moves = [];
+  for (const gk of [...gks].sort((a, b) => a - b)) {
+    const members = UI_STATE.byGroup.get(gk) || [];
+    const first = members.length ? UI_STATE.edits.get(members[0].unitId) : null;
+    if (!first || !first.country) throw new Error('groupe sans pays en attente : ' + gk);
+    for (const m of members) {
+      const e = UI_STATE.edits.get(m.unitId);
+      if (!e || !e.country || e.country.id !== first.country.id) throw new Error('groupe dont les appareils n\'ont pas le même pays : ' + gk);
+      if (UI_STATE.dupIds.has(m.unitId)) throw new Error('groupe à identifiant en double : ' + gk);
+    }
+    moves.push({ gk, camp: members[0].coalition, category: members[0].category, toId: first.country.id, toName: first.country.name,
+      members, callsigns: members.map(m => UI_STATE.edits.get(m.unitId).callsign) });
+  }
+  return moves;
+}
+
+// Ajoute à `patches` ceux des déplacements `moves` (et retire ceux qu'ils absorbent) ; remplit `wanted` pour verifyWrite.
+function lxCountryPatches(src, moves, patches, wanted) {
+  const { tokens, errors } = DCS_TOKENIZER.tokenize(src);
+  if (errors.length > 0) throw new Error('tokeniseur : ' + errors[0].message);
+  const ast = DCS_PARSER.parse(tokens);
+  const struct = {};
+  const walk = lxWalkAircraft(ast, struct);
+  if (walk.length !== UI_STATE.aircraft.length) throw new Error('parcours : nombre d\'appareils différent');
+  for (let i = 0; i < walk.length; i++) {
+    const a = UI_STATE.aircraft[i];
+    if (walk[i].unitId !== a.unitId || walk[i].gk !== a.gk) throw new Error('parcours : appareil ' + i + ' différent');
+  }
+  const where = new Map();
+  for (const camp of Object.keys(struct)) {
+    struct[camp].entries.forEach((en, ei) => {
+      for (const cat of Object.keys(en.cats)) en.cats[cat].list.forEach(item => { if (item.gk !== null) where.set(item.gk, { camp, ei, cat, item }); });
+    });
+  }
+  const byCamp = new Map();
+  for (const mv of moves) {
+    if (!byCamp.has(mv.camp)) byCamp.set(mv.camp, []);
+    byCamp.get(mv.camp).push(mv);
+  }
+  wanted.camps = new Map();    // camp -> nombre d'entrées de pays attendu
+  wanted.entries = [];         // { camp, id, exists }
+  wanted.lists = [];           // { camp, id, cat, count } : tables `group` attendues
+  for (const [camp, list] of byCamp) lxCampPatches(src, struct[camp], camp, list, where, patches, wanted);
+  for (const mv of moves) {
+    mv.members.forEach((u, i) => {
+      wanted.country.set(u.unitId, { id: mv.toId, name: mv.toName, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign });
+    });
+  }
+}
+
+function lxCampPatches(src, S, camp, list, where, patches, wanted) {
+  if (!S) throw new Error('camp sans table country : ' + camp);
+  const finals = new Map();          // 'ei|cat' -> groupes de la table `group` après les déplacements
+  const touched = new Set();         // entrées de pays touchées
+  const fresh = [];                  // entrées de pays à créer : { id, name, cats: Map(cat -> items) }
+  const getFinal = (ei, cat) => {
+    const k = ei + '|' + cat;
+    if (!finals.has(k)) { const info = S.entries[ei].cats[cat]; finals.set(k, info ? info.list.slice() : []); }
+    return finals.get(k);
+  };
+  for (const mv of list) {
+    const w = where.get(mv.gk);
+    if (!w || w.camp !== camp) throw new Error('groupe introuvable : ' + mv.gk);
+    const from = getFinal(w.ei, w.cat);
+    const at = from.indexOf(w.item);
+    if (at < 0) throw new Error('groupe absent de sa table : ' + mv.gk);
+    from.splice(at, 1);
+    touched.add(w.ei);
+    const srcInfo = S.entries[w.ei].cats[w.cat];
+    const item = { ge: w.item.ge, gk: mv.gk, mv, srcInd: lxIndentAt(src, srcInfo.groups.pos.start.offset) };
+    const di = S.entries.findIndex(en => en.id === mv.toId);
+    if (di >= 0) { getFinal(di, w.cat).push(item); touched.add(di); }
+    else {
+      let ne = fresh.find(x => x.id === mv.toId);
+      if (!ne) { ne = { id: mv.toId, name: mv.toName, cats: new Map() }; fresh.push(ne); }
+      if (!ne.cats.has(w.cat)) ne.cats.set(w.cat, []);
+      ne.cats.get(w.cat).push(item);
+    }
+  }
+  // une entrée sans plus aucun groupe (aucune catégorie qui en porte) est retirée
+  const removed = new Set();
+  for (const ei of touched) {
+    const en = S.entries[ei];
+    let n = en.otherGroups;
+    for (const cat of ['plane', 'helicopter']) {
+      const k = ei + '|' + cat;
+      n += finals.has(k) ? finals.get(k).length : (en.cats[cat] ? en.cats[cat].list.length : 0);
+    }
+    if (n === 0) removed.add(ei);
+  }
+  const out = [];
+  const bodyOf = item => {
+    const a = item.ge.value.pos.start.offset, b = item.ge.value.pos.end.offset;
+    const inner = lxTake(patches, a, b);
+    if (item.mv) item.mv.members.forEach((u, i) => { if (item.mv.callsigns[i] !== undefined) inner.push(lxCallsignPatch(src, u, item.mv.callsigns[i])); });
+    return lxSlice(src, a, b, inner);
+  };
+  const sameInd = (items, ind) => { for (const it of items) if (it.mv && it.srcInd !== ind) throw new Error('retrait des groupes différent d\'un pays à l\'autre'); };
+  const pendingCats = new Map();     // ei -> [[cat, bodies]]
+  for (const [k, items] of finals) {
+    const bar = k.indexOf('|');
+    const ei = Number(k.slice(0, bar)), cat = k.slice(bar + 1);
+    if (removed.has(ei)) continue;
+    const en = S.entries[ei], info = en.cats[cat];
+    if (items.length === 0) {
+      if (info) { const x = lxEntryExtent(src, info.catEntry); out.push(lxRange(x.start, x.end, '')); }
+      continue;
+    }
+    const bodies = items.map(bodyOf);
+    wanted.lists.push({ camp, id: en.id, cat, count: items.length });
+    if (info && info.groups) {
+      const ind = lxIndentAt(src, info.groups.pos.start.offset);
+      sameInd(items, ind);
+      out.push(lxRange(info.groups.pos.start.offset, info.groups.pos.end.offset, lxGroupsText(ind, bodies)));
+    } else if (info) {
+      const c = lxIndentAt(src, info.catNode.pos.start.offset) + 1;
+      sameInd(items, c);
+      const at = lxCloseLine(src, info.catNode);
+      out.push(lxRange(at, at, lxTabs(c) + '["group"] = \n' + lxTabs(c) + lxGroupsText(c, bodies) + ', -- end of ["group"]\n'));
+    } else {
+      if (!pendingCats.has(ei)) pendingCats.set(ei, []);
+      pendingCats.get(ei).push([cat, bodies, items]);
+    }
+  }
+  for (const [ei, cats] of pendingCats) {
+    const en = S.entries[ei];
+    const c = lxIndentAt(src, en.ce.value.pos.start.offset) + 1;
+    let text = '';
+    for (const [cat, bodies, items] of cats) { sameInd(items, c + 1); text += lxCatText(c, cat, bodies); }
+    const at = lxCloseLine(src, en.ce.value);
+    out.push(lxRange(at, at, text));
+  }
+  for (const ei of removed) {
+    const x = lxEntryExtent(src, S.entries[ei].ce);
+    out.push(lxRange(x.start, x.end, ''));
+    wanted.entries.push({ camp, id: S.entries[ei].id, exists: false });
+  }
+  // clés des entrées de pays : 1…m dans l'ordre
+  let ord = 0;
+  S.entries.forEach((en, ei) => {
+    if (removed.has(ei)) return;
+    ord++;
+    const kv = en.ce.key && en.ce.key.kind === 'int' ? en.ce.key.value : null;
+    if (kv === ord) return;
+    const x = lxEntryExtent(src, en.ce);
+    out.push({ pos: en.ce.keyPos, newValueStr: '[' + ord + ']' });
+    if (x.digits) out.push(lxRange(x.digits.start, x.digits.end, String(ord)));
+  });
+  for (const ei of touched) if (!removed.has(ei)) wanted.entries.push({ camp, id: S.entries[ei].id, exists: true });
+  // entrées neuves, à la fin
+  if (fresh.length) {
+    const ci = lxIndentAt(src, S.table.pos.start.offset) + 1;
+    let text = '';
+    fresh.forEach((ne, j) => {
+      const cats = [];
+      for (const [cat, items] of ne.cats) { sameInd(items, ci + 2); cats.push([cat, items.map(bodyOf)]); wanted.lists.push({ camp, id: ne.id, cat, count: items.length }); }
+      text += lxNewEntryText(ci, ord + j + 1, ne.id, ne.name, cats);
+      wanted.entries.push({ camp, id: ne.id, exists: true });
+    });
+    if (S.table.entries.length === 0) out.push(lxRange(S.table.pos.start.offset, S.table.pos.end.offset, '{\n' + text + lxTabs(ci - 1) + '}'));
+    else { const at = lxCloseLine(src, S.table); out.push(lxRange(at, at, text)); }
+  }
+  wanted.camps.set(camp, ord + fresh.length);
+  for (const p of out) patches.push(p);
+}
+
+// Aucun recouvrement entre patches, et aucun point de départ commun avec une insertion (l'ordre d'application serait ambigu).
+function lxCheckPatches(patches) {
+  const asc = patches.slice().sort((a, b) => a.pos.start.offset - b.pos.start.offset || a.pos.end.offset - b.pos.end.offset);
+  for (let i = 1; i < asc.length; i++) {
+    const p = asc[i - 1], q = asc[i];
+    if (p.pos.end.offset > q.pos.start.offset) throw new Error('patches qui se recouvrent');
+    if (p.pos.start.offset === q.pos.start.offset && (p.pos.end.offset === p.pos.start.offset || q.pos.end.offset === q.pos.start.offset)) throw new Error('patches de même départ');
+  }
+}
+
+// Un patch par valeur : le payload est remplacé en entier, la livrée par son texte ; un pays changé déplace son groupe entier
+// (voir lxCountryPatches), indicatifs réécrits compris.
 function collectPatches(src) {
   const patches = [];
-  const wanted = { payload: new Map(), livery: new Map() };
+  const wanted = { payload: new Map(), livery: new Map(), country: new Map(), camps: new Map(), entries: [], lists: [] };
   for (const [id, ed] of UI_STATE.edits) {
     const u = UI_STATE.byId.get(id);
     if (!u) throw new Error('unitId ' + id + ' introuvable');
@@ -12706,28 +13340,71 @@ function collectPatches(src) {
       wanted.livery.set(id, String(ed.livery));
     }
   }
+  const moves = lxCollectMoves();
+  if (moves.length) lxCountryPatches(src, moves, patches, wanted);
+  lxCheckPatches(patches);
   // Offsets décroissants : un patch ne décale pas ceux qui restent à appliquer
   patches.sort((a, b) => b.pos.start.offset - a.pos.start.offset);
   return { patches, wanted };
 }
 
-// Relit le texte écrit : chaque payload et livery_id écrit doit égaler la valeur voulue,
-// et tout appareil non modifié doit être resté tel quel. Retourne { error } ou { ast, aircraft }.
+// Relit le texte écrit : chaque appareil est retrouvé (par unitId et rang dans son groupe) dans le pays, la catégorie, avec l'indicatif,
+// l'emport et la livrée voulus ; un appareil non modifié est resté tel quel ; un groupe qui change de pays reste entier ; les tables
+// touchées ont leurs clés 1…m. Retourne { error } ou { ast, aircraft }.
 function verifyWrite(patchedSrc, wanted) {
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
   if (errors.length > 0) return { error: 'tokeniseur : ' + errors[0].message + ' L' + (errors[0].line + 1) };
   const ast = DCS_PARSER.parse(tokens);
-  const re = lxWalkAircraft(ast);
+  const struct = {};
+  const re = lxWalkAircraft(ast, struct);
   if (re.length !== UI_STATE.aircraft.length) return { error: 'appareils : ' + re.length + ' ≠ ' + UI_STATE.aircraft.length };
-  // Même ordre de parcours avant et après : on compare appareil par appareil (les unitId peuvent être en double)
+  // Un identifiant en double : on apparie par ordre d'apparition (un groupe qui en porte ne bouge pas)
+  const slots = new Map();
+  re.forEach((r, i) => { if (!slots.has(r.unitId)) slots.set(r.unitId, []); slots.get(r.unitId).push(i); });
+  const seen = new Map();
+  const gkMap = new Map(), gkBack = new Map();
   for (let i = 0; i < UI_STATE.aircraft.length; i++) {
     const u = UI_STATE.aircraft[i];
-    const u2 = re[i];
-    if (!u2 || u2.unitId !== u.unitId) return { error: 'unitId ' + u.unitId + ' disparu' };
+    const n = seen.get(u.unitId) || 0;
+    seen.set(u.unitId, n + 1);
+    const at = (slots.get(u.unitId) || [])[n];
+    if (at === undefined) return { error: 'unitId ' + u.unitId + ' disparu' };
+    const u2 = re[at];
+    if (u2.rank !== u.rank || u2.groupName !== u.groupName || u2.groupId !== u.groupId || u2.name !== u.name || u2.type !== u.type ||
+        u2.coalition !== u.coalition || u2.skill !== u.skill) return { error: 'appareil ' + u.name + ' (' + u.unitId + ')' };
+    const wc = wanted.country.get(u.unitId);
+    if (u2.countryId !== (wc ? wc.id : u.countryId) || u2.country !== (wc ? wc.name : u.country) || u2.category !== (wc ? wc.category : u.category)) {
+      return { error: 'pays ' + u.name + ' (' + u.unitId + ')' };
+    }
+    if (!deepEqValues(wc ? wc.callsign : u.callsign, u2.callsign)) return { error: 'callsign ' + u.name + ' (' + u.unitId + ')' };
     const wantP = wanted.payload.has(u.unitId) ? wanted.payload.get(u.unitId) : u.payload;
     const wantL = wanted.livery.has(u.unitId) ? wanted.livery.get(u.unitId) : u.livery;
     if (!deepEqValues(wantP, u2.payload)) return { error: 'payload ' + u.name + ' (' + u.unitId + ')' };
     if (wantL !== u2.livery) return { error: 'livery_id ' + u.name + ' (' + u.unitId + ')' };
+    if (!gkMap.has(u.gk)) { gkMap.set(u.gk, u2.gk); if (gkBack.has(u2.gk)) return { error: 'groupes confondus : ' + u.groupName }; gkBack.set(u2.gk, u.gk); }
+    else if (gkMap.get(u.gk) !== u2.gk) return { error: 'groupe coupé : ' + u.groupName };
+  }
+  for (const [camp, count] of wanted.camps) {
+    const S = struct[camp];
+    if (!S || S.entries.length !== count) return { error: 'pays du camp ' + camp };
+    for (let j = 0; j < S.entries.length; j++) {
+      const k = S.entries[j].ce.key;
+      if (!k || k.kind !== 'int' || k.value !== j + 1) return { error: 'clés des pays du camp ' + camp };
+    }
+  }
+  for (const x of wanted.entries) {
+    const S = struct[x.camp];
+    if (!S || S.entries.some(en => en.id === x.id) !== x.exists) return { error: 'pays ' + x.id + ' du camp ' + x.camp };
+  }
+  for (const x of wanted.lists) {
+    const S = struct[x.camp];
+    const en = S && S.entries.find(e => e.id === x.id);
+    const info = en && en.cats[x.cat];
+    if (!info || !info.groups || info.groups.entries.length !== x.count) return { error: 'groupes du pays ' + x.id + ' (' + x.cat + ')' };
+    for (let j = 0; j < info.groups.entries.length; j++) {
+      const k = info.groups.entries[j].key;
+      if (!k || k.kind !== 'int' || k.value !== j + 1) return { error: 'clés des groupes du pays ' + x.id + ' (' + x.cat + ')' };
+    }
   }
   return { ast, aircraft: re };
 }
@@ -12812,7 +13489,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     }
     UI_STATE.edits = new Map();
     rememberSaved(savedBytes, UI_STATE.loadoutDefs);
-    setModel({ source: extracted.source, aircraft: verdict.aircraft });
+    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast) });
     renderAll();
 
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', nMod), 'success');
