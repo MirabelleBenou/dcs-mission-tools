@@ -557,7 +557,7 @@
     .cmp-row select { width: 100%; min-width: 0; }
     .cmp-row .cmp-nomirror { grid-column: 2 / -1; font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
     .cmp-row .cmp-nomirror[hidden] { display: none; }
-    .cmp-row .cmp-oneof { grid-column: 2 / -1; font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
+    .cmp-row .cmp-oneof, .cmp-row .cmp-rule { grid-column: 2 / -1; font-size: 12px; color: var(--warn); overflow-wrap: anywhere; }
     .cmp-row .cmp-oneof[hidden] { display: none; }
     .cmp-row .pair { font: 12px var(--font-mono); color: var(--text-dim); }
     .cmp-row .cmp-kg { text-align: right; font: 13px var(--font-mono); color: var(--text-2); white-space: nowrap; }
@@ -836,6 +836,12 @@ const I18N = {
     'cmp.sym':                     'Symétrique',
     'cmp.noMirror':                '↔ pas d\'équivalent sur la station jumelle {0}',
     'cmp.oneOf':                   'Une seule porte : retiré de la station {0}',
+    'cmp.clash':                   'incompatible avec {0}',
+    'cmp.rule':                    'Incompatible avec la station {0} : {1}',
+    'cmp.blocked':                 'Corrigez les stations incompatibles pour retenir cet emport',
+    'rule.ajs37-mix':              'une seule arme air-sol à la fois sur l\'AJS37, sauf l\'AKAN avec la RB 75 ou la RB 05',
+    'rule.mig21-ecm':              'le SPS-141 ou l\'ASO-2, pas les deux',
+    'rule.f1-r530':                'des R530 au fuselage ou sous les ailes, pas les deux',
     'w.left':                      '(gauche)',
     'w.right':                     '(droite)',
     'cmp.mass':                    'Masse des emports :',
@@ -983,6 +989,12 @@ const I18N = {
     'cmp.sym':                     'Symmetric',
     'cmp.noMirror':                '↔ no equivalent on twin station {0}',
     'cmp.oneOf':                   'One door only: removed from station {0}',
+    'cmp.clash':                   'clashes with {0}',
+    'cmp.rule':                    'Clashes with station {0}: {1}',
+    'cmp.blocked':                 'Fix the clashing stations to keep this loadout',
+    'rule.ajs37-mix':              'one air-to-ground weapon at a time on the AJS37, except the AKAN with the RB 75 or the RB 05',
+    'rule.mig21-ecm':              'the SPS-141 or the ASO-2, not both',
+    'rule.f1-r530':                'R530s under the fuselage or under the wings, not both',
     'w.left':                      '(left)',
     'w.right':                     '(right)',
     'cmp.mass':                    'Loadout weight:',
@@ -10393,6 +10405,192 @@ function payloadOneOfOthers(type, n) {
   return out;
 }
 
+// Incompatibilités d'emport par appareil, d'après les manuels officiels et les guides de la communauté (table du 9 novembre 2026).
+// Deux formes : « mix » (fam : CLSID → famille d'armes ; ok : paires de familles permises, toute autre paire de familles différentes est un conflit)
+// et « excl » (g : groupes { st, w } ; un CLSID de w posé sur une station de st est incompatible avec un CLSID d'un autre groupe posé sur une station de ce groupe-là).
+const PAYLOAD_RULES = {
+ "AJS37": [
+  {
+   "id": "ajs37-mix",
+   "k": "mix",
+   "fam": {
+    "{BK90}": "BK90",
+    "{BK90MJ1}": "BK90",
+    "{BK90MJ2}": "BK90",
+    "{AKAN}": "AKAN",
+    "{AKAN_NO_TRC}": "AKAN",
+    "{ARAKM70BHE}": "ARAK",
+    "{ARAKM70BAP}": "ARAK",
+    "{ARAKM70BAPPX}": "ARAK",
+    "{Rb04_HB}": "RB04",
+    "{Rb04AI}": "RB04",
+    "{Rb15_HB}": "RB15",
+    "{Rb15AI}": "RB15",
+    "{LYSBOMB_V7V}": "LYSB",
+    "{LYSBOMB_S7V}": "LYSB",
+    "{LYSBOMB_S7H}": "LYSB",
+    "{LYSBOMB_V7H}": "LYSB",
+    "{M71BOMB}": "M71",
+    "{M71BOMBD}": "M71",
+    "{RB75}": "RB75",
+    "{RB75B}": "RB75",
+    "{RB75T}": "RB75",
+    "{Robot05}": "RB05"
+   },
+   "ok": [
+    [
+     "AKAN",
+     "RB75"
+    ],
+    [
+     "AKAN",
+     "RB05"
+    ]
+   ]
+  }
+ ],
+ "MiG-21Bis": [
+  {
+   "id": "mig21-ecm",
+   "k": "excl",
+   "g": [
+    {
+     "st": [
+      "3"
+     ],
+     "w": [
+      "{SPS-141-100}"
+     ]
+    },
+    {
+     "st": [
+      "6"
+     ],
+     "w": [
+      "{ASO-2}"
+     ]
+    }
+   ]
+  }
+ ],
+ "Mirage-F1EE": [
+  {
+   "id": "f1-r530",
+   "k": "excl",
+   "g": [
+    {
+     "st": [
+      "4"
+     ],
+     "w": [
+      "{R530F_EM}",
+      "{R530F_IR}"
+     ]
+    },
+    {
+     "st": [
+      "3",
+      "5"
+     ],
+     "w": [
+      "{R530F_EM}",
+      "{R530F_IR}"
+     ]
+    }
+   ]
+  }
+ ],
+ "Mirage-F1CE": [
+  {
+   "id": "f1-r530",
+   "k": "excl",
+   "g": [
+    {
+     "st": [
+      "4"
+     ],
+     "w": [
+      "{R530F_EM}",
+      "{R530F_IR}"
+     ]
+    },
+    {
+     "st": [
+      "3",
+      "5"
+     ],
+     "w": [
+      "{R530F_EM}",
+      "{R530F_IR}"
+     ]
+    }
+   ]
+  }
+ ],
+ "Mirage-F1BE": [
+  {
+   "id": "f1-r530",
+   "k": "excl",
+   "g": [
+    {
+     "st": [
+      "4"
+     ],
+     "w": [
+      "{R530F_EM}",
+      "{R530F_IR}"
+     ]
+    },
+    {
+     "st": [
+      "3",
+      "5"
+     ],
+     "w": [
+      "{R530F_EM}",
+      "{R530F_IR}"
+     ]
+    }
+   ]
+  }
+ ]
+}
+;
+// Les conflits que créerait le CLSID `c` posé à la station `n` de `type` : [{ st, rule }] — les AUTRES stations de l'emport `st` (station → CLSID, '' = vide)
+// dont le contenu ne peut pas aller avec `c` en `n`, et l'id de la règle —, triés par numéro de station puis par règle. [] pour un CLSID vide ou un type sans règle.
+// Fonction pure : ni DOM, ni t(), ni stockage.
+function payloadRuleConflicts(type, st, n, c) {
+  if (typeof c !== 'string' || c === '' || typeof type !== 'string' || !payloadHas(PAYLOAD_RULES, type)) return [];
+  n = String(n);
+  const out = [];
+  const put = (m, rule) => { if (!out.some(x => x.st === m && x.rule === rule)) out.push({ st: m, rule }); };
+  PAYLOAD_RULES[type].forEach(r => {
+    if (r.k === 'mix') {
+      if (!payloadHas(r.fam, c)) return;
+      const f = r.fam[c];
+      Object.keys(st).forEach(m => {
+        const o = st[m];
+        if (m === n || typeof o !== 'string' || o === '' || !payloadHas(r.fam, o)) return;
+        const g = r.fam[o];
+        if (g === f || r.ok.some(p => (p[0] === f && p[1] === g) || (p[0] === g && p[1] === f))) return;
+        put(m, r.id);
+      });
+    } else if (r.k === 'excl') {
+      r.g.forEach((gi, i) => {
+        if (gi.st.indexOf(n) < 0 || gi.w.indexOf(c) < 0) return;
+        r.g.forEach((gj, j) => {
+          if (j === i) return;
+          gj.st.forEach(m => {
+            const o = payloadHas(st, m) ? st[m] : '';
+            if (m !== n && typeof o === 'string' && gj.w.indexOf(o) >= 0) put(m, r.id);
+          });
+        });
+      });
+    }
+  });
+  return out.sort((a, b) => (Number(a.st) - Number(b.st)) || (a.rule < b.rule ? -1 : a.rule > b.rule ? 1 : 0));
+}
+
 // Nom d'une arme suivi de son côté, quand elle en a un parmi des homonymes (payloadWeaponSide).
 function weaponLabel(type, clsid) {
   const side = payloadWeaponSide(type, clsid);
@@ -11605,14 +11803,47 @@ function cmpStaggerNums() {
   }
 }
 
+// Incompatibilités d'emport (PAYLOAD_RULES) : les stations en conflit, jointes par « , »
+const cmpStationsOf = cl => cl.map(x => x.st).filter((m, i, a) => a.indexOf(m) === i).join(', ');
+// Le libellé d'une option avant que sa raison d'être grisée n'y soit ajoutée
+const cmpOptBase = new WeakMap();
+// Les règles de la station `n` : son contenu seul, avec les autres stations — une phrase par règle
+function cmpRuleText(n) {
+  const cl = payloadRuleConflicts(CMP.type, CMP.st, n, CMP.st[n]);
+  const ids = cl.map(x => x.rule).filter((r, i, a) => a.indexOf(r) === i);
+  return ids.map(id => t('cmp.rule').replace(/\{(\d)\}/g, (m, k) => k === '0' ? cmpStationsOf(cl.filter(x => x.rule === id)) : t('rule.' + id))).join(' ; ');
+}
+// Vrai si une station porte un contenu en conflit avec une autre
+function cmpHasClash() {
+  return payloadHas(PAYLOAD_RULES, CMP.type) && CMP.pyl.some(p => CMP.st[p.n] !== '' && payloadRuleConflicts(CMP.type, CMP.st, p.n, CMP.st[p.n]).length > 0);
+}
+
 // Valeurs affichées : listes, masses, cases, total, bouton
 function cmpUpdate() {
   const modal = document.getElementById('cmp-modal');
+  const ruled = payloadHas(PAYLOAD_RULES, CMP.type);
   for (const { n } of CMP.pyl) {
     const c = CMP.st[n];
     const row = modal.querySelector('.cmp-row[data-st="' + n + '"]');
     const sel = row.querySelector('select');
     if (sel.value !== c) sel.value = c;
+    if (ruled) {
+      // une option qui entrerait en conflit est grisée, avec les stations en cause ; l'option vide et la valeur en place ne le sont jamais
+      for (const o of sel.options) {
+        if (o.value === '') continue;
+        if (!cmpOptBase.has(o)) cmpOptBase.set(o, o.textContent);
+        const cl = o.value === c ? [] : payloadRuleConflicts(CMP.type, CMP.st, n, o.value);
+        const dis = cl.length > 0;
+        const txt = cmpOptBase.get(o) + (dis ? ' — ' + t('cmp.clash').replace('{0}', cmpStationsOf(cl)) : '');
+        if (o.disabled !== dis) o.disabled = dis;
+        if (o.textContent !== txt) o.textContent = txt;
+      }
+      // un contenu en conflit (emport de départ, ou tout autre chemin) le dit sous la ligne de la station
+      const msg = c !== '' ? cmpRuleText(n) : '';
+      let rl = row.querySelector('.cmp-rule');
+      if (msg && !rl) { rl = document.createElement('span'); rl.className = 'cmp-rule'; row.appendChild(rl); }
+      if (rl) { if (msg) { if (rl.textContent !== msg) rl.textContent = msg; } else rl.remove(); }
+    }
     let w = null;
     if (c !== '') {
       const i = cmpIdx.get(c);
@@ -11655,7 +11886,9 @@ function cmpUpdate() {
   document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(cmpNum(total) + ' kg' + (unknown ? ' + ?' : '')) + '</b>' + takeoff;
   const ap = document.getElementById('cmp-apply');
   ap.textContent = t('cmp.apply');
-  ap.disabled = false;
+  const blocked = cmpHasClash();
+  ap.disabled = blocked;
+  if (blocked) ap.title = t('cmp.blocked'); else if (ap.hasAttribute('title')) ap.removeAttribute('title');
   cmpDraw();
 }
 
@@ -11686,6 +11919,8 @@ function cmpDraw() {
 // « Vide » ne vide la paire que si elle portait, juste avant ce choix, le miroir de l'arme que la station portait.
 function cmpChoose(n, c) {
   const prev = CMP.st[n];
+  // Un choix qui entrerait en conflit (PAYLOAD_RULES) est refusé, quel que soit le chemin : rien ne change
+  if (c !== '' && c !== prev && payloadRuleConflicts(CMP.type, CMP.st, n, c).length) { cmpUpdate(); return; }
   CMP.st[n] = c;
   CMP.sel = n;
   CMP.oneOf = null;
@@ -11701,7 +11936,8 @@ function cmpChoose(n, c) {
         if (prev !== '' && CMP.st[pp.n] === payloadMirrorClsid(prev, pp.allowed)) CMP.st[pp.n] = '';
       } else {
         const m = payloadMirrorClsid(c, pp.allowed);
-        if (m !== '') CMP.st[pp.n] = m;
+        // l'arme miroir n'est posée que si elle ne crée aucun conflit ; sinon la jumelle ne bouge pas
+        if (m !== '' && !payloadRuleConflicts(CMP.type, CMP.st, pp.n, m).length) CMP.st[pp.n] = m;
       }
     }
   }
@@ -11723,7 +11959,7 @@ function cmpRegister(type, def) {
 // « Retenir cet emport » : la composition entre dans les emports du type et devient l'emport choisi du panneau ;
 // aucun appareil n'est modifié (c'est « Appliquer à la sélection » qui l'applique).
 function cmpApply() {
-  if (!CMP.open) return;
+  if (!CMP.open || cmpHasClash()) return;
   const def = cmpDef(), type = CMP.type;
   cmpRegister(type, def);
   const d = UI_STATE.loadoutDefs.get(type).find(x => x.sig === def.sig);
