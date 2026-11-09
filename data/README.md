@@ -62,9 +62,9 @@ Table `DCS aircraft type -> pylons -> weapons each pylon accepts`, used by the *
 
 ## aircraft_views.json
 
-Table `DCS aircraft type -> front view`, used by the **Loadout Editor** to show where each station is: the drawing (SVG text), its `viewBox`, the attachment point of each station in `viewBox` units, and the stations that are off the view. Four types have a view: Mi-24P, Mi-8MT, F-4E-45MC and Mirage-F1EE.
+Table `DCS aircraft type -> front view`, used by the **Loadout Editor** to show where each station is: the drawing (SVG text), its `viewBox`, the attachment point of each station in `viewBox` units, and the stations that are off the view. 42 types have a view: every aircraft of the DCS Reference Guide v35 that the editor knows, except the OH-58D.
 
-- **Source**: [`views/`](views/): the four `.svg` drawings and `stations.json`, where each type names its drawing (`svg`, relative to `data/`).
+- **Source**: [`views/`](views/): the 32 `.svg` drawings and `stations.json`, where each type names its drawing (`svg`, relative to `data/`).
 - **Licence**: the drawings are by **Goldwolf** (DCS Reference Guide), used with permission, and are **not covered by the repository's AGPL licence**: do not reuse them without the author's permission (see [`views/LICENSE.md`](views/LICENSE.md)).
 - **Regenerate**:
 

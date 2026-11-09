@@ -4,6 +4,9 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ## [Unreleased]
 
+### Added
+- **Loadout Editor**: the front view now covers 42 aircraft types — every aircraft of Goldwolf's DCS Reference Guide that the editor knows: A-10A/C, AH-64D, AJS37, AV-8B, C-101CC, C-130J, F-100D, F-14A/B, F-15C, F-15E, F-16C, F-5E, F-86F, F/A-18C, J-11A, JF-17, Ka-50, L-39ZA, M-2000C, MB-339, MiG-15, MiG-19, MiG-21, MiG-29, Mirage F1, SA342, Su-25T, Su-27, Su-33 and UH-1H, besides the Mi-24P, Mi-8MT, F-4E and Mirage F1EE; mirrored stations follow the drawing.
+
 ### Changed
 - **All tools**: messages now look and behave the same across the suite — they appear bottom right, just above the bottom bar so they never hide *Save*, marked ✅ ⚠️ ❌ by kind, errors staying 6 s; confirmations open in the suite's own window (Cancel, Escape or a tap outside to back out) instead of the browser's dialog; every tool shows the same loading spinner while a mission is read, and the Weather Editor's custom-weather notice moves under the header, like the Ground Unit Swapper's.
 - **All tools**: messages say what happened in plain words — an unreadable file, a failed save or a wrong comm plan each get one clear sentence instead of a technical error; the Comm Plan Editor and the Weather Editor confirm a loaded mission like the other tools; the home screen refuses a file that is not a mission before keeping it, and leaving a tool says what happens to unsaved changes; every drop zone reads the same, and the Loadout Editor gets its own icon.
