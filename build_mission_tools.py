@@ -917,9 +917,15 @@ def build_html(module_html_js, tile_uris, versions):
 
         /* Retour à l'accueil avec des modifications non sauvegardées */
         'confirm.leave.title':  "Revenir à l'accueil ?",
-        'confirm.leave.text':   "Le {{module}} garde vos modifications, mais elles ne passent aux autres outils qu'après « Sauvegarder ». Une sauvegarde faite dans un autre outil les effacera.",
+        'confirm.leave.text':   "Le {{module}} garde vos modifications, mais elles ne passent aux autres outils qu'après « Sauvegarder ».",
         'confirm.leave.ok':     "Revenir à l'accueil",
         'confirm.leave.cancel': "Rester",
+
+        /* Réouverture d'un outil modifié dont le fichier de travail a changé */
+        'confirm.reload.title':  "Le fichier de travail a changé",
+        'confirm.reload.text':   "Le {{module}} a des modifications non sauvegardées. Le recharger avec {{file}} les efface ; le garder tel quel laisse de côté ce qui a changé dans le fichier de travail.",
+        'confirm.reload.ok':     "Recharger",
+        'confirm.reload.cancel': "Garder mes modifications",
 
         /* Fichier refusé (pas un .miz) ; nom du bouton de langue pour les lecteurs d'écran */
         'wf.notMiz': "Ce fichier n'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l'éditeur de mission.",
@@ -949,9 +955,15 @@ def build_html(module_html_js, tile_uris, versions):
 
         /* Back to the home screen with unsaved changes */
         'confirm.leave.title':  'Back to the home screen?',
-        'confirm.leave.text':   "The {{module}} keeps your changes, but they reach the other tools only after Save. Saving in another tool will erase them.",
+        'confirm.leave.text':   "The {{module}} keeps your changes, but they reach the other tools only after Save.",
         'confirm.leave.ok':     "Go back",
         'confirm.leave.cancel': "Stay",
+
+        /* Reopening a modified tool whose working file has changed */
+        'confirm.reload.title':  "The working file has changed",
+        'confirm.reload.text':   "The {{module}} has unsaved changes. Reloading it with {{file}} erases them; keeping it as is leaves out what changed in the working file.",
+        'confirm.reload.ok':     "Reload",
+        'confirm.reload.cancel': "Keep my changes",
 
         /* Refused file (not a .miz); language button name for screen readers */
         'wf.notMiz': "This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.",
@@ -1096,7 +1108,8 @@ def build_html(module_html_js, tile_uris, versions):
     /* ══ FICHIER DE TRAVAIL — state ══
        workingFile : File | null
        Le File est recrée depuis des ArrayBuffer à l\'injection cross-realm (Phase B).
-       injectedFilePerModule : {{id: filename}} — évite les injections dupliquées. */
+       injectedFilePerModule : {{id: File}} — le fichier de travail (l\'objet File lui-même, pas son nom) que chaque outil
+       a lu : un outil n\'est relu que si le fichier de travail actuel n\'est pas celui qu\'il a lu. */
     let workingFile = null;
     const injectedFilePerModule = {{}};
 
@@ -1106,11 +1119,9 @@ def build_html(module_html_js, tile_uris, versions):
          Le File sera reconstruit au bon realm à la prochaine injection. */
       try {{
         workingFile = new File([blob], filename, {{ type: 'application/octet-stream' }});
-        /* Invalider le cache d'injection pour tous les modules :
-           le fichier a changé, il faudra ré-injecter partout. */
-        Object.keys(injectedFilePerModule).forEach(function(id) {{
-          injectedFilePerModule[id] = null;
-        }});
+        /* L\'outil qui sauvegarde est à jour : son texte écrit est la base du nouveau fichier de travail.
+           Les autres outils reliront à leur prochaine ouverture (leur File lu n\'est plus le fichier de travail). */
+        if (activeModule) injectedFilePerModule[activeModule] = workingFile;
         updateWfBar();
         console.log('[M·T] MT_onModuleSave — fichier de travail mis à jour :', filename);
       }} catch(e) {{
@@ -1120,22 +1131,23 @@ def build_html(module_html_js, tile_uris, versions):
 
     /* ── Injection cross-realm du fichier de travail dans un module ── */
     async function injectWorkingFile(iframe, id) {{
-      if (!workingFile) return;
-      if (injectedFilePerModule[id] === workingFile.name) return;
+      var wf = workingFile;
+      if (!wf) return;
+      if (injectedFilePerModule[id] === wf) return;
       var win = iframe.contentWindow;
       var doc = iframe.contentDocument;
       if (!win || !doc) return;
       var input = doc.getElementById('file-input');
       if (!input) return;
       try {{
-        var bytes = new Uint8Array(await workingFile.arrayBuffer());
-        var childFile = new win.File([bytes], workingFile.name, {{ type: 'application/octet-stream' }});
+        var bytes = new Uint8Array(await wf.arrayBuffer());
+        var childFile = new win.File([bytes], wf.name, {{ type: 'application/octet-stream' }});
         var dt = new win.DataTransfer();
         dt.items.add(childFile);
         input.files = dt.files;
         input.dispatchEvent(new win.Event('change', {{ bubbles: true }}));
-        injectedFilePerModule[id] = workingFile.name;
-        console.log('[M·T] Fichier injecté dans module', id, ':', workingFile.name);
+        injectedFilePerModule[id] = wf;
+        console.log('[M·T] Fichier injecté dans module', id, ':', wf.name);
       }} catch(e) {{
         console.error('[M·T] injectWorkingFile — erreur cross-realm :', e);
       }}
@@ -1313,12 +1325,32 @@ def build_html(module_html_js, tile_uris, versions):
     }}
 
     /* ── Navigation ──────────────────────────────────────── */
-    function openModule(id) {{
+    let reopenAsking = false;
+    async function openModule(id) {{
       const mod = MODULES.find(function(m) {{ return m.id === id; }});
       if (!mod) return;
       if (!MODULE_HTML[id]) {{
         console.warn('[M·T] Module ' + id + ' : base64 vide, abandon');
         return;
+      }}
+
+      /* Outil déjà ouvert, modifié, dont le fichier de travail n\'est pas celui qu\'il a lu : une question avant de
+         l\'afficher. « Garder mes modifications » (ou Échap, ou le fond) l\'affiche sans rien relire. */
+      let keepEdits = false;
+      if (iframes[id] && workingFile && injectedFilePerModule[id] !== workingFile && hasUnsavedEdits(id)) {{
+        if (reopenAsking) return;
+        reopenAsking = true;
+        try {{
+          const reload = await mtbConfirm({{
+            title:  t('confirm.reload.title'),
+            text:   t('confirm.reload.text').replace(/\{{(module|file)\}}/g, function(m, k) {{ return k === 'module' ? mod.name : workingFile.name; }}),
+            ok:     t('confirm.reload.ok'),
+            cancel: t('confirm.reload.cancel')
+          }});
+          keepEdits = !reload;
+        }} finally {{
+          reopenAsking = false;
+        }}
       }}
 
       document.getElementById('landing').style.display = 'none';
@@ -1370,7 +1402,7 @@ def build_html(module_html_js, tile_uris, versions):
       }} else {{
         iframes[id].style.display = 'block';
         document.getElementById('module-loading').classList.add('hidden');
-        injectWorkingFile(iframes[id], id);
+        if (!keepEdits) injectWorkingFile(iframes[id], id);
       }}
 
       activeModule = id;

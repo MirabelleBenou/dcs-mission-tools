@@ -807,6 +807,7 @@ const I18N = {
     'table.typesHelp':             'Nouveau type : ceux déjà dans la mission (un autre s\'ajoute dans l\'éditeur de mission de DCS)',
     'table.readonly.title':        'Lecture seule — préservé pour scripts mission',
     'table.undo':                  'Annuler',
+    'table.typeCell.title':        'Changer le type',
     'spinner.loading':             'Chargement\u2026',
     'footer.loadNew':              '📂 Charger un autre .miz',
     'footer.loadNew.title':        'Charger un autre .miz',
@@ -905,6 +906,7 @@ const I18N = {
     'table.typesHelp':             'New type: those already in the mission (add another in the DCS Mission Editor)',
     'table.readonly.title':        'Read-only — preserved for mission scripts',
     'table.undo':                  'Undo',
+    'table.typeCell.title':        'Change the type',
     'spinner.loading':             'Loading\u2026',
     'footer.loadNew':              '📂 Load another .miz',
     'footer.loadNew.title':        'Load another .miz',
@@ -1962,7 +1964,7 @@ const SharedCombobox = (() => {
     if (e.key === 'ArrowDown') { e.preventDefault(); _moveHL(1); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); _moveHL(-1); }
     else if (e.key === 'Enter') { e.preventDefault(); _selectHL(); }
-    else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); _close(); }
+    else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); _close(true); }
   }
 
   function _filterList() {
@@ -2011,15 +2013,24 @@ const SharedCombobox = (() => {
   }
 
   function _selectHL() {
-    if (_hlIndex >= 0 && _hlIndex < _filtered.length) _select(_filtered[_hlIndex].value);
-    else _close();
+    if (_hlIndex >= 0 && _hlIndex < _filtered.length) _select(_filtered[_hlIndex].value, true);
+    else _close(true);
   }
 
-  function _select(value) {
+  // refocus : choix ou fermeture au clavier → le focus revient à la cellule de type (de la même unité, si elle a été redessinée)
+  function _select(value, refocus) {
     _currentVal = value;
     const cb = _onChange;   // capture avant _close() qui met _onChange = null
+    const cell = _activeCell, uid = cell && cell.dataset ? cell.dataset.unitId : null;
     _close();
     if (cb) cb(value);
+    if (refocus) _focusCell(cell, uid);
+  }
+
+  function _focusCell(cell, uid) {
+    let c = cell && document.contains(cell) ? cell : null;
+    if (!c && uid) c = document.querySelector('.combobox-cell[data-unit-id="' + uid + '"]');
+    if (c) c.focus({ preventScroll: true });
   }
 
   function _position(cellEl) {
@@ -2047,11 +2058,13 @@ const SharedCombobox = (() => {
     requestAnimationFrame(() => _search.focus());
   }
 
-  function _close() {
+  function _close(refocus) {
     if (!_popup) return;
+    const cell = _activeCell, uid = cell && cell.dataset ? cell.dataset.unitId : null;
     _popup.setAttribute('hidden', '');
     _activeCell = null;
     _onChange   = null;
+    if (refocus === true) _focusCell(cell, uid);
   }
 
   function setOptions(opts) {
@@ -2838,7 +2851,7 @@ function renderTable(rows) {
       <td style="white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(unit.type)} <small style="color:var(--text-dim);font-size:10px">${escHtml(getDisplayName(unit.type))}</small></td>
       <td>
         <div style="display:flex;align-items:center;gap:4px">
-          <div class="combobox-cell tbm-trigger${typeCellChanged ? ' changed' : ''}" data-unit-id="${unit.unitId}" title="Cliquer pour changer le type" style="flex:1">
+          <div class="combobox-cell tbm-trigger${typeCellChanged ? ' changed' : ''}" tabindex="0" role="button" aria-haspopup="listbox" data-unit-id="${unit.unitId}" title="${t('table.typeCell.title')}" style="flex:1">
             <span class="combobox-cell-value${typeCellChanged ? '' : ' placeholder'}">${escHtml(typeDisplayLabel)}</span>
           </div>
           <button class="btn-undo-cell btn-undo-type${typeCellChanged ? ' visible' : ''}" data-unit-id="${unit.unitId}" title="${t('table.undo')}">↺</button>
@@ -2921,6 +2934,18 @@ document.getElementById('units-tbody').addEventListener('click', function(e) {
   // ── SharedCombobox sur cellule type ───────────────────────
   const cell = e.target.closest('.combobox-cell');
   if (!cell) return;
+  openTypeList(cell);
+});
+
+// Cellule de type au clavier : Entrée ou Espace ouvrent la même liste qu'au clic
+document.getElementById('units-tbody').addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  if (!e.target.classList || !e.target.classList.contains('combobox-cell')) return;
+  e.preventDefault();
+  openTypeList(e.target);
+});
+
+function openTypeList(cell) {
   const unitId = parseInt(cell.dataset.unitId, 10);
   const unit   = UI_STATE.unitsById.get(unitId);
   if (!unit) return;
@@ -2940,7 +2965,7 @@ document.getElementById('units-tbody').addEventListener('click', function(e) {
       updateBulkBtn();
     },
   });
-});
+}
 
 // Helper : mettre à jour les éléments DOM d'une ligne sans re-render complet
 function _updateRowAfterEdit(unitId) {
@@ -3264,7 +3289,20 @@ document.getElementById('btn-save').addEventListener('click', async () => {
       window.parent.MT_onModuleSave(blob, outName);
     }
 
-    showToast(t('toast.saved').replace('{file}', outName).replace('{n}', UI_STATE.edits.size), 'success');
+    // Le texte écrit devient la base, comme au Comm Plan Editor, au Weather Editor et au Loadout Editor. Le fichier est déjà
+    // téléchargé : un échec de la relecture dit toast.saveCheckError (catch ci-dessous), et les modifications restent en attente.
+    const savedCount = UI_STATE.edits.size;
+    const { tokens: newTk } = DCS_TOKENIZER.tokenize(patchedSrc);
+    const newModel = extractGroundUnits(DCS_PARSER.parse(newTk), patchedSrc, UI_STATE.model.source.mizFilename, otherFiles);
+    UI_STATE.model      = newModel;
+    UI_STATE.unitsById  = new Map(newModel.units.map(u => [u.unitId, u]));
+    UI_STATE.edits      = new Map();
+    UI_STATE.selected   = new Set();
+    UI_STATE.lastChkIdx = null;
+    renderAll();
+    updateHeaderChk();
+
+    showToast(t('toast.saved').replace('{file}', outName).replace('{n}', savedCount), 'success');
   } catch (err) {
     console.error('[Save] Erreur :', err);
     showToast(t(downloaded ? 'toast.saveCheckError' : 'toast.saveError'), 'error');
@@ -3496,7 +3534,7 @@ window.addEventListener('resize', () => {
 #mtb-modal .mtb-box { background: var(--surface); border: 1px solid var(--border); border-top: 3px solid var(--accent);
   border-radius: 4px; width: 100%; max-width: 460px; padding: 20px 22px 16px; box-shadow: 0 8px 32px rgba(0,0,0,.6); }
 #mtb-modal h2 { font-size: 15px; font-weight: 600; color: var(--text); margin: 0 0 10px; }
-#mtb-modal p { font-size: 13px; line-height: 1.55; color: var(--text-2); margin: 0 0 6px; }
+#mtb-modal p { font-size: 13px; line-height: 1.55; color: var(--text-2); margin: 0 0 6px; overflow-wrap: anywhere; }
 #mtb-modal .mtb-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 #mtb-modal button { min-height: 44px; padding: 0 18px; border-radius: 4px; font: inherit; font-size: 13px; cursor: pointer; }
 #mtb-modal .mtb-cancel { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }

@@ -10,6 +10,9 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **All tools**: one folding sign across the suite — a triangle in the tool's colour, left of the title, that turns when open — and the whole header folds, with larger touch targets; the Comm Plan Editor and the Ground Unit Swapper move their two rare actions into a menu, which keeps their bottom bar to two rows on a phone; the Ground Unit Swapper's filters fold away (folded by default on a phone, with a count of active filters) and its banner becomes a one-line hint, giving the table twice the height on a phone; the drop screen fits a phone held sideways; on the home screen, messages no longer hide the working-file bar.
 - **All tools**: finishing touches — Roboto Mono is now embedded, so numbers look the same on every machine; the language button and the back button are full-size touch targets; the Ground Unit Swapper is olive again (it borrowed the Comm Plan Editor's amber); the Comm Plan Editor's filters look like the other tools'; labels, counters and saved-file names read the same in all four tools; clearing every change in the Comm Plan Editor, or loading another mission with unsaved changes in the other tools, now asks first.
 
+### Fixed
+- **All tools**: reopening a tool with unsaved changes after the working file has changed — saved in another tool, or another mission picked on the home screen — now asks whether to reload it or keep your changes, instead of erasing them; a mission picked again under the same name is read again; the Ground Unit Swapper, once saved, starts from the saved file like the other tools; its type cell can be opened from the keyboard.
+
 ## [1.4.0] — 2026-11-08
 
 ### Added
