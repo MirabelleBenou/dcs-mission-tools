@@ -12,6 +12,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 
 ### Fixed
 - **All tools**: reopening a tool with unsaved changes after the working file has changed — saved in another tool, or another mission picked on the home screen — now asks whether to reload it or keep your changes, instead of erasing them; a mission picked again under the same name is read again; the Ground Unit Swapper, once saved, starts from the saved file like the other tools; its type cell can be opened from the keyboard.
+- **Ground Unit Swapper**: unit names such as the ZSU-23-4 Shilka's "Gun Dish" no longer show stray backslashes.
 
 ## [1.4.0] — 2026-11-08
 
