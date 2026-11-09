@@ -1343,7 +1343,7 @@ def build_html(module_html_js, tile_uris, versions):
         try {{
           const reload = await mtbConfirm({{
             title:  t('confirm.reload.title'),
-            text:   t('confirm.reload.text').replace(/\{{(module|file)\}}/g, function(m, k) {{ return k === 'module' ? mod.name : workingFile.name; }}),
+            text:   t('confirm.reload.text').replace(/\\{{(module|file)\\}}/g, function(m, k) {{ return k === 'module' ? mod.name : workingFile.name; }}),
             ok:     t('confirm.reload.ok'),
             cancel: t('confirm.reload.cancel')
           }});
