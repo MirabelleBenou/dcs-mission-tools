@@ -10715,15 +10715,17 @@ function cntForm(value) {
 
 // Les indicatifs déjà portés : { numbers: Set<nombre>, flights: Set<'<nom>|<n>'> }. Un indicatif à nom « Enfield111 » porte le nom
 // « Enfield », le vol 11 (le nom est suivi du numéro de vol puis du rang). Fonction pure sur des valeurs.
+function cntFlightOf(v) {
+  if (cntForm(v) !== 'name' || v['2'] === undefined) return null;
+  const suffix = String(v['2']) + String(v['3']);
+  const base = v['3'] !== undefined && v.name.endsWith(suffix) ? v.name.slice(0, v.name.length - suffix.length) : v.name.replace(/\d+$/, '');
+  return base + '|' + v['2'];
+}
 function cntTakenAdd(taken, values) {
   for (const v of values) {
     const f = cntForm(v);
     if (f === 'number') taken.numbers.add(v);
-    else if (f === 'name' && v['2'] !== undefined) {
-      const suffix = String(v['2']) + String(v['3']);
-      const base = v['3'] !== undefined && v.name.endsWith(suffix) ? v.name.slice(0, v.name.length - suffix.length) : v.name.replace(/\d+$/, '');
-      taken.flights.add(base + '|' + v['2']);
-    }
+    else if (f === 'name') { const k = cntFlightOf(v); if (k !== null) taken.flights.add(k); }
   }
   return taken;
 }
@@ -13235,7 +13237,7 @@ function lxCountryPatches(src, moves, patches, wanted) {
     const ex = struct[mv.camp] ? struct[mv.camp].entries.find(en => en.id === mv.toId) : null;
     const wantName = ex && typeof ex.name === 'string' ? ex.name : mv.toName;
     mv.members.forEach((u, i) => {
-      wanted.country.set(u.unitId, { id: mv.toId, name: wantName, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign });
+      wanted.country.set(u.unitId, { id: mv.toId, name: wantName, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign, rewritten: mv.callsigns[i] !== undefined });
     });
   }
 }
@@ -13410,6 +13412,7 @@ function verifyWrite(patchedSrc, wanted) {
   re.forEach((r, i) => { if (!slots.has(r.unitId)) slots.set(r.unitId, []); slots.get(r.unitId).push(i); });
   const seen = new Map();
   const gkMap = new Map(), gkBack = new Map();
+  const rewritten = [];   // rang (dans le texte relu) des appareils dont le module a réécrit l'indicatif
   for (let i = 0; i < UI_STATE.aircraft.length; i++) {
     const u = UI_STATE.aircraft[i];
     const n = seen.get(u.unitId) || 0;
@@ -13424,12 +13427,30 @@ function verifyWrite(patchedSrc, wanted) {
       return { error: 'pays ' + u.name + ' (' + u.unitId + ')' };
     }
     if (!deepEqValues(wc ? wc.callsign : u.callsign, u2.callsign)) return { error: 'callsign ' + u.name + ' (' + u.unitId + ')' };
+    if (wc && wc.rewritten) rewritten.push(at);
     const wantP = wanted.payload.has(u.unitId) ? wanted.payload.get(u.unitId) : u.payload;
     const wantL = wanted.livery.has(u.unitId) ? wanted.livery.get(u.unitId) : u.livery;
     if (!deepEqValues(wantP, u2.payload)) return { error: 'payload ' + u.name + ' (' + u.unitId + ')' };
     if (wantL !== u2.livery) return { error: 'livery_id ' + u.name + ' (' + u.unitId + ')' };
     if (!gkMap.has(u.gk)) { gkMap.set(u.gk, u2.gk); if (gkBack.has(u2.gk)) return { error: 'groupes confondus : ' + u.groupName }; gkBack.set(u2.gk, u.gk); }
     else if (gkMap.get(u.gk) !== u2.gk) return { error: 'groupe coupé : ' + u.groupName };
+  }
+  // Un indicatif RÉÉCRIT par le module ne doit pas être celui d'un autre appareil du camp : même nombre, ou même nom et même numéro de vol
+  // ([3] différent permis entre appareils d'un même vol réécrit ensemble). Les indicatifs que le module n'a pas écrits ne sont pas jugés.
+  if (rewritten.length) {
+    const rew = new Set(rewritten);
+    const keyOf = v => { const f = cntForm(v); return f === 'number' ? '#' + v : f === 'name' ? cntFlightOf(v) : null; };
+    const index = new Map();      // camp|clé -> rangs des appareils
+    re.forEach((r, i) => { const k = keyOf(r.callsign); if (k === null) return; const kk = r.coalition + '|' + k; if (!index.has(kk)) index.set(kk, []); index.get(kk).push(i); });
+    for (const i of rewritten) {
+      const r = re[i];
+      for (const j of index.get(r.coalition + '|' + keyOf(r.callsign)) || []) {
+        if (j === i) continue;
+        const o = re[j];
+        const sameFlight = cntForm(r.callsign) === 'name' && rew.has(j) && o.gk === r.gk && o.callsign['3'] !== r.callsign['3'];
+        if (!sameFlight) return { error: 'indicatif en double : ' + r.name + ' (' + r.unitId + ')' };
+      }
+    }
   }
   for (const [camp, count] of wanted.camps) {
     const S = struct[camp];
