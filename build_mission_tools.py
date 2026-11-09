@@ -1121,7 +1121,13 @@ def build_html(module_html_js, tile_uris, versions):
         workingFile = new File([blob], filename, {{ type: 'application/octet-stream' }});
         /* L\'outil qui sauvegarde est à jour : son texte écrit est la base du nouveau fichier de travail.
            Les autres outils reliront à leur prochaine ouverture (leur File lu n\'est plus le fichier de travail). */
-        if (activeModule) injectedFilePerModule[activeModule] = workingFile;
+        /* L\'outil à noter est celui dont l\'iframe a produit le blob (pas l\'écran affiché : le CPE et le WX sauvegardent
+           sans sablier, un autre outil peut être ouvert avant l\'arrivée de ce rappel). Aucun ne correspond : aucun noté. */
+        Object.keys(iframes).forEach(function(id) {{
+          try {{
+            if (blob instanceof iframes[id].contentWindow.Blob) injectedFilePerModule[id] = workingFile;
+          }} catch(e) {{}}
+        }});
         updateWfBar();
         console.log('[M·T] MT_onModuleSave — fichier de travail mis à jour :', filename);
       }} catch(e) {{
@@ -1345,7 +1351,8 @@ def build_html(module_html_js, tile_uris, versions):
             title:  t('confirm.reload.title'),
             text:   t('confirm.reload.text').replace(/\\{{(module|file)\\}}/g, function(m, k) {{ return k === 'module' ? mod.name : workingFile.name; }}),
             ok:     t('confirm.reload.ok'),
-            cancel: t('confirm.reload.cancel')
+            cancel: t('confirm.reload.cancel'),
+            focus:  'cancel'
           }});
           keepEdits = !reload;
         }} finally {{

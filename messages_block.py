@@ -127,7 +127,8 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
     mtbTimer = setTimeout(() => { mtbToastEl.className = ''; }, MTB_MS[type]);
   }
 
-  /* Annuler, Échap ou un toucher sur le fond rendent false ; l'action rend true. Une fenêtre déjà ouverte rend false. */
+  /* Annuler, Échap ou un toucher sur le fond rendent false ; l'action rend true. Une fenêtre déjà ouverte rend false. Un clic dont
+     detail dépasse 1 est ignoré sur l'action et sur le fond. Option focus: 'cancel' : le focus initial va à Annuler (sinon à l'action). */
   function mtbShowConfirm(o) {
     if (mtbClose) mtbClose(false);
     o = o || {};
@@ -157,12 +158,12 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
         }
       };
       mtbClose = done;
-      bOk.onclick = () => done(true);
+      bOk.onclick = e => { if (e.detail > 1) return; done(true); };   /* le second clic d'un double clic ne répond jamais à une question */
       bNo.onclick = () => done(false);
-      mtbModalEl.onclick = e => { if (e.target === mtbModalEl) done(false); };
+      mtbModalEl.onclick = e => { if (e.target === mtbModalEl && !(e.detail > 1)) done(false); };
       document.addEventListener('keydown', key, true);
       mtbModalEl.classList.add('open');
-      bOk.focus();
+      (o.focus === 'cancel' ? bNo : bOk).focus();
     });
   }
 
