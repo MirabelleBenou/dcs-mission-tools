@@ -1070,8 +1070,9 @@ const DCS_TOKENIZER = (() => {
   return{tokenize,T};
 })();
 
+/* ===== PARSEUR DE LA SUITE ===== */
 // ═══════════════════════════════════════════════════════════════
-// DCS_PARSER — Étape C : AST avec positions sources
+// DCS_PARSER — AST avec positions sources, selon la grammaire des tables de Lua
 //
 // Chaque nœud porte pos = { start:{line,col,offset}, end:{line,col,offset} }
 // (tous 0-based, end exclusif).
@@ -1089,6 +1090,10 @@ const DCS_TOKENIZER = (() => {
 //
 // Assignation racine :
 //   pos couvre depuis 'mission' jusqu'après '}'.
+//
+// Séparateurs, comme Lua (fieldlist ::= field { fieldsep field } [ fieldsep ], fieldsep ::= ',' | ';') : aucun
+// séparateur avant le premier champ ; exactement un entre deux champs ; au plus un après le dernier. Toute autre
+// suite lève une ParseError.
 // ═══════════════════════════════════════════════════════════════
 const DCS_PARSER = (() => {
 
@@ -1119,10 +1124,6 @@ const DCS_PARSER = (() => {
       return consume();
     }
 
-    function skipSep() {
-      while (peek() && (peek().type === 'COMMA' || peek().type === 'SEMICOLON')) consume();
-    }
-
     // Construire un objet pos à partir de deux tokens de borne
     function makePos(startTk, endTk) {
       return {
@@ -1149,11 +1150,15 @@ const DCS_PARSER = (() => {
       const lbrace = expect('LBRACE');
       const entries = [];
       while (true) {
-        skipSep();
         const tk = peek();
         if (!tk || tk.type === 'RBRACE' || tk.type === 'EOF') break;
         entries.push(parseEntry());
-        skipSep();
+        const sep = peek();
+        if (sep && (sep.type === 'COMMA' || sep.type === 'SEMICOLON')) { consume(); continue; }
+        // pas de séparateur : ce champ est le dernier, la table doit se fermer ici
+        if (sep && sep.type !== 'RBRACE')
+          throw new ParseError(`Séparateur « , » ou « ; » attendu entre deux champs, obtenu ${sep.type}(${JSON.stringify(sep.value)})`, sep);
+        break;
       }
       const rbrace = expect('RBRACE');
       return { kind:'table', entries, pos: makePos(lbrace, rbrace) };
@@ -1219,6 +1224,24 @@ const DCS_PARSER = (() => {
 
   return { parse, ParseError };
 })();
+
+// Contrôle d'après écriture : le texte se découpe, puis le parseur (grammaire des tables de Lua) l'accepte. Lève une
+// erreur sinon ; l'appelant n'écrit alors rien.
+function retokenizeSafety(patchedSrc) {
+  const t0 = performance.now();
+  const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
+  const elapsed = Math.round(performance.now() - t0);
+  if (errors.length > 0) {
+    throw new Error('Retokenize failed: ' + errors[0].message + ' L' + (errors[0].line+1) + ':C' + (errors[0].col+1));
+  }
+  try {
+    DCS_PARSER.parse(tokens);
+  } catch (e) {
+    throw new Error('Retokenize failed: ' + (e && e.message ? e.message : String(e)) + (e && e.tokenLine !== undefined ? ' L' + e.tokenLine + ':C' + (Number(e.tokenCol) + 1) : ''));
+  }
+  console.log('[Save] Retokenize OK : 0 erreurs, ' + tokens.length.toLocaleString() + ' tokens, ' + elapsed + ' ms');
+}
+/* ===== FIN DU PARSEUR ===== */
 
 // [astGet et extractClientSlots remplacés par DCS_EXTRACTOR en Étape D]
 
@@ -1793,17 +1816,6 @@ function applyPatches(srcText, patches) {
     result = result.substring(0, p.pos.start.offset) + p.newValueStr + result.substring(p.pos.end.offset);
   }
   return result;
-}
-
-// Étape C : retokenize de sécurité
-function retokenizeSafety(patchedSrc) {
-  const t0 = performance.now();
-  const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
-  const elapsed = Math.round(performance.now() - t0);
-  if (errors.length > 0) {
-    throw new Error('Retokenize failed: ' + errors[0].message + ' L' + (errors[0].line+1) + ':C' + (errors[0].col+1));
-  }
-  console.log('[Save] Retokenize OK : 0 erreurs, ' + tokens.length.toLocaleString() + ' tokens, ' + elapsed + ' ms');
 }
 
 // Étape D : reconstruction zip

@@ -24,6 +24,7 @@ import sys
 from radio_block import build_block
 from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
 from messages_block import build_block as build_messages_block, BLOCK_BEGIN as MESSAGES_BEGIN, BLOCK_END as MESSAGES_END
+from parser_block import build_block as build_parser_block, BLOCK_BEGIN as PARSER_BEGIN, BLOCK_END as PARSER_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '1.4.0'
@@ -258,6 +259,41 @@ def check_messages_block():
             print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] Bloc des messages identique à messages_block.py ({mod["src"]})')
+
+
+# Définitions interdites hors du bloc : function retokenizeSafety, const|let|var|class DCS_PARSER, affectation à DCS_PARSER
+PARSER_DEF_RE = re.compile(
+    r'\bfunction\s*\*?\s*retokenizeSafety\b'
+    r'|\b(?:const|let|var|class)\s+DCS_PARSER\b'
+    r'|(?<![.\w])(?:window\.)?DCS_PARSER\s*=(?![=>])')
+
+
+def check_parser_block():
+    """Garde d'identité : le bloc du parseur (parser_block.build_block()) doit figurer exactement une fois, tel quel, dans
+    chacun des quatre modules, et ni DCS_PARSER ni retokenizeSafety ne doivent être définis hors de ses marqueurs.
+    Sinon le build s'arrête avant toute écriture."""
+    block = build_parser_block()
+    for mod in MODULES:
+        try:
+            with open(os.path.join(SCRIPT_DIR, mod['src']), 'r', encoding='utf-8') as fh:
+                html = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if html.count(block) != 1:
+            print(f'  [ERREUR] Le bloc du parseur de {mod["src"]} diffère de parser_block.py '
+                  f'(attendu : une fois, à l\'identique) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if html.count(PARSER_BEGIN) != 1 or html.count(PARSER_END) != 1:
+            print(f'  [ERREUR] Un marqueur du bloc du parseur figure plusieurs fois dans {mod["src"]} '
+                  f'— build arrêté', file=sys.stderr)
+            sys.exit(1)
+        redef = PARSER_DEF_RE.search(html.replace(block, '', 1))
+        if redef:
+            print(f'  [ERREUR] {mod["src"]} définit « {redef.group(0).strip()} » hors des marqueurs du bloc du parseur '
+                  f'— build arrêté', file=sys.stderr)
+            sys.exit(1)
+        print(f'  [OK] Bloc du parseur identique à parser_block.py ({mod["src"]})')
 
 
 def build_module_html_js(modules):
@@ -1472,6 +1508,7 @@ def main():
     check_radio_block()
     check_listes_block()
     check_messages_block()
+    check_parser_block()
 
     print('\n[2/4] Encodage modules HTML…')
     module_html_js = build_module_html_js(MODULES)
