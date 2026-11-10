@@ -13996,6 +13996,12 @@ select[data-tbm-src] { display: none !important; }
 .tbm-opt[aria-disabled="true"] .tbm-mark { border-style: dashed; border-color: var(--text-dim); background: none; }
 .tbm-opt[aria-disabled="true"] .tbm-note { color: var(--text-dim); font-size: 10px; letter-spacing: 1px; margin-left: auto; padding-left: 14px; }
 .tbm-opt.tbm-hide { display: none; }
+.tbm-group {
+  font-family: var(--font-ui); font-weight: 500; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--text-2); padding: 10px 14px 4px; list-style: none; cursor: default; user-select: none; border-top: 1px solid var(--border);
+}
+.tbm-group:first-child, .tbm-head + .tbm-group, .tbm-search + .tbm-group { border-top: 0; }
+.tbm-group.tbm-hide { display: none; }
 .tbm-none { padding: 10px 14px; color: var(--text-dim); font-family: var(--font-ui); font-size: 12px; text-align: center; list-style: none; }
 .tbm-none.tbm-hide { display: none; }
 @media (pointer: coarse) { .tbm-opt { min-height: 44px; } .tbm-search input { font-size: 16px; } }
@@ -14201,9 +14207,26 @@ function tbmOpen(m) {
   }
   m.lis = [];
   m.norm = [];
+  m.grps = [];   /* les titres de groupes : { li, first, last } (index des options du groupe) ; un titre n'est pas une option */
+  let grp = null, grpNode = null;
   const frag = document.createDocumentFragment();
   for (let k = 0; k < opts.length; k++) {
     const o = opts[k], li = document.createElement('li');
+    const og = o.parentNode && o.parentNode.tagName === 'OPTGROUP' ? o.parentNode : null;
+    if (og !== grpNode) {
+      grpNode = og;
+      grp = null;
+      if (og && og.label) {   /* un label vide ou absent : pas de titre */
+        const gl = document.createElement('li');
+        gl.className = 'tbm-group';
+        gl.setAttribute('role', 'presentation');
+        gl.textContent = og.label;
+        frag.appendChild(gl);
+        grp = { li: gl, first: k, last: k };
+        m.grps.push(grp);
+      }
+    }
+    if (grp) grp.last = k;
     li.className = 'tbm-opt';
     li.id = 'tbm-' + m.uid + '-' + k;
     li.setAttribute('role', 'option');
@@ -14241,7 +14264,7 @@ function tbmOpen(m) {
   m.none = none;
   ul.addEventListener('keydown', e => tbmKey(m, e));
   /* Avec un champ de recherche, toucher un choix ne prend pas le focus : le clavier virtuel reste ouvert jusqu'au choix */
-  const keepFocus = e => { if (m.search && e.target.closest && e.target.closest('.tbm-opt')) e.preventDefault(); };
+  const keepFocus = e => { if (m.search && e.target.closest && e.target.closest('.tbm-opt, .tbm-group')) e.preventDefault(); };
   ul.addEventListener('mousedown', keepFocus);
   ul.addEventListener('pointerdown', keepFocus);
   ul.addEventListener('click', e => {
@@ -14280,6 +14303,11 @@ function tbmFilter(m, q) {
     if (!hide) { vis++; if (first < 0 && !opts[k].disabled) first = k; }
   }
   m.none.classList.toggle('tbm-hide', vis > 0);
+  for (const g of (m.grps || [])) {   /* un titre dont aucune option du groupe n'est visible est masqué */
+    let any = false;
+    for (let k = g.first; k <= g.last; k++) if (!m.lis[k].classList.contains('tbm-hide')) { any = true; break; }
+    if (any === g.li.classList.contains('tbm-hide')) g.li.classList.toggle('tbm-hide', !any);
+  }
   m.panel.scrollTop = 0;
   tbmPlace(m);
   if (nq === '') {
@@ -14341,7 +14369,8 @@ function tbmSetActive(m, k, reveal) {
   p.setAttribute('aria-activedescendant', li.id);
   if (!reveal) return;
   const sh = m.searchBox ? m.searchBox.offsetHeight : 0;
-  const t = li.offsetTop, h = li.offsetHeight;
+  const pv = li.previousElementSibling;
+  const t = (pv && pv.classList.contains('tbm-group') && !pv.classList.contains('tbm-hide') ? pv : li).offsetTop, h = li.offsetTop + li.offsetHeight - t;
   if (k === tbmFirst(m, 1) && !m.search) p.scrollTop = 0;
   else if (t - sh < p.scrollTop) p.scrollTop = Math.max(0, t - sh);
   else if (t + h > p.scrollTop + p.clientHeight) p.scrollTop = reveal === 'center' ? Math.max(0, t - (p.clientHeight - h) / 2) : t + h - p.clientHeight;
