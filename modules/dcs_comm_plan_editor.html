@@ -3557,7 +3557,7 @@ select[data-tbm-src] { display: none !important; }
   font-family: var(--font-ui); font-weight: 500; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
   color: var(--text-2); padding: 10px 14px 4px; list-style: none; cursor: default; user-select: none; border-top: 1px solid var(--border);
 }
-.tbm-group:first-child, .tbm-head + .tbm-group, .tbm-search + .tbm-group { border-top: 0; }
+.tbm-group.tbm-gtop { border-top: 0; }
 .tbm-group.tbm-hide { display: none; }
 .tbm-none { padding: 10px 14px; color: var(--text-dim); font-family: var(--font-ui); font-size: 12px; text-align: center; list-style: none; }
 .tbm-none.tbm-hide { display: none; }
@@ -3813,6 +3813,7 @@ function tbmOpen(m) {
     frag.appendChild(li);
   }
   ul.appendChild(frag);
+  tbmGroupTop(ul);
   const none = document.createElement('li');
   none.className = 'tbm-none tbm-hide';
   none.setAttribute('role', 'presentation');
@@ -3848,6 +3849,19 @@ function tbmOpen(m) {
   (m.search || ul).focus({ preventScroll: true });
 }
 
+/* Un titre de groupe visible qu'aucune option visible ne précède porte tbm-gtop (pas de filet : jamais deux filets sous le champ de
+   recherche ou l'en-tête) */
+function tbmGroupTop(ul) {
+  let seen = false;
+  const kids = ul.children;
+  for (let i = 0; i < kids.length; i++) {
+    const li = kids[i];
+    if (li.classList.contains('tbm-group')) {
+      if (!li.classList.contains('tbm-hide')) li.classList.toggle('tbm-gtop', !seen);
+    } else if (li.classList.contains('tbm-opt') && !li.classList.contains('tbm-hide')) seen = true;
+  }
+}
+
 /* La saisie masque les choix dont le libellé ne contient pas le texte ; le premier choix visible devient le choix
    courant (Entrée le prend) ; aucun choix : « Aucun résultat ». */
 function tbmFilter(m, q) {
@@ -3865,6 +3879,7 @@ function tbmFilter(m, q) {
     for (let k = g.first; k <= g.last; k++) if (!m.lis[k].classList.contains('tbm-hide')) { any = true; break; }
     if (any === g.li.classList.contains('tbm-hide')) g.li.classList.toggle('tbm-hide', !any);
   }
+  tbmGroupTop(m.panel);
   m.panel.scrollTop = 0;
   tbmPlace(m);
   if (nq === '') {

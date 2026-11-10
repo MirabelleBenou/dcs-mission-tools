@@ -924,7 +924,9 @@ const I18N = {
     'bar.country':                 '→ {to} · {g} groupe(s) · {n} appareil(s)',
     'bar.countryDragged':          ' (dont {m} non coché(s), du même groupe)',
     'bar.countryCallsign':         ' ; indicatif réécrit pour {k} groupe(s)',
-    'bar.countryCamp':             ' ; passe au {camp}',
+    'bar.countryCamp.blue':        ' ; passe au camp bleu',
+    'bar.countryCamp.red':         ' ; passe au camp rouge',
+    'bar.countryCamp.neutrals':    ' ; passe aux neutres',
     'bar.campBy':                  'par',
     'bar.campBase':                'part d\'une base de son ancien camp : {0}',
     'bar.campTargeted':            'visé par des tâches : {0}',
@@ -1102,7 +1104,9 @@ const I18N = {
     'bar.country':                 '→ {to} · {g} group(s) · {n} aircraft',
     'bar.countryDragged':          ' (including {m} unchecked, same group)',
     'bar.countryCallsign':         '; callsign rewritten for {k} group(s)',
-    'bar.countryCamp':             '; moves to the {camp}',
+    'bar.countryCamp.blue':        '; moves to the blue side',
+    'bar.countryCamp.red':         '; moves to the red side',
+    'bar.countryCamp.neutrals':    '; moves to the neutrals',
     'bar.campBy':                  'by',
     'bar.campBase':                'departs from a base of its former side: {0}',
     'bar.campTargeted':            'targeted by tasks: {0}',
@@ -10773,13 +10777,22 @@ function cntTaken(values) {
 // values[i] vaut null (indicatif inchangé) ou la nouvelle valeur. Un indicatif déjà dans la forme du pays d'arrivée ne change pas ;
 // vers un pays à nombres : le plus petit entier ≥ 100 libre dans le camp ; vers un pays à noms : le premier nom de la liste du pays
 // pour la catégorie du type, le plus petit numéro de vol ≥ 1 libre pour ce nom, et le rang de l'appareil dans le groupe.
-function cntCallsigns(units, toId, taken) {
+// checkTaken (groupe qui quitte le camp du fichier) : un indicatif déjà dans la forme du pays d'arrivée mais déjà pris dans `taken` est réécrit
+// comme un indicatif d'une autre forme (à noms : tout le vol, qui garde un seul numéro de vol) ; un indicatif libre reste inchangé. `taken` ne
+// doit pas contenir les appareils du groupe lui-même.
+function cntCallsigns(units, toId, taken, checkTaken) {
   const to = cntCountry(toId);
   const values = units.map(() => null);
   if (to === null) return { values, rewritten: false };
-  const need = units.map(u => { const f = cntForm(u.callsign); return f !== null && f !== to.cs; });
+  const forms = units.map(u => cntForm(u.callsign));
+  let need = units.map((u, i) => forms[i] !== null && forms[i] !== to.cs);
+  if (checkTaken) {
+    if (to.cs === 'number') units.forEach((u, i) => { if (!need[i] && forms[i] === 'number' && taken.numbers.has(u.callsign)) need[i] = true; });
+    else if (units.some((u, i) => { const k = (!need[i] && forms[i] === 'name') ? cntFlightOf(u.callsign) : null; return k !== null && taken.flights.has(k); })) need = forms.map(f => f !== null);
+  }
   if (!need.some(Boolean)) return { values, rewritten: false };
   if (to.cs === 'number') {
+    units.forEach((u, i) => { if (!need[i] && forms[i] === 'number') taken.numbers.add(u.callsign); });   // un indicatif gardé reste réservé
     let n = 99;
     units.forEach((u, i) => {
       if (!need[i]) return;
@@ -12114,9 +12127,10 @@ function countryPlan(type, toId, checked, visSet) {
   // Les indicatifs pris dans un camp : TOUS ses appareils (ceux qui bougent aussi : un appareil qui garde son indicatif le garde réservé),
   // et l'indicatif d'ORIGINE de tout appareil qui a un pays en attente, dans son camp d'origine (l'annuler ou revenir au pays d'origine
   // le rend alors toujours libre). Le camp d'un appareil est son camp en attente.
-  const takenOf = camp => {
+  const takenOf = (camp, excl) => {
     const t = cntTaken([]);
     for (const a of UI_STATE.aircraft) {
+      if (excl && excl.has(a.unitId)) continue;   // les appareils du groupe lui-même ne comptent pas
       if (curCamp(a) === camp) cntTakenAdd(t, [curCallsign(a)]);
       const ed = UI_STATE.edits.get(a.unitId);
       if (ed && ed.country && a.coalition === camp) cntTakenAdd(t, [a.callsign]);
@@ -12125,15 +12139,20 @@ function countryPlan(type, toId, checked, visSet) {
   };
   const checkedIds = new Set(checked.map(u => u.unitId));
   const taken = takenOf(toCamp);
+  const assigned = [];         // les valeurs attribuées par ce plan, groupe après groupe
   for (const g of groups) {    // dans l'ordre du .miz ; chaque valeur attribuée est réservée avant le groupe suivant
     const cur = g.members.map(curCallsign);
+    // un groupe qui quitte le camp du fichier ne doit doubler aucun indicatif du camp d'arrivée (en attente compris, hors lui-même)
+    const leaves = g.members[0].coalition !== toCamp;
     let next;
     if (g.members.every(m => m.countryId === toId)) next = g.members.map(m => m.callsign);   // retour au pays d'origine : indicatifs d'origine
     else {
-      const res = cntCallsigns(g.members.map((m, i) => ({ type: m.type, callsign: cur[i] })), toId, taken);
+      const tk = leaves ? cntTakenAdd(takenOf(toCamp, new Set(g.members.map(m => m.unitId))), assigned) : taken;
+      const res = cntCallsigns(g.members.map((m, i) => ({ type: m.type, callsign: cur[i] })), toId, tk, leaves);
       next = res.values.map((v, i) => v === null ? cur[i] : v);
     }
     cntTakenAdd(taken, next);
+    assigned.push(...next);
     g.callsigns = next;
     g.rewritten = next.some((v, i) => !deepEqValues(v, cur[i]));
     if (g.rewritten) plan.nCallsign++;
@@ -12145,8 +12164,8 @@ function countryPlan(type, toId, checked, visSet) {
     }
     // le camp change ; les liens au camp (calculés sur le fichier lu) comptent si le groupe quitte son camp d'origine
     const m0 = g.members[0];
-    if (curCamp(m0) !== toCamp) plan.campChange = true;
     if (m0.coalition !== toCamp) {
+      plan.campChange = true;
       const l = campLinks(g.gk), nm = m0.groupName;
       if (l.base !== null) plan.links.base.push({ name: nm, list: [l.base] });
       if (l.targetedBy.length) plan.links.targeted.push({ name: nm, list: l.targetedBy });
@@ -12670,11 +12689,11 @@ function renderActionBar(type) {
   }
   if (plan.country) {
     const c = plan.country;
-    const k = (txt, g, n) => txt.replace('{to}', c.to ? c.toName : '').replace('{g}', g).replace('{n}', n);
+    const k = (txt, g, n) => txt.split('{to}').join(c.to ? c.toName : '').replace('{g}', g).replace('{n}', n);
     let v = k(t('bar.country'), c.groups.length, c.allUnits.size);
     if (c.groups.length && c.dragged) v += t('bar.countryDragged').replace('{m}', c.dragged);
     if (c.nCallsign) v += t('bar.countryCallsign').replace('{k}', c.nCallsign);
-    if (c.campChange) { const cn = t('country.camp.' + c.toCamp); v += t('bar.countryCamp').replace('{camp}', cn.charAt(0).toLowerCase() + cn.slice(1)); }
+    if (c.campChange) v += t('bar.countryCamp.' + c.toCamp);
     // les liens des groupes qui quittent leur camp : une ligne orange par sorte de lien, sans rien bloquer
     const fmt = {
       base:     x => x.name + ' (' + x.list[0] + ')',
@@ -12684,7 +12703,7 @@ function renderActionBar(type) {
     };
     let warn = '';
     for (const [kind, key] of [['base', 'bar.campBase'], ['targeted', 'bar.campTargeted'], ['targets', 'bar.campTargets'], ['triggers', 'bar.campTriggers']]) {
-      if (c.links[kind].length) warn += '<div class="camp-warn">' + escHtml(t(key).replace('{0}', c.links[kind].map(fmt[kind]).join(', '))) + '</div>';
+      if (c.links[kind].length) warn += '<div class="camp-warn">' + escHtml(t(key).split('{0}').join(c.links[kind].map(fmt[kind]).join(', '))) + '</div>';
     }
     rows.push([t('bar.k.country'), escHtml(v) + warn, c.groups.length ? '' : 'off']);
   }
@@ -14266,7 +14285,7 @@ select[data-tbm-src] { display: none !important; }
   font-family: var(--font-ui); font-weight: 500; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
   color: var(--text-2); padding: 10px 14px 4px; list-style: none; cursor: default; user-select: none; border-top: 1px solid var(--border);
 }
-.tbm-group:first-child, .tbm-head + .tbm-group, .tbm-search + .tbm-group { border-top: 0; }
+.tbm-group.tbm-gtop { border-top: 0; }
 .tbm-group.tbm-hide { display: none; }
 .tbm-none { padding: 10px 14px; color: var(--text-dim); font-family: var(--font-ui); font-size: 12px; text-align: center; list-style: none; }
 .tbm-none.tbm-hide { display: none; }
@@ -14522,6 +14541,7 @@ function tbmOpen(m) {
     frag.appendChild(li);
   }
   ul.appendChild(frag);
+  tbmGroupTop(ul);
   const none = document.createElement('li');
   none.className = 'tbm-none tbm-hide';
   none.setAttribute('role', 'presentation');
@@ -14557,6 +14577,19 @@ function tbmOpen(m) {
   (m.search || ul).focus({ preventScroll: true });
 }
 
+/* Un titre de groupe visible qu'aucune option visible ne précède porte tbm-gtop (pas de filet : jamais deux filets sous le champ de
+   recherche ou l'en-tête) */
+function tbmGroupTop(ul) {
+  let seen = false;
+  const kids = ul.children;
+  for (let i = 0; i < kids.length; i++) {
+    const li = kids[i];
+    if (li.classList.contains('tbm-group')) {
+      if (!li.classList.contains('tbm-hide')) li.classList.toggle('tbm-gtop', !seen);
+    } else if (li.classList.contains('tbm-opt') && !li.classList.contains('tbm-hide')) seen = true;
+  }
+}
+
 /* La saisie masque les choix dont le libellé ne contient pas le texte ; le premier choix visible devient le choix
    courant (Entrée le prend) ; aucun choix : « Aucun résultat ». */
 function tbmFilter(m, q) {
@@ -14574,6 +14607,7 @@ function tbmFilter(m, q) {
     for (let k = g.first; k <= g.last; k++) if (!m.lis[k].classList.contains('tbm-hide')) { any = true; break; }
     if (any === g.li.classList.contains('tbm-hide')) g.li.classList.toggle('tbm-hide', !any);
   }
+  tbmGroupTop(m.panel);
   m.panel.scrollTop = 0;
   tbmPlace(m);
   if (nq === '') {
