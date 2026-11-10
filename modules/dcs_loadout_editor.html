@@ -379,6 +379,7 @@
     .bar-v .n { color: var(--accent); font-weight: 700; }
     .bar-v.off { color: var(--text-dim); }
     .bar-v.warn { color: #E0B04C; }
+    .bar-v .camp-warn { color: #E0B04C; margin-top: 2px; }
     .bar-empty { font-size: 12px; color: var(--text-dim); }
     .bar-go { align-self: stretch; min-height: 34px; font-size: 13px; }
 
@@ -724,7 +725,7 @@
         <div class="sec-body" id="panel-country">
           <div class="set-field"><label for="country-select" data-i18n="country.label">Passer au pays</label><select id="country-select"></select></div>
           <div class="set-hint" id="country-note" hidden></div>
-          <div class="set-hint" data-i18n="country.hint">Tout le groupe change de pays ; son indicatif est réécrit si le pays d'arrivée l'écrit autrement (nom ou numéro).</div>
+          <div class="set-hint" data-i18n="country.hint">Tout le groupe change de pays, et de camp si le pays est d'un autre camp ; son indicatif est réécrit si le pays d'arrivée l'écrit autrement (nom ou numéro).</div>
         </div>
       </details>
       <div id="action-bar" aria-live="polite"></div>
@@ -826,7 +827,10 @@ const I18N = {
     'country.noType':              'n\'a pas ce type',
     'country.mixed':               'Appareils cochés de camps différents : cochez-en d\'un seul camp pour changer de pays.',
     'country.none':                'Cochez des appareils de ce type pour changer leur pays.',
-    'country.hint':                'Tout le groupe change de pays ; son indicatif est réécrit si le pays d\'arrivée l\'écrit autrement (nom ou numéro).',
+    'country.hint':                'Tout le groupe change de pays, et de camp si le pays est d\'un autre camp ; son indicatif est réécrit si le pays d\'arrivée l\'écrit autrement (nom ou numéro).',
+    'country.camp.blue':           'Camp bleu',
+    'country.camp.red':            'Camp rouge',
+    'country.camp.neutrals':       'Neutres',
     'panel.apply':                 'Appliquer à la sélection',
     'panel.count.one':             '{n} appareil',
     'panel.count.other':           '{n} appareils',
@@ -920,6 +924,12 @@ const I18N = {
     'bar.country':                 '→ {to} · {g} groupe(s) · {n} appareil(s)',
     'bar.countryDragged':          ' (dont {m} non coché(s), du même groupe)',
     'bar.countryCallsign':         ' ; indicatif réécrit pour {k} groupe(s)',
+    'bar.countryCamp':             ' ; passe au {camp}',
+    'bar.campBy':                  'par',
+    'bar.campBase':                'part d\'une base de son ancien camp : {0}',
+    'bar.campTargeted':            'visé par des tâches : {0}',
+    'bar.campTargets':             'ses tâches visent : {0}',
+    'bar.campTriggers':            'cité par des déclencheurs : {0}',
     'bar.cur':                     ' (actuellement {cur})',
     'bar.loadoutSame':             '{l} — déjà porté par les appareils cochés',
     'bar.set.fuel':                'carburant {v} kg',
@@ -995,7 +1005,10 @@ const I18N = {
     'country.noType':              'does not fly this type',
     'country.mixed':               'Checked aircraft from different sides: check aircraft from one side only to change country.',
     'country.none':                'Check aircraft of this type to change their country.',
-    'country.hint':                'The whole group changes country; its callsign is rewritten if the new country writes it differently (name or number).',
+    'country.hint':                'The whole group changes country, and side if the country belongs to another side; its callsign is rewritten if the new country writes it differently (name or number).',
+    'country.camp.blue':           'Blue side',
+    'country.camp.red':            'Red side',
+    'country.camp.neutrals':       'Neutrals',
     'panel.apply':                 'Apply to selection',
     'panel.count.one':             '{n} aircraft',
     'panel.count.other':           '{n} aircraft',
@@ -1089,6 +1102,12 @@ const I18N = {
     'bar.country':                 '→ {to} · {g} group(s) · {n} aircraft',
     'bar.countryDragged':          ' (including {m} unchecked, same group)',
     'bar.countryCallsign':         '; callsign rewritten for {k} group(s)',
+    'bar.countryCamp':             '; moves to the {camp}',
+    'bar.campBy':                  'by',
+    'bar.campBase':                'departs from a base of its former side: {0}',
+    'bar.campTargeted':            'targeted by tasks: {0}',
+    'bar.campTargets':             'its tasks target: {0}',
+    'bar.campTriggers':            'named in triggers: {0}',
     'bar.cur':                     ' (currently {cur})',
     'bar.loadoutSame':             '{l} — already carried by the selected aircraft',
     'bar.set.fuel':                'fuel {v} kg',
@@ -10784,6 +10803,191 @@ function cntCallsigns(units, toId, taken) {
 // ═══ PAYS — FONCTIONS PURES : fin ═══
 
 // ═══════════════════════════════════════════════════════════════
+// LIENS D'UN GROUPE À SON CAMP — FONCTIONS PURES (ni DOM, ni t(), ni stockage) : début
+// Calculés sur le fichier tel qu'il a été lu (aucune modification en attente n'y entre) ; le fichier `warehouses` du .miz est lu,
+// jamais réécrit. Un index est construit une fois au chargement (et après un enregistrement) : lxBuildCampIndex.
+// ═══════════════════════════════════════════════════════════════
+// Les camps dans l'ordre d'affichage : `first` d'abord, puis bleu, rouge, neutres.
+function cntCampOrder(first) {
+  const all = ['blue', 'red', 'neutrals'];
+  return all.indexOf(first) >= 0 ? [first].concat(all.filter(c => c !== first)) : all;
+}
+
+// Le camp de mission.coalitions qui porte le pays `id` (celui de `first` d'abord), ou null.
+function cntCampOf(coalitions, id, first) {
+  for (const c of cntCampOrder(first)) if (coalitions && coalitions[c] && coalitions[c].indexOf(id) >= 0) return c;
+  return null;
+}
+
+// `warehouses.airports[n].coalition` : BLUE, RED, NEUTRAL -> blue, red, neutrals ; autre valeur : null.
+function lxWarehouseCamp(v) {
+  if (typeof v !== 'string') return null;
+  const k = v.toUpperCase();
+  return k === 'BLUE' ? 'blue' : k === 'RED' ? 'red' : (k === 'NEUTRAL' || k === 'NEUTRALS') ? 'neutrals' : null;
+}
+
+// Le camp de chaque aérodrome du fichier `warehouses` (texte) : Map<numéro, camp>. Fichier absent ou illisible : Map vide.
+function lxReadAirports(text) {
+  const out = new Map();
+  if (typeof text !== 'string' || text === '') return out;
+  try {
+    const { tokens, errors } = DCS_TOKENIZER.tokenize(text);
+    if (errors.length > 0) return out;
+    const ast = DCS_PARSER.parse(tokens);
+    const root = ast.kind === 'assignment' ? ast.value : ast;
+    const ap = lxGet(root, 'airports');
+    if (!ap || ap.kind !== 'table') return out;
+    for (const e of ap.entries) {
+      if (!e.key || e.key.kind !== 'int') continue;
+      const c = lxWarehouseCamp(lxScalar(lxGet(e.value, 'coalition')));
+      if (c !== null) out.set(e.key.value, c);
+    }
+  } catch (err) { return new Map(); }
+  return out;
+}
+
+// Les groupId visés par les tâches de `node` (tout ce qui est dessous) : une table qui porte `params.groupId`, la tâche EPLRS exceptée
+// (son groupId est la liaison de données, pas une cible).
+function lxTaskTargets(node, out) {
+  if (!node || node.kind !== 'table') return;
+  const params = lxGet(node, 'params');
+  if (params && params.kind === 'table') {
+    const gid = lxScalar(lxGet(params, 'groupId'));
+    if (typeof gid === 'number' && lxScalar(lxGet(node, 'id')) !== 'EPLRS') out.add(gid);
+  }
+  for (const e of node.entries) lxTaskTargets(e.value, out);
+}
+
+// Ce qu'une règle de déclencheur cite : les clés `group` (groupId), les clés `unit` (unitId) et toutes ses chaînes, n'importe où dedans.
+function lxRuleRefs(node, refs) {
+  if (!node) return;
+  if (node.kind === 'string') { refs.strings.push(node.value); return; }
+  if (node.kind !== 'table') return;
+  for (const e of node.entries) {
+    if (e.key && (e.key.kind === 'ident' || e.key.kind === 'string') && e.value && e.value.kind === 'number') {
+      if (e.key.value === 'group') refs.groups.add(e.value.value);
+      else if (e.key.value === 'unit') refs.units.add(e.value.value);
+    }
+    lxRuleRefs(e.value, refs);
+  }
+}
+
+// L'index des liens : Map<gk, { base, targetedBy, targets, triggers }> pour chaque groupe d'avions et d'hélicoptères (gk : le rang du
+// parcours de lxWalkAircraft). ast : le `mission` ; warehousesText : le texte du fichier `warehouses` (ou null).
+function lxBuildCampIndex(ast, warehousesText) {
+  const index = new Map();
+  const mission = ast.kind === 'assignment' ? ast.value : ast;
+  const coalNode = lxGet(mission, 'coalition');
+  if (!coalNode) return index;
+  const theatre = lxScalar(lxGet(mission, 'theatre'));
+  const names = (typeof theatre === 'string' && Object.prototype.hasOwnProperty.call(AIRPORT_NAMES, theatre)) ? AIRPORT_NAMES[theatre] : {};
+  const airports = lxReadAirports(warehousesText);
+  // tous les groupes, toutes catégories et tous camps ; toutes les unités par unitId
+  const groups = [], byNode = new Map(), unitOf = new Map(), byId = new Map();
+  for (const camp of ['blue', 'red', 'neutrals']) {
+    const countries = lxGet(lxGet(coalNode, camp), 'country');
+    if (!countries || countries.kind !== 'table') continue;
+    for (const ce of countries.entries) {
+      if (!ce.value || ce.value.kind !== 'table') continue;
+      for (const oe of ce.value.entries) {
+        if (!oe.key || (oe.key.kind !== 'string' && oe.key.kind !== 'ident')) continue;
+        const gt = lxGet(oe.value, 'group');
+        if (!gt || gt.kind !== 'table') continue;
+        for (const ge of gt.entries) {
+          const node = ge.value;
+          if (!node || node.kind !== 'table') continue;
+          const rec = { camp, node, name: lxScalar(lxGet(node, 'name')), groupId: lxScalar(lxGet(node, 'groupId')), unitIds: [], targets: new Set() };
+          const units = lxGet(node, 'units');
+          if (units && units.kind === 'table') {
+            for (const ue of units.entries) {
+              const un = ue.value;
+              if (!un || un.kind !== 'table') continue;
+              const unitId = lxScalar(lxGet(un, 'unitId'));
+              if (typeof unitId === 'number') {
+                rec.unitIds.push(unitId);
+                if (!unitOf.has(unitId)) unitOf.set(unitId, { camp, name: lxScalar(lxGet(un, 'name')) });
+              }
+            }
+          }
+          const route = lxGet(node, 'route');
+          if (route) lxTaskTargets(route, rec.targets);
+          groups.push(rec);
+          byNode.set(node, rec);
+          if (typeof rec.groupId === 'number') { if (!byId.has(rec.groupId)) byId.set(rec.groupId, []); byId.get(rec.groupId).push(rec); }
+        }
+      }
+    }
+  }
+  // les règles de déclencheur
+  const rules = [];
+  const trig = lxGet(mission, 'trigrules');
+  if (trig && trig.kind === 'table') {
+    for (const e of trig.entries) {
+      const refs = { groups: new Set(), units: new Set(), strings: [] };
+      lxRuleRefs(e.value, refs);
+      rules.push(refs);
+    }
+  }
+  const nameOf = rec => (typeof rec.name === 'string' && rec.name !== '') ? rec.name : '#' + rec.groupId;
+  const uniq = list => [...new Set(list)].sort();
+  const struct = {};
+  lxWalkAircraft(ast, struct);
+  for (const camp of Object.keys(struct)) {
+    for (const en of struct[camp].entries) {
+      for (const cat of Object.keys(en.cats)) {
+        for (const item of en.cats[cat].list) {
+          if (item.gk === null) continue;
+          const rec = byNode.get(item.ge.value);
+          if (!rec) continue;
+          let base = null;
+          const route = lxGet(rec.node, 'route');
+          const pts = route ? lxGet(route, 'points') : null;
+          const first = pts && pts.kind === 'table' && pts.entries.length ? (lxGet(pts, 1) || pts.entries[0].value) : null;
+          if (first && first.kind === 'table') {
+            const ad = lxScalar(lxGet(first, 'airdromeId'));
+            if (typeof ad === 'number') {
+              if (airports.get(ad) === rec.camp) base = typeof names[String(ad)] === 'string' ? names[String(ad)] : '#' + ad;
+            } else {
+              let lu = lxScalar(lxGet(first, 'linkUnit'));
+              if (typeof lu !== 'number') lu = lxScalar(lxGet(first, 'helipadId'));
+              const u = typeof lu === 'number' ? unitOf.get(lu) : undefined;
+              if (u && u.camp === rec.camp) base = (typeof u.name === 'string' && u.name !== '') ? u.name : '#' + lu;
+            }
+          }
+          const targetedBy = [];
+          if (typeof rec.groupId === 'number') for (const o of groups) if (o !== rec && o.targets.has(rec.groupId)) targetedBy.push(nameOf(o));
+          const targets = [];
+          for (const gid of rec.targets) {
+            const hit = byId.get(gid);
+            if (hit && hit.length) for (const o of hit) targets.push(nameOf(o)); else targets.push('#' + gid);
+          }
+          const unitSet = new Set(rec.unitIds);
+          const triggers = [];
+          rules.forEach((r, i) => {
+            let cited = typeof rec.groupId === 'number' && r.groups.has(rec.groupId);
+            if (!cited) for (const id of unitSet) if (r.units.has(id)) { cited = true; break; }
+            if (!cited && typeof rec.name === 'string' && rec.name !== '') {
+              cited = r.strings.some(x => x === rec.name || x.indexOf('"' + rec.name + '"') >= 0 || x.indexOf("'" + rec.name + "'") >= 0);
+            }
+            if (cited) triggers.push(i + 1);
+          });
+          index.set(item.gk, { base, targetedBy: uniq(targetedBy), targets: uniq(targets), triggers });
+        }
+      }
+    }
+  }
+  return index;
+}
+
+// Les liens du groupe de rang `gk` : { base, targetedBy, targets, triggers } (voir lxBuildCampIndex) ; rien : tout vide.
+function campLinks(gk) {
+  const idx = UI_STATE.campIndex;
+  const l = idx ? idx.get(gk) : undefined;
+  return l || { base: null, targetedBy: [], targets: [], triggers: [] };
+}
+// ═══ LIENS D'UN GROUPE À SON CAMP — FONCTIONS PURES : fin ═══
+
+// ═══════════════════════════════════════════════════════════════
 // ÉTAT
 // ═══════════════════════════════════════════════════════════════
 const UI_STATE = {
@@ -10802,6 +11006,7 @@ const UI_STATE = {
   coalitions:    { blue: [], red: [], neutrals: [] },   // mission.coalitions : les id de pays de chaque camp
   entryNames:    { blue: {}, red: {}, neutrals: {} },   // le nom écrit par chaque entrée de pays du fichier, par id
   byGroup:       new Map(),   // rang du groupe → ses appareils (ordre du groupe)
+  campIndex:     null,        // rang du groupe → ses liens à son camp (campLinks), calculés sur le fichier lu
   dupIds:        new Set(),   // unitId portés par plusieurs appareils (ou absents) : aucune modification
   tab:           'list',      // onglet courant sous 768 px : 'list' | 'panel'
   rev:           0,           // incrémenté à chaque modification (invalide les caches)
@@ -10852,6 +11057,11 @@ function curLivery(u) {
 function curCountry(u) {
   const e = UI_STATE.edits.get(u.unitId);
   return (e && e.country) ? e.country : { id: u.countryId, name: u.country };
+}
+// Le camp d'un appareil, pris en compte un pays en attente d'un autre camp (partout où l'on raisonne par camp, sauf le filtre : camp du fichier).
+function curCamp(u) {
+  const e = UI_STATE.edits.get(u.unitId);
+  return (e && e.country && e.country.camp) || u.coalition;
 }
 function curCallsign(u) {
   const e = UI_STATE.edits.get(u.unitId);
@@ -11625,16 +11835,16 @@ function touchEdit(u, mutate) {
 
 function setPayload(u, value) { touchEdit(u, e => { e.payload = value; }); }
 function setLivery(u, value)  { touchEdit(u, e => { e.livery = value; }); }
-// Le pays d'un appareil (to : { id, name }) et, s'il change, son indicatif (une valeur identique à celle du fichier ne s'écrit pas).
+// Le pays d'un appareil (to : { id, name, camp }) et, s'il change, son indicatif (une valeur identique à celle du fichier ne s'écrit pas).
 function setCountry(u, to, callsign) {
   touchEdit(u, e => {
-    e.country = { id: to.id, name: to.name };
+    e.country = to.camp ? { id: to.id, name: to.name, camp: to.camp } : { id: to.id, name: to.name };
     if (callsign !== undefined && !deepEqValues(callsign, u.callsign)) e.callsign = callsign; else delete e.callsign;
   });
 }
 // Écrit en attente le pays d'arrivée et les indicatifs du plan, groupe après groupe.
 function applyCountryPlan(cp) {
-  for (const g of cp.groups) g.members.forEach((m, i) => setCountry(m, { id: cp.toId, name: cp.toName }, g.callsigns[i]));
+  for (const g of cp.groups) g.members.forEach((m, i) => setCountry(m, { id: cp.toId, name: cp.toName, camp: cp.toCamp }, g.callsigns[i]));
 }
 // Annuler le pays d'une ligne l'annule pour tout son groupe (les emports et livrées des autres lignes restent).
 function revertCountryOfGroup(u) {
@@ -11880,12 +12090,17 @@ function fmtSetting(v) {
 // leurs appareils, et les indicatifs réécrits (attribués groupe après groupe, ceux du camp pris en compte, en attente compris).
 function countryPlan(type, toId, checked, visSet) {
   const to = cntCountry(toId);
-  const plan = { to, toId, toName: to ? to.name : '', groups: [], allUnits: new Set(), checkedChanging: new Set(), dragged: 0, nCallsign: 0 };
+  const plan = { to, toId, toName: to ? to.name : '', toCamp: null, groups: [], allUnits: new Set(), checkedChanging: new Set(), dragged: 0, nCallsign: 0,
+    campChange: false, links: { base: [], targeted: [], targets: [], triggers: [] } };
   if (to === null) return plan;
   const eligible = checked.filter(u => !skipReason(u, type, visSet, 'country'));
+  // le camp d'arrivée : celui de mission.coalitions qui porte le pays (celui des cochés d'abord) ; ses entrées de pays sont celles du fichier pour ce camp
+  const first = checked.length ? curCamp(checked[0]) : null;
+  const toCamp = cntCampOf(UI_STATE.coalitions, toId, first) || first;
+  plan.toCamp = toCamp;
   // le nom d'une entrée de pays déjà dans le fichier (cas A) est celui du fichier ; le nom de la table ne sert qu'à une entrée neuve (cas B)
   if (eligible.length) {
-    const fileName = (UI_STATE.entryNames[eligible[0].coalition] || {})[toId];
+    const fileName = (UI_STATE.entryNames[toCamp] || {})[toId];
     if (typeof fileName === 'string') plan.toName = fileName;
   }
   const order = [], seen = new Set();
@@ -11897,30 +12112,28 @@ function countryPlan(type, toId, checked, visSet) {
     groups.push({ gk, members });
   }
   // Les indicatifs pris dans un camp : TOUS ses appareils (ceux qui bougent aussi : un appareil qui garde son indicatif le garde réservé),
-  // et l'indicatif d'ORIGINE de tout appareil qui a un pays en attente (l'annuler ou revenir au pays d'origine le rend alors toujours libre).
+  // et l'indicatif d'ORIGINE de tout appareil qui a un pays en attente, dans son camp d'origine (l'annuler ou revenir au pays d'origine
+  // le rend alors toujours libre). Le camp d'un appareil est son camp en attente.
   const takenOf = camp => {
     const t = cntTaken([]);
     for (const a of UI_STATE.aircraft) {
-      if (a.coalition !== camp) continue;
-      cntTakenAdd(t, [curCallsign(a)]);
+      if (curCamp(a) === camp) cntTakenAdd(t, [curCallsign(a)]);
       const ed = UI_STATE.edits.get(a.unitId);
-      if (ed && ed.country) cntTakenAdd(t, [a.callsign]);
+      if (ed && ed.country && a.coalition === camp) cntTakenAdd(t, [a.callsign]);
     }
     return t;
   };
   const checkedIds = new Set(checked.map(u => u.unitId));
-  const taken = {};
+  const taken = takenOf(toCamp);
   for (const g of groups) {    // dans l'ordre du .miz ; chaque valeur attribuée est réservée avant le groupe suivant
-    const camp = g.members[0].coalition;
-    if (!taken[camp]) taken[camp] = takenOf(camp);
     const cur = g.members.map(curCallsign);
     let next;
     if (g.members.every(m => m.countryId === toId)) next = g.members.map(m => m.callsign);   // retour au pays d'origine : indicatifs d'origine
     else {
-      const res = cntCallsigns(g.members.map((m, i) => ({ type: m.type, callsign: cur[i] })), toId, taken[camp]);
+      const res = cntCallsigns(g.members.map((m, i) => ({ type: m.type, callsign: cur[i] })), toId, taken);
       next = res.values.map((v, i) => v === null ? cur[i] : v);
     }
-    cntTakenAdd(taken[camp], next);
+    cntTakenAdd(taken, next);
     g.callsigns = next;
     g.rewritten = next.some((v, i) => !deepEqValues(v, cur[i]));
     if (g.rewritten) plan.nCallsign++;
@@ -11929,6 +12142,16 @@ function countryPlan(type, toId, checked, visSet) {
       plan.allUnits.add(m.unitId);
       if (checkedIds.has(m.unitId)) plan.checkedChanging.add(m.unitId);
       if (!UI_STATE.selected.has(m.unitId)) plan.dragged++;   // « non coché(s) » : absents de la sélection, rien d'autre
+    }
+    // le camp change ; les liens au camp (calculés sur le fichier lu) comptent si le groupe quitte son camp d'origine
+    const m0 = g.members[0];
+    if (curCamp(m0) !== toCamp) plan.campChange = true;
+    if (m0.coalition !== toCamp) {
+      const l = campLinks(g.gk), nm = m0.groupName;
+      if (l.base !== null) plan.links.base.push({ name: nm, list: [l.base] });
+      if (l.targetedBy.length) plan.links.targeted.push({ name: nm, list: l.targetedBy });
+      if (l.targets.length) plan.links.targets.push({ name: nm, list: l.targets });
+      if (l.triggers.length) plan.links.triggers.push({ name: nm, list: l.triggers });
     }
   }
   return plan;
@@ -12043,8 +12266,16 @@ function setModel(model) {
     byGroup.get(u.gk).push(u);
   }
   UI_STATE.byGroup = byGroup;
+  UI_STATE.campIndex = model.campIndex || null;
   UI_STATE.rev++;
   UI_STATE._cache.clear();
+}
+
+// Le texte du fichier `warehouses` du .miz (lu seulement), ou null s'il manque.
+function lxWarehousesText(otherFilesMap) {
+  const raw = otherFilesMap ? otherFilesMap.warehouses : null;
+  if (!raw) return null;
+  try { return new TextDecoder('utf-8').decode(raw); } catch (err) { return null; }
 }
 
 async function loadMiz(file) {
@@ -12102,7 +12333,7 @@ async function loadMiz(file) {
     UI_STATE.collapsed = new Set();
     UI_STATE.filters = { coalition: '', type: '', role: '', search: '' };
     UI_STATE.showModifiedOnly = false;
-    setModel({ source: extracted.source, aircraft, coalitions, entryNames });
+    setModel({ source: extracted.source, aircraft, coalitions, entryNames, campIndex: lxBuildCampIndex(ast, lxWarehousesText(otherFilesMap)) });
     buildLoadoutDefs();
     if (reopened) restoreLoadoutDefs(UI_STATE.lastSaved.defs);
     UI_STATE.choice = { type: null, loadout: null, livery: null, country: null };
@@ -12261,7 +12492,7 @@ function renderTable() {
         '<td class="c-unit">' + escHtml(u.name) +
           '<span class="narrow-only">' + escHtml(roleTxt) + ' · <span' + (cChanged ? ' class="changed"' : '') + '>' + escHtml(cc.name) + '</span></span></td>' +
         '<td class="c-role"><span class="role-badge role-' + u.role + '">' + escHtml(roleTxt) + '</span></td>' +
-        '<td class="c-country' + (cChanged ? ' changed' : '') + '"><span class="coal-dot ' + u.coalition + '"></span>' + escHtml(cc.name) + '</td>' +
+        '<td class="c-country' + (cChanged ? ' changed' : '') + '"><span class="coal-dot ' + curCamp(u) + '"></span>' + escHtml(cc.name) + '</td>' +
         '<td class="td-ld cell-loadout">' + (ldInfo.cur.has(u.unitId)
           ? '<span class="ld-badge' + (ldInfo.orig.get(u.unitId) !== ldInfo.cur.get(u.unitId) ? ' changed ld-arrow' : (pChanged ? ' changed' : '')) + '">' +
               escHtml(ldInfo.orig.get(u.unitId) !== ldInfo.cur.get(u.unitId) ? (ldInfo.orig.get(u.unitId) || '—') + ' → ' + ldInfo.cur.get(u.unitId) : ldInfo.cur.get(u.unitId)) + '</span>'
@@ -12363,22 +12594,33 @@ function renderCountry(type) {
   const note = document.getElementById('country-note');
   const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
   const checked = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && visSet.has(u.unitId));
-  const camps = new Set(checked.map(u => u.coalition));
+  const camps = new Set(checked.map(u => curCamp(u)));
   const state = checked.length === 0 ? 'none' : camps.size > 1 ? 'mixed' : 'ok';
-  let opts = [];
+  // un groupe d'options par camp : le camp des cochés d'abord, puis bleu, rouge, neutres ; un pays n'est proposé que dans un camp
+  const groups = [];
   if (state === 'ok') {
     const types = new Set();
     for (const u of checked) for (const m of groupMembers(u)) types.add(m.type);
-    opts = cntOptions(UI_STATE.coalitions[checked[0].coalition] || [], [...types], checked.map(u => curCountry(u).id), UI_STATE.entryNames[checked[0].coalition]);
+    const seen = new Set();
+    for (const camp of cntCampOrder(curCamp(checked[0]))) {
+      const list = cntOptions(UI_STATE.coalitions[camp] || [], [...types], checked.map(u => curCountry(u).id), UI_STATE.entryNames[camp]).filter(o => !seen.has(o.id));
+      list.forEach(o => seen.add(o.id));
+      if (list.length) groups.push({ camp, opts: list });
+    }
   }
   if (UI_STATE.choice.country != null) {
-    const o = opts.find(x => x.id === UI_STATE.choice.country);
+    let o = null;
+    for (const g of groups) if (!o) o = g.opts.find(x => x.id === UI_STATE.choice.country) || null;
     if (!o || o.reason !== null) UI_STATE.choice.country = null;
   }
   let html = '<option value="">' + escHtml(t('country.keep')) + '</option>';
-  for (const o of opts) {
-    html += '<option value="' + o.id + '"' + (o.reason ? ' disabled' : '') + '>' +
-      escHtml(o.name + (o.reason ? ' — ' + t(o.reason === 'current' ? 'country.current' : 'country.noType') : '')) + '</option>';
+  for (const g of groups) {
+    html += '<optgroup label="' + escHtml(t('country.camp.' + g.camp)) + '">';
+    for (const o of g.opts) {
+      html += '<option value="' + o.id + '"' + (o.reason ? ' disabled' : '') + '>' +
+        escHtml(o.name + (o.reason ? ' — ' + t(o.reason === 'current' ? 'country.current' : 'country.noType') : '')) + '</option>';
+    }
+    html += '</optgroup>';
   }
   sel.innerHTML = html;
   sel.setAttribute('aria-label', t('country.label'));
@@ -12432,7 +12674,19 @@ function renderActionBar(type) {
     let v = k(t('bar.country'), c.groups.length, c.allUnits.size);
     if (c.groups.length && c.dragged) v += t('bar.countryDragged').replace('{m}', c.dragged);
     if (c.nCallsign) v += t('bar.countryCallsign').replace('{k}', c.nCallsign);
-    rows.push([t('bar.k.country'), escHtml(v), c.groups.length ? '' : 'off']);
+    if (c.campChange) { const cn = t('country.camp.' + c.toCamp); v += t('bar.countryCamp').replace('{camp}', cn.charAt(0).toLowerCase() + cn.slice(1)); }
+    // les liens des groupes qui quittent leur camp : une ligne orange par sorte de lien, sans rien bloquer
+    const fmt = {
+      base:     x => x.name + ' (' + x.list[0] + ')',
+      targeted: x => x.name + ' (' + t('bar.campBy') + ' ' + x.list.join(', ') + ')',
+      targets:  x => x.name + ' (' + x.list.join(', ') + ')',
+      triggers: x => x.name + ' (' + x.list.length + ')',
+    };
+    let warn = '';
+    for (const [kind, key] of [['base', 'bar.campBase'], ['targeted', 'bar.campTargeted'], ['targets', 'bar.campTargets'], ['triggers', 'bar.campTriggers']]) {
+      if (c.links[kind].length) warn += '<div class="camp-warn">' + escHtml(t(key).replace('{0}', c.links[kind].map(fmt[kind]).join(', '))) + '</div>';
+    }
+    rows.push([t('bar.k.country'), escHtml(v) + warn, c.groups.length ? '' : 'off']);
   }
   const blocked = !!(plan.settings && plan.settings.error);
   const can = plan.total > 0 && !blocked;
@@ -13277,7 +13531,8 @@ function lxCallsignPatch(src, u, value) {
   return lxRange(i + 1, e + tail[0].length, str);
 }
 
-// Les groupes à déplacer, d'après les modifications en attente : [{ gk, camp, category, toId, toName, members, callsigns }] par gk.
+// Les groupes à déplacer, d'après les modifications en attente : [{ gk, camp, toCamp, category, toId, toName, members, callsigns }] par gk
+// (camp : le camp du fichier ; toCamp : le camp d'arrivée, le même s'il ne change pas).
 function lxCollectMoves() {
   const gks = new Set();
   for (const [id, ed] of UI_STATE.edits) {
@@ -13293,10 +13548,10 @@ function lxCollectMoves() {
     if (!first || !first.country) throw new Error('groupe sans pays en attente : ' + gk);
     for (const m of members) {
       const e = UI_STATE.edits.get(m.unitId);
-      if (!e || !e.country || e.country.id !== first.country.id) throw new Error('groupe dont les appareils n\'ont pas le même pays : ' + gk);
+      if (!e || !e.country || e.country.id !== first.country.id || (e.country.camp || m.coalition) !== (first.country.camp || members[0].coalition)) throw new Error('groupe dont les appareils n\'ont pas le même pays : ' + gk);
       if (UI_STATE.dupIds.has(m.unitId)) throw new Error('groupe à identifiant en double : ' + gk);
     }
-    moves.push({ gk, camp: members[0].coalition, category: members[0].category, toId: first.country.id, toName: first.country.name,
+    moves.push({ gk, camp: members[0].coalition, toCamp: first.country.camp || members[0].coalition, category: members[0].category, toId: first.country.id, toName: first.country.name,
       members, callsigns: members.map(m => UI_STATE.edits.get(m.unitId).callsign) });
   }
   return moves;
@@ -13320,26 +13575,31 @@ function lxCountryPatches(src, moves, patches, wanted) {
       for (const cat of Object.keys(en.cats)) en.cats[cat].list.forEach(item => { if (item.gk !== null) where.set(item.gk, { camp, ei, cat, item }); });
     });
   }
-  const byCamp = new Map();
-  for (const mv of moves) {
-    if (!byCamp.has(mv.camp)) byCamp.set(mv.camp, []);
-    byCamp.get(mv.camp).push(mv);
-  }
+  // les camps touchés : celui de départ et celui d'arrivée de chaque déplacement
+  const camps = [];
+  for (const mv of moves) for (const c of [mv.camp, mv.toCamp]) if (camps.indexOf(c) < 0) camps.push(c);
   wanted.camps = new Map();    // camp -> nombre d'entrées de pays attendu
   wanted.entries = [];         // { camp, id, exists }
   wanted.lists = [];           // { camp, id, cat, count } : tables `group` attendues
-  for (const [camp, list] of byCamp) lxCampPatches(src, struct[camp], camp, list, where, patches, wanted);
+  // toutes les réécritures de tables sont rassemblées avant d'être poussées : un groupe qui change de camp est pris dans le texte d'origine,
+  // où `lxTake` refuserait un patch à cheval sur la réécriture de la table de son camp de départ
+  const outAll = [];
+  for (const camp of camps) lxCampPatches(src, struct, camp, moves, where, patches, wanted, outAll);
+  for (const p of outAll) patches.push(p);
   for (const mv of moves) {
     // une entrée existante garde son nom : c'est celui que la vérification attend ; le nom de la table n'est écrit que pour une entrée neuve
-    const ex = struct[mv.camp] ? struct[mv.camp].entries.find(en => en.id === mv.toId) : null;
+    const ex = struct[mv.toCamp] ? struct[mv.toCamp].entries.find(en => en.id === mv.toId) : null;
     const wantName = ex && typeof ex.name === 'string' ? ex.name : mv.toName;
     mv.members.forEach((u, i) => {
-      wanted.country.set(u.unitId, { id: mv.toId, name: wantName, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign, rewritten: mv.callsigns[i] !== undefined });
+      wanted.country.set(u.unitId, { id: mv.toId, name: wantName, camp: mv.toCamp, category: mv.category, callsign: mv.callsigns[i] !== undefined ? mv.callsigns[i] : u.callsign, rewritten: mv.callsigns[i] !== undefined });
     });
   }
 }
 
-function lxCampPatches(src, S, camp, list, where, patches, wanted) {
+// Les réécritures du camp `camp` : il perd les groupes de `moves` qui en partent (mv.camp) et reçoit ceux qui y arrivent (mv.toCamp) ; les
+// patchs de réécriture sont rendus dans `outAll` (`patches` ne sert qu'à prendre ceux des groupes déplacés). Un déplacement dans le même camp est les deux à la fois.
+function lxCampPatches(src, struct, camp, moves, where, patches, wanted, outAll) {
+  const S = struct[camp];
   if (!S) throw new Error('camp sans table country : ' + camp);
   const finals = new Map();          // 'ei|cat' -> groupes de la table `group` après les déplacements
   const touched = new Set();         // entrées de pays touchées
@@ -13349,15 +13609,20 @@ function lxCampPatches(src, S, camp, list, where, patches, wanted) {
     if (!finals.has(k)) { const info = S.entries[ei].cats[cat]; finals.set(k, info ? info.list.slice() : []); }
     return finals.get(k);
   };
-  for (const mv of list) {
+  for (const mv of moves) {
+    const leaving = mv.camp === camp, arriving = mv.toCamp === camp;
+    if (!leaving && !arriving) continue;
     const w = where.get(mv.gk);
-    if (!w || w.camp !== camp) throw new Error('groupe introuvable : ' + mv.gk);
-    const from = getFinal(w.ei, w.cat);
-    const at = from.indexOf(w.item);
-    if (at < 0) throw new Error('groupe absent de sa table : ' + mv.gk);
-    from.splice(at, 1);
-    touched.add(w.ei);
-    const srcInfo = S.entries[w.ei].cats[w.cat];
+    if (!w || w.camp !== mv.camp) throw new Error('groupe introuvable : ' + mv.gk);
+    if (leaving) {
+      const from = getFinal(w.ei, w.cat);
+      const at = from.indexOf(w.item);
+      if (at < 0) throw new Error('groupe absent de sa table : ' + mv.gk);
+      from.splice(at, 1);
+      touched.add(w.ei);
+    }
+    if (!arriving) continue;
+    const srcInfo = struct[mv.camp].entries[w.ei].cats[w.cat];
     const item = { ge: w.item.ge, gk: mv.gk, mv, srcInd: lxIndentAt(src, srcInfo.groups.pos.start.offset) };
     const di = S.entries.findIndex(en => en.id === mv.toId);
     if (di >= 0) { getFinal(di, w.cat).push(item); touched.add(di); }
@@ -13452,7 +13717,7 @@ function lxCampPatches(src, S, camp, list, where, patches, wanted) {
     else { const at = lxCloseLine(src, S.table); out.push(lxRange(at, at, text)); }
   }
   wanted.camps.set(camp, ord + fresh.length);
-  for (const p of out) patches.push(p);
+  for (const p of out) outAll.push(p);
 }
 
 // Aucun recouvrement entre patches, et aucun point de départ commun avec une insertion (l'ordre d'application serait ambigu).
@@ -13518,8 +13783,9 @@ function verifyWrite(patchedSrc, wanted) {
     if (at === undefined) return { error: 'unitId ' + u.unitId + ' disparu' };
     const u2 = re[at];
     if (u2.rank !== u.rank || u2.groupName !== u.groupName || u2.groupId !== u.groupId || u2.name !== u.name || u2.type !== u.type ||
-        u2.coalition !== u.coalition || u2.skill !== u.skill) return { error: 'appareil ' + u.name + ' (' + u.unitId + ')' };
+        u2.skill !== u.skill) return { error: 'appareil ' + u.name + ' (' + u.unitId + ')' };
     const wc = wanted.country.get(u.unitId);
+    if (u2.coalition !== (wc ? wc.camp : u.coalition)) return { error: 'camp ' + u.name + ' (' + u.unitId + ')' };
     if (u2.countryId !== (wc ? wc.id : u.countryId) || u2.country !== (wc ? wc.name : u.country) || u2.category !== (wc ? wc.category : u.category)) {
       return { error: 'pays ' + u.name + ' (' + u.unitId + ')' };
     }
@@ -13654,7 +13920,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     }
     UI_STATE.edits = new Map();
     rememberSaved(savedBytes, UI_STATE.loadoutDefs);
-    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast), entryNames: lxEntryNames(verdict.ast) });
+    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast), entryNames: lxEntryNames(verdict.ast), campIndex: lxBuildCampIndex(verdict.ast, lxWarehousesText(otherFilesMap)) });
     renderAll();
 
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', nMod), 'success');
