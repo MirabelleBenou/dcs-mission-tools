@@ -61,5 +61,5 @@ temporary folder, removed when everything passes), `--tools cp,gu,wx,le`.
 - `le_pays.py` — the Loadout Editor country cases for one mission (`python3 -B tests/le_pays.py . mission.miz label out_dir`).
 - `deplacements.py` — compares a mission before and after a country change (`python3 -B tests/deplacements.py before.miz after.miz`).
 
-The fixtures hold no real unit, squadron or person name. `.miz` files are otherwise ignored by git (`.gitignore`): the three above
+The fixtures hold no real unit or person name. `.miz` files are otherwise ignored by git (`.gitignore`): the three above
 were added explicitly, and a mission of your own stays out of the repository.

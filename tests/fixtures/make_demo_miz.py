@@ -1,6 +1,6 @@
 """Generate a neutral demo .miz (Caucasus) for the Mission Tools README captures.
 Usage: python3 -B make_demo_miz.py out.miz   (needs pydcs==1.0.0)
-No real squadron, unit or person names."""
+No real unit or person names."""
 import sys, datetime, warnings
 warnings.filterwarnings('ignore')
 import dcs
