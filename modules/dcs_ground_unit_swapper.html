@@ -595,6 +595,42 @@
     .combobox-cell.changed { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, transparent); }
     .combobox-cell-value { flex: 1; margin-right: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .combobox-cell-value.placeholder { color: var(--text-dim); }
+
+    /* ── Cellule du type actuel ; le groupe repris dans la cellule de l'unité ne se montre que sous 560 px ───────── */
+    .td-type { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    .u-grp { display: none; }
+
+    /* ── Écran étroit : sous 860 px, Coalition et Famille (en-têtes et cellules) sont masquées — les filtres les donnent ── */
+    @media (max-width: 860px) {
+      #units-table th:nth-child(2), #units-table th:nth-child(3),
+      #units-table td:nth-child(2), #units-table td:nth-child(3) { display: none; }
+    }
+
+    /* ── Téléphone : sous 560 px, chaque unité tient sur deux rangées. 1re : la case, le nom de l'unité avec son groupe,
+       le type actuel ; 2e : la liste du nouveau type et celle du niveau, côte à côte, sur toute la largeur moins la
+       colonne de la case. Aucune valeur coupée : tout passe à la ligne. L'en-tête garde « tout cocher » et les
+       en-têtes triables, en une rangée qui passe à la ligne. ────────────────────────────────────────────────────── */
+    @media (max-width: 560px) {
+      #units-table, #units-table thead, #units-table tbody { display: block; }
+      #units-table thead tr { display: flex; flex-wrap: wrap; align-items: center; }
+      #units-table th { padding: 8px 8px; }
+      #units-table th.th-chk { flex: 0 0 44px; width: 44px; padding: 0; display: flex; justify-content: center; }
+      #units-table th:nth-child(2), #units-table th:nth-child(3), #units-table th:nth-child(7) { display: none; }
+      #units-table tbody tr { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--border); }
+      #units-table tbody td { display: block; min-width: 0; padding: 4px 8px; border-bottom: 0; overflow-wrap: anywhere; }
+      #units-table tbody td:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; display: flex; align-items: center; justify-content: center; padding: 0; }
+      #units-table tbody td:nth-child(2), #units-table tbody td:nth-child(3), #units-table tbody td:nth-child(4) { display: none; }
+      #units-table tbody td:nth-child(5) { grid-column: 2; grid-row: 1; color: var(--text); }
+      #units-table tbody td:nth-child(6) { grid-column: 3; grid-row: 1; }
+      #units-table tbody td:nth-child(7) { grid-column: 2; grid-row: 2; }
+      #units-table tbody td:nth-child(8) { grid-column: 3; grid-row: 2; }
+      .u-grp { display: block; color: var(--text-dim); }
+      .td-type { white-space: normal; max-width: none; overflow: visible; text-overflow: clip; }
+      #units-table .tbm-trigger, #units-table .combobox-cell { min-width: 0; max-width: none; }
+      #units-table .tbm-lbl { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+      #units-table .tbm-lbl::after { display: none; }
+      #units-table .combobox-cell-value { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+    }
   </style>
 </head>
 <body>
@@ -2882,8 +2918,8 @@ function renderTable(rows) {
       <td><span class="coal-badge ${coalClass}">${unit.coalition}</span></td>
       <td><span class="fam-badge fam-${famMeta.css}">${t('family.' + unit.family)}</span></td>
       <td class="readonly" title="${t('table.readonly.title')}">${escHtml(unit.groupName)}</td>
-      <td class="readonly" title="${t('table.readonly.title')}">${escHtml(unit.name)}</td>
-      <td style="white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${escHtml(unit.type)} <small style="color:var(--text-dim);font-size:10px">${escHtml(getDisplayName(unit.type))}</small></td>
+      <td class="readonly td-unit" title="${t('table.readonly.title')}">${escHtml(unit.name)}<span class="u-grp">${escHtml(unit.groupName)}</span></td>
+      <td class="td-type">${escHtml(unit.type)} <small style="color:var(--text-dim);font-size:10px">${escHtml(getDisplayName(unit.type))}</small></td>
       <td>
         <div style="display:flex;align-items:center;gap:4px">
           <div class="combobox-cell tbm-trigger${typeCellChanged ? ' changed' : ''}" tabindex="0" role="button" aria-haspopup="listbox" data-unit-id="${unit.unitId}" title="${t('table.typeCell.title')}" style="flex:1">
@@ -3606,6 +3642,16 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
 .mtb-menu > button + button { border-top: 1px solid var(--border); }
 .mtb-menu > button:hover, .mtb-menu > button:focus-visible { background: var(--surface-2, rgba(255,255,255,.04)); }
 .mtb-menu > button:disabled { opacity: .4; cursor: default; }
+/* ── page retenue : pas de « tirer pour actualiser » ── */
+html, body { overscroll-behavior-y: contain; }
+/* ── au doigt : tout ce qui se touche fait au moins 44 px de haut et de large (cases à cocher, boutons radio et champs
+   cachés exclus) ; !important, pour que la règle vaille sur une taille posée localement par un id ou une classe ── */
+@media (pointer: coarse) {
+  button, select, [role="button"], .tbm-trigger, .combobox-display, .combobox-cell, .chip,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 44px !important; min-width: 44px !important; }
+  /* un lien dans une ligne de texte : sa zone de toucher grandit par le haut et le bas, sans toucher à la ligne */
+  a[href] { padding-top: 16px; padding-bottom: 16px; }
+}
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
   const MTB_MS = { success: 3000, info: 3000, warn: 4500, error: 6000 };

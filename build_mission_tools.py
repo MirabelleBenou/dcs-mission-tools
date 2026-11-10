@@ -838,6 +838,29 @@ def build_html(module_html_js, tile_uris, versions):
       pointer-events: none;
     }}
 
+    /* ── Barre du fichier de travail sur deux rangées sous 560 px : le nom passe à la ligne au lieu d'être coupé,
+       les boutons sont sur leur propre rangée, à droite. Sa hauteur réelle est reportée dans --wf-bar-h (script). ── */
+    @media (max-width: 560px) {{
+      #wf-bar {{
+        height: auto;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        gap: 0 12px;
+      }}
+      #wf-bar .wf-label {{ order: 1; }}
+      #wf-bar .wf-filename {{
+        order: 2;
+        flex: 1 1 0;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }}
+      #wf-bar::after {{ content: ""; order: 3; flex: 0 0 100%; height: 0; }}
+      #wf-bar .wf-btn {{ order: 4; margin-top: 6px; }}
+      #wf-bar #wf-btn-load {{ margin-left: auto; }}
+    }}
+
     /* ── Responsive ── */
     @media (max-width: 768px) {{
       #cards-grid, #ghost-grid {{
@@ -1402,6 +1425,9 @@ def build_html(module_html_js, tile_uris, versions):
         }}
       }}
 
+      /* Une entrée d'historique (même adresse) par ouverture depuis l'accueil : le retour du navigateur la consomme. */
+      if (!onToolEntry()) pushToolEntry();
+
       document.getElementById('landing').style.display = 'none';
       const moduleView = document.getElementById('module-view');
       moduleView.classList.add('active');
@@ -1457,18 +1483,20 @@ def build_html(module_html_js, tile_uris, versions):
       activeModule = id;
     }}
 
-    async function goHub() {{
-      /* Garde : édits non sauvegardées dans le module actif */
-      if (activeModule && hasUnsavedEdits(activeModule)) {{
-        var modName = (MODULES.find(function(m) {{ return m.id === activeModule; }}) || {{}}).name || activeModule;
-        var leave = await mtbConfirm({{
-          title:  t('confirm.leave.title'),
-          text:   t('confirm.leave.text').replace('{{module}}', modName),
-          ok:     t('confirm.leave.ok'),
-          cancel: t('confirm.leave.cancel')
-        }});
-        if (!leave) return;
-      }}
+    /* La question avant de quitter un outil modifié (confirm.leave*). Vrai : on peut partir. */
+    async function confirmLeaveTool() {{
+      if (!activeModule || !hasUnsavedEdits(activeModule)) return true;
+      var modName = (MODULES.find(function(m) {{ return m.id === activeModule; }}) || {{}}).name || activeModule;
+      return await mtbConfirm({{
+        title:  t('confirm.leave.title'),
+        text:   t('confirm.leave.text').replace('{{module}}', modName),
+        ok:     t('confirm.leave.ok'),
+        cancel: t('confirm.leave.cancel')
+      }});
+    }}
+
+    /* Retour à l'accueil : l'outil reste en mémoire (ses modifications aussi), seul l'affichage change. */
+    function showHome() {{
       Object.keys(iframes).forEach(function(iid) {{ iframes[iid].style.display = 'none'; }});
       document.getElementById('module-view').classList.remove('active');
       document.getElementById('landing').style.display = 'flex';
@@ -1483,13 +1511,62 @@ def build_html(module_html_js, tile_uris, versions):
       }} catch(e) {{}}
     }}
 
+    /* « ◄ Mission Tools » : la question s'il y a des modifications, puis l'accueil ; il consomme l'entrée d'historique
+       de l'outil (le popstate qu'il provoque est ignoré). */
+    async function goHub() {{
+      if (!(await confirmLeaveTool())) return;
+      if (onToolEntry()) {{
+        ignorePops++;
+        setTimeout(function() {{ ignorePops = 0; }}, 1000);
+        history.back();
+      }}
+      showHome();
+    }}
+
+    /* ── La page retenue : historique, question du navigateur ─────────────────────────────────────────── */
+    var HISTORY_HOME = {{ mt: 'home' }};
+    var HISTORY_TOOL = {{ mt: 'tool' }};
+    var ignorePops = 0;
+    function onToolEntry() {{ var st = history.state; return !!(st && st.mt === 'tool'); }}
+    function pushToolEntry() {{ try {{ history.pushState(HISTORY_TOOL, ''); }} catch(e) {{}} }}
+
+    /* Le retour du navigateur (geste, bouton, history.back()) depuis un outil fait ce que fait « ◄ Mission Tools » : on
+       est déjà revenu à l'entrée de l'accueil ; avec des modifications, la question ; « Rester » rétablit l'entrée. */
+    window.addEventListener('popstate', async function() {{
+      if (ignorePops > 0) {{ ignorePops--; return; }}
+      if (!activeModule || onToolEntry()) return;
+      if (!(await confirmLeaveTool())) {{ pushToolEntry(); return; }}
+      showHome();
+    }});
+
+    /* Tant qu'un outil ouvert (affiché ou non) a des modifications non sauvegardées, le navigateur pose sa question avant
+       de fermer ou de recharger la page. */
+    window.addEventListener('beforeunload', function(e) {{
+      var dirty = Object.keys(iframes).some(function(iid) {{ return hasUnsavedEdits(iid); }});
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    }});
+
+    /* Sous 560 px la barre du fichier de travail fait deux rangées (ou plus) : sa hauteur réelle compense le bas de l'accueil. */
+    function syncWfBarHeight() {{
+      var root = document.documentElement;
+      if (!window.matchMedia('(max-width: 560px)').matches) {{ root.style.removeProperty('--wf-bar-h'); return; }}
+      var h = document.getElementById('wf-bar').offsetHeight;
+      if (h > 0) root.style.setProperty('--wf-bar-h', h + 'px');
+    }}
+
     /* ── Init ────────────────────────────────────────────── */
     function init() {{
+      try {{ history.replaceState(HISTORY_HOME, ''); }} catch(e) {{}}
       initLang();
       applyI18nStatic();
       updateFlagButton();
       renderCards();
       renderGhosts();
+      if (typeof ResizeObserver === 'function') new ResizeObserver(syncWfBarHeight).observe(document.getElementById('wf-bar'));
+      window.addEventListener('resize', syncWfBarHeight);
+      syncWfBarHeight();
       console.log('[M·T v' + APP_VERSION + '] Initialisé — ' + MODULES.length + ' modules, langue: ' + CURRENT_LANG);
     }}
 

@@ -590,6 +590,18 @@
       .cmp-foot { padding: 12px; }
       .cmp-foot .sp { margin-left: 0; }
     }
+    /* Téléphone (≤ 560 px) : chaque station sur deux rangées. 1re : son numéro, la station symétrique (↔) et la masse ;
+       2e : sa liste, sur toute la largeur, dont le nom de l'arme passe à la ligne au lieu d'être coupé. */
+    @media (max-width: 560px) {
+      .cmp-row { grid-template-columns: 28px minmax(0, 1fr) auto; row-gap: 4px; }
+      .cmp-row .sn { grid-column: 1; grid-row: 1; }
+      .cmp-row .pair { grid-column: 2; grid-row: 1; }
+      .cmp-row .cmp-kg { grid-column: 3; grid-row: 1; }
+      .cmp-row .tbm-trigger { grid-column: 1 / -1; grid-row: 2; }
+      .cmp-row .tbm-lbl { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+      .cmp-row .tbm-lbl::after { display: none; }
+      .cmp-row .cmp-nomirror, .cmp-row .cmp-oneof, .cmp-row .cmp-rule { grid-column: 1 / -1; }
+    }
   </style>
 </head>
 <body>
@@ -14143,6 +14155,16 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
 .mtb-menu > button + button { border-top: 1px solid var(--border); }
 .mtb-menu > button:hover, .mtb-menu > button:focus-visible { background: var(--surface-2, rgba(255,255,255,.04)); }
 .mtb-menu > button:disabled { opacity: .4; cursor: default; }
+/* ── page retenue : pas de « tirer pour actualiser » ── */
+html, body { overscroll-behavior-y: contain; }
+/* ── au doigt : tout ce qui se touche fait au moins 44 px de haut et de large (cases à cocher, boutons radio et champs
+   cachés exclus) ; !important, pour que la règle vaille sur une taille posée localement par un id ou une classe ── */
+@media (pointer: coarse) {
+  button, select, [role="button"], .tbm-trigger, .combobox-display, .combobox-cell, .chip,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 44px !important; min-width: 44px !important; }
+  /* un lien dans une ligne de texte : sa zone de toucher grandit par le haut et le bas, sans toucher à la ligne */
+  a[href] { padding-top: 16px; padding-bottom: 16px; }
+}
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
   const MTB_MS = { success: 3000, info: 3000, warn: 4500, error: 6000 };

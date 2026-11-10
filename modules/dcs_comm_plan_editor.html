@@ -3363,6 +3363,16 @@ details[open] > summary > .mtb-chev { transform: rotate(90deg); }
 .mtb-menu > button + button { border-top: 1px solid var(--border); }
 .mtb-menu > button:hover, .mtb-menu > button:focus-visible { background: var(--surface-2, rgba(255,255,255,.04)); }
 .mtb-menu > button:disabled { opacity: .4; cursor: default; }
+/* ── page retenue : pas de « tirer pour actualiser » ── */
+html, body { overscroll-behavior-y: contain; }
+/* ── au doigt : tout ce qui se touche fait au moins 44 px de haut et de large (cases à cocher, boutons radio et champs
+   cachés exclus) ; !important, pour que la règle vaille sur une taille posée localement par un id ou une classe ── */
+@media (pointer: coarse) {
+  button, select, [role="button"], .tbm-trigger, .combobox-display, .combobox-cell, .chip,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 44px !important; min-width: 44px !important; }
+  /* un lien dans une ligne de texte : sa zone de toucher grandit par le haut et le bas, sans toucher à la ligne */
+  a[href] { padding-top: 16px; padding-bottom: 16px; }
+}
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
   const MTB_MS = { success: 3000, info: 3000, warn: 4500, error: 6000 };
