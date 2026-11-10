@@ -500,6 +500,11 @@
       .wx-grid-clouds { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 8px; }
       .wx-grid-clouds > .wx-field:first-child { grid-column: 1 / -1; }
     }
+    /* Au doigt, le ↺ fait 44 px de large : dans une cellule de vent il passe sous le champ, pour que la valeur reste lisible. */
+    @media (max-width: 560px) and (pointer: coarse) {
+      .wx-grid-4 .wx-cell { flex-wrap: wrap; }
+      .wx-grid-4 .wx-cell input, .wx-grid-4 .wx-cell .btn-rollback { flex: 1 1 100%; }
+    }
 
     /* ── En-tête sur deux lignes sous 560 px (même dessin dans les quatre outils) ── */
     @media (max-width: 560px) {
@@ -2453,8 +2458,8 @@ html, body { overscroll-behavior-y: contain; }
 @media (pointer: coarse) {
   button, select, [role="button"], .tbm-trigger, .combobox-display, .combobox-cell, .chip,
   input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 44px !important; min-width: 44px !important; }
-  /* un lien dans une ligne de texte : sa zone de toucher grandit par le haut et le bas, sans toucher à la ligne */
-  a[href] { padding-top: 16px; padding-bottom: 16px; }
+  /* un lien dans une ligne de texte : sa zone de toucher grandit de chaque côté (la marge négative garde le texte en place) */
+  a[href] { padding: 16px 8px; margin: 0 -8px; }
 }
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };

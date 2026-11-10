@@ -3370,8 +3370,8 @@ html, body { overscroll-behavior-y: contain; }
 @media (pointer: coarse) {
   button, select, [role="button"], .tbm-trigger, .combobox-display, .combobox-cell, .chip,
   input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 44px !important; min-width: 44px !important; }
-  /* un lien dans une ligne de texte : sa zone de toucher grandit par le haut et le bas, sans toucher à la ligne */
-  a[href] { padding-top: 16px; padding-bottom: 16px; }
+  /* un lien dans une ligne de texte : sa zone de toucher grandit de chaque côté (la marge négative garde le texte en place) */
+  a[href] { padding: 16px 8px; margin: 0 -8px; }
 }
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
