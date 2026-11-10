@@ -11406,6 +11406,7 @@ function payloadGameIndex(type) {
 // Les conflits que créerait le CLSID `c` posé à la station `n` de `type` : [{ st, rule }] — les AUTRES stations de l'emport `st` (station → CLSID, '' = vide)
 // dont le contenu ne peut pas aller avec `c` en `n`, et l'id de la règle —, triés par numéro de station puis par règle. [] pour un CLSID vide ou un type sans règle.
 // Les règles écrites (PAYLOAD_RULES) et celles du jeu (PAYLOAD_GAME_RULES, id « game », dans les deux sens) ; une station déjà en conflit par une règle écrite n'en reçoit pas d'autre.
+// Une règle du jeu entre deux stations d'un même groupe de PAYLOAD_ONE_OF (les portes du Mi-24P) n'est pas rendue : le groupe dit déjà la même contrainte (l'autre station est vidée, avec son message).
 // Fonction pure : ni DOM, ni t(), ni stockage.
 function payloadRuleConflicts(type, st, n, c) {
   if (typeof c !== 'string' || c === '' || typeof type !== 'string') return [];
@@ -11442,7 +11443,8 @@ function payloadRuleConflicts(type, st, n, c) {
     const gi = payloadGameIndex(type), ci = payloadClsidIdx(c);
     const have = new Set(out.map(x => x.st));
     const cur = m => (payloadHas(st, m) && typeof st[m] === 'string') ? st[m] : '';
-    const hit = m => { if (!have.has(m)) { have.add(m); out.push({ st: m, rule: 'game' }); } };
+    const door = payloadOneOfOthers(type, n);
+    const hit = m => { if (!have.has(m) && door.indexOf(m) < 0) { have.add(m); out.push({ st: m, rule: 'game' }); } };
     // c en sa : conflit avec sb si elle porte une charge que la règle exclut
     if (payloadHas(gi.xa, n)) gi.xa[n].forEach(e => {
       if (ci === undefined || !e.ia.has(ci)) return;
