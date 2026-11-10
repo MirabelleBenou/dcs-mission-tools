@@ -532,7 +532,7 @@
 </header>
 
 <div id="preset-absent-banner" class="mtb-banner info hidden" data-i18n="banner.customMode">
-  ℹ Météo réglée à la main : aucun preset de nuages. En choisir un l'ajoutera à la sauvegarde ; « Conserver Custom » ne change rien.
+  ℹ Nuages réglés à la main : aucun préréglage. En choisir un l'ajoutera à la sauvegarde ; « nuages réglés à la main » ne change rien.
 </div>
 
 <div id="drop-zone">
@@ -625,7 +625,7 @@
     <div class="wx-section-body">
       <div class="wx-grid wx-grid-clouds">
         <div class="wx-field">
-          <span class="wx-label" data-i18n="label.cloudPreset">Preset nuageux</span>
+          <span class="wx-label" data-i18n="label.cloudPreset">Préréglage de nuages</span>
           <div class="wx-cell" style="align-items:flex-start">
             <!-- Select fantôme (valeur canonique, caché) -->
             <select id="f-preset" data-tbm-skip disabled></select>
@@ -664,8 +664,8 @@
         </div>
       </div>
       <div style="margin-top:10px">
-        <button id="btn-remove-preset" class="btn-footer hidden" data-i18n-title="tooltip.removePreset" title="Supprimer la clé preset du bloc clouds — DCS utilisera alors les valeurs density/thickness existantes">
-          <span data-i18n="btn.removePreset">🗑 Supprimer le preset (nuages réglés à la main)</span>
+        <button id="btn-remove-preset" class="btn-footer hidden" data-i18n-title="tooltip.removePreset" title="Retirer le préréglage : DCS reprendra les réglages manuels de la mission (densité, épaisseur, base)">
+          <span data-i18n="btn.removePreset">🗑 Retirer le préréglage (nuages réglés à la main)</span>
         </button>
       </div>
     </div>
@@ -773,8 +773,8 @@ const I18N = {
     'wind.col.speed':          'Vitesse (m/s)',
     'wind.ground':             'Sol',
     'section.clouds':          '☁ Nuages',
-    'banner.customMode':       'ℹ Météo réglée à la main : aucun preset de nuages. En choisir un l\'ajoutera à la sauvegarde ; « Conserver Custom » ne change rien.',
-    'label.cloudPreset':       'Preset nuageux',
+    'banner.customMode':       'ℹ Nuages réglés à la main : aucun préréglage. En choisir un l\'ajoutera à la sauvegarde ; « nuages réglés à la main » ne change rien.',
+    'label.cloudPreset':       'Préréglage de nuages',
     'placeholder.search':      '🔍 Rechercher...',
     'list.search':             'Rechercher\u2026',
     'list.none':               'Aucun r\u00e9sultat',
@@ -784,8 +784,8 @@ const I18N = {
     'precip.rain':             '🌧 Pluie',
     'precip.storm':            '⛈ Orage',
     'tooltip.cancel':          'Annuler',
-    'tooltip.removePreset':    'Supprimer la clé preset du bloc clouds — DCS utilisera alors les valeurs density/thickness existantes',
-    'btn.removePreset':        '🗑 Supprimer le preset (nuages réglés à la main)',
+    'tooltip.removePreset':    'Retirer le préréglage : DCS reprendra les réglages manuels de la mission (densité, épaisseur, base)',
+    'btn.removePreset':        '🗑 Retirer le préréglage (nuages réglés à la main)',
     'section.info':            'ℹ Informations (lecture seule)',
     'label.qnh':               'QNH',
     'label.temp':              'Température',
@@ -796,8 +796,9 @@ const I18N = {
     'btn.save':                '💾 Sauvegarder',
     'count.modification':      'modification',
     'count.modifications':     'modifications',
-    'preset.keepCustom':       '(Conserver Custom — pas de preset)',
-    'toast.saved':             'Sauvegardé :',
+    'preset.keepCustom':       '(nuages réglés à la main — aucun préréglage)',
+    'toast.saved.one':         '{file} sauvegardé — {n} modification',
+    'toast.saved.other':       '{file} sauvegardé — {n} modifications',
     'toast.loaded':            'Météo chargée depuis {file}',
     'toast.saveError':         'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.saveCheckError':    'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
@@ -816,8 +817,8 @@ const I18N = {
     'confirm.pendingLost.ok':     'Charger',
     'confirm.pendingLost.cancel': 'Annuler',
     'confirm.removePreset':    'Les nuages reprendront les réglages manuels de la mission (densité, épaisseur, base).',
-    'confirm.removePreset.title':  'Supprimer le preset de nuages ?',
-    'confirm.removePreset.ok':     'Supprimer',
+    'confirm.removePreset.title':  'Retirer le préréglage de nuages ?',
+    'confirm.removePreset.ok':     'Retirer',
     'confirm.removePreset.cancel': 'Annuler',
     'ro.fog.on':               'activé',
     'ro.fog.off':              'désactivé',
@@ -844,7 +845,7 @@ const I18N = {
     'wind.col.speed':          'Speed (m/s)',
     'wind.ground':             'Ground',
     'section.clouds':          '☁ Clouds',
-    'banner.customMode':       'ℹ Weather set by hand: no cloud preset. Choosing one adds it to the save; “Keep Custom” changes nothing.',
+    'banner.customMode':       'ℹ Clouds set by hand: no preset. Choosing one adds it to the save; “clouds set by hand” changes nothing.',
     'label.cloudPreset':       'Cloud preset',
     'placeholder.search':      '🔍 Search...',
     'list.search':             'Search\u2026',
@@ -855,7 +856,7 @@ const I18N = {
     'precip.rain':             '🌧 Rain',
     'precip.storm':            '⛈ Thunderstorm',
     'tooltip.cancel':          'Undo',
-    'tooltip.removePreset':    'Remove the preset key from the clouds block — DCS will use the existing density/thickness values',
+    'tooltip.removePreset':    'Remove the preset: DCS will use the mission\'s manual settings (density, thickness, base)',
     'btn.removePreset':        '🗑 Remove preset (clouds set by hand)',
     'section.info':            'ℹ Information (read-only)',
     'label.qnh':               'QNH',
@@ -867,8 +868,9 @@ const I18N = {
     'btn.save':                '💾 Save',
     'count.modification':      'change',
     'count.modifications':     'changes',
-    'preset.keepCustom':       '(Keep Custom — no preset)',
-    'toast.saved':             'Saved:',
+    'preset.keepCustom':       '(clouds set by hand — no preset)',
+    'toast.saved.one':         '{file} saved — {n} change',
+    'toast.saved.other':       '{file} saved — {n} changes',
     'toast.loaded':            'Weather loaded from {file}',
     'toast.saveError':         'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.saveCheckError':    'The downloaded file could not be checked: do not use it. Your changes are kept.',
@@ -921,6 +923,11 @@ function t(key, fallback) {
   if (key in I18N.fr) return I18N.fr[key];
   console.warn('[i18n] missing key:', key);
   return key;
+}
+
+// Pluriel : clé.one pour 0 et 1, clé.other au-delà ({n} remplacé ; un nom libre se pose après, par split/join)
+function tn(key, n) {
+  return t(key + (n > 1 ? '.other' : '.one')).replace('{n}', n);
 }
 
 function initLang() {
@@ -2019,7 +2026,6 @@ function showToast(msg, type = 'success') {
 // CHARGEMENT .MIZ
 // ═══════════════════════════════════════════════════════════════
 async function loadMizFile(file) {
-  const t0 = performance.now();
   mtbSpinner(t('spinner.loading'));
   // Message d'erreur : une archive illisible ou sans entrée « mission » → load.notMiz ; tout le reste → load.unreadable
   let loadKey = 'load.unreadable';
@@ -2048,14 +2054,9 @@ async function loadMizFile(file) {
       console.warn('[Load] Tokens avec erreurs :', errors.length);
     }
     const ast = DCS_PARSER.parse(tokens);
-    const elapsed = Math.round(performance.now() - t0);
-
-    console.log(`[Load] AST construit, ${tokens.length} nœuds, ${elapsed} ms`);
 
     // Extraction WeatherModel
     const weather = WX_EXTRACTOR.extract(ast, text);
-    console.log('[Load] WeatherModel extrait :');
-    console.dir(weather);
 
     // Stocker dans UI_STATE
     UI_STATE.model = {
@@ -2081,7 +2082,7 @@ async function loadMizFile(file) {
     document.getElementById('main-ui').classList.remove('hidden');
     document.getElementById('modifications-bar').classList.remove('hidden');
 
-    showToast(t('toast.loaded').replace('{file}', file.name), 'success');
+    showToast(t('toast.loaded').split('{file}').join(file.name), 'success');
   } catch (err) {
     console.error('[Load] Erreur :', err);
     showToast(t(loadKey), 'error');
@@ -2272,9 +2273,6 @@ function collectWeatherPatches(srcText, weather, edits) {
   // ── Tri par offset DÉCROISSANT (invariant absolu) ─────────────────────────
   patches.sort((a, b) => b.pos.start.offset - a.pos.start.offset);
 
-  console.log('[Save] Patches (' + patches.length + ') :');
-  patches.forEach(p => console.log('  @' + p.pos.start.offset + ' → ' + JSON.stringify(p.newValueStr).slice(0, 60)));
-
   return patches;
 }
 
@@ -2282,12 +2280,7 @@ function collectWeatherPatches(srcText, weather, edits) {
 // SAUVEGARDE
 // ═══════════════════════════════════════════════════════════════
 function generateSaveFilename(original) {
-  const base = original.replace(/\.miz$/i, '');
-  const now  = new Date();
-  const p    = n => String(n).padStart(2, '0');
-  const stamp = now.getFullYear() + p(now.getMonth()+1) + p(now.getDate())
-              + '-' + p(now.getHours()) + p(now.getMinutes()) + p(now.getSeconds());
-  return base + '_weather_' + stamp + '.miz';
+  return mtbOutName(original, 'weather', '.miz');
 }
 
 function triggerDownload(blob, filename) {
@@ -2308,6 +2301,7 @@ async function handleSave() {
   try {
     const { weather, _text, _otherFilesData, _mizFilename } = UI_STATE.model;
     const edits = UI_STATE.edits;
+    const nSaved = Object.keys(edits).length;   // le compteur au moment de « Sauvegarder »
 
     // 1. Collecter les patches
     const patches = collectWeatherPatches(_text, weather, edits);
@@ -2366,7 +2360,7 @@ async function handleSave() {
     bindEdits();
     updateModCount();
 
-    showToast(t('toast.saved') + ' ' + filename, 'success');
+    showToast(tn('toast.saved', nSaved).split('{file}').join(filename), 'success');
 
   } catch (err) {
     console.error('[Save] Erreur :', err);
@@ -2386,8 +2380,6 @@ initLang();
 applyI18nStatic();
 updateFlagButton();
 updateDocTitle();
-
-console.log(`[WX] DCS Weather Editor v${APP_VERSION} prêt`);
 
 /* ===== MESSAGES DE LA SUITE ===== */
 /* Toast, fenêtre de confirmation, sablier : un seul jeu de boîtes pour toute la suite. Réglage de la page : variable

@@ -842,7 +842,8 @@ const I18N = {
     'footer.importTpl.title':  'Importer un plan radio (JSON)',
     'footer.save':             '💾 Sauvegarder',
     'footer.save.titleDisabled': 'Aucune modification à sauvegarder',
-    'footer.save.titleEnabled':  'Sauvegarder {n} modification(s)',
+    'footer.save.titleEnabled.one':   'Sauvegarder {n} modification',
+    'footer.save.titleEnabled.other': 'Sauvegarder {n} modifications',
     'modal.tplImport.title':   '📥 Plan radio importé',
     'drop.title':              'Déposer un fichier .miz ici',
     'drop.sub':                'ou cliquer pour parcourir',
@@ -862,10 +863,12 @@ const I18N = {
     'empty.noType':            'Aucun type sélectionné — cochez des types dans le sélecteur ci-dessus.',
     'empty.noEdits':           'Aucune modification en cours. Éditez des fréquences pour les voir apparaître ici.',
     'empty.noResult':          'Aucun résultat pour ces filtres.',
-    'toast.saved':             'Sauvegardé : ',
+    'toast.saved.one':         '{file} sauvegardé — {n} modification',
+    'toast.saved.other':       '{file} sauvegardé — {n} modifications',
     'toast.noEffectiveChange': 'Aucune modification effective (valeurs inchangées). Sauvegarde annulée.',
     'toast.pickFile':          'Veuillez choisir un fichier .miz',
-    'toast.loaded':            '{n} appareils jouables chargés depuis {file}',
+    'toast.loaded.one':        '{n} appareil jouable chargé depuis {file}',
+    'toast.loaded.other':      '{n} appareils jouables chargés depuis {file}',
     'toast.saveError':         'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.saveCheckError':    'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
     'toast.tplInvalid':        'Ce fichier n\'est pas un plan radio lisible (JSON).',
@@ -918,7 +921,8 @@ const I18N = {
     'footer.importTpl.title':  'Import a comm plan (JSON)',
     'footer.save':             '💾 Save',
     'footer.save.titleDisabled': 'No changes to save',
-    'footer.save.titleEnabled':  'Save {n} change(s)',
+    'footer.save.titleEnabled.one':   'Save {n} change',
+    'footer.save.titleEnabled.other': 'Save {n} changes',
     'modal.tplImport.title':   '📥 Comm plan imported',
     'drop.title':              'Drop a .miz file here',
     'drop.sub':                'or click to browse',
@@ -938,10 +942,12 @@ const I18N = {
     'empty.noType':            'No type selected — check types in the selector above.',
     'empty.noEdits':           'No changes in progress. Edit frequencies to see them appear here.',
     'empty.noResult':          'No results for these filters.',
-    'toast.saved':             'Saved: ',
+    'toast.saved.one':         '{file} saved — {n} change',
+    'toast.saved.other':       '{file} saved — {n} changes',
     'toast.noEffectiveChange': 'No effective change (values unchanged). Save cancelled.',
     'toast.pickFile':          'Please choose a .miz file',
-    'toast.loaded':            '{n} player aircraft loaded from {file}',
+    'toast.loaded.one':        '{n} player aircraft loaded from {file}',
+    'toast.loaded.other':      '{n} player aircraft loaded from {file}',
     'toast.saveError':         'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.saveCheckError':    'The downloaded file could not be checked: do not use it. Your changes are kept.',
     'toast.tplInvalid':        'This file is not a readable comm plan (JSON).',
@@ -953,8 +959,8 @@ const I18N = {
     'count.modification':      'change',
     'count.modifications':     'changes',
     'confirm.revertAll':       'Unsaved changes will be lost.',
-    'confirm.revertAll.title': 'Revert all changes?',
-    'confirm.revertAll.ok':    'Revert all',
+    'confirm.revertAll.title': 'Undo all changes?',
+    'confirm.revertAll.ok':    'Undo all',
     'confirm.revertAll.cancel':'Keep',
     'confirm.pendingLost':     'Pending changes will be lost.',
     'confirm.pendingLost.title':  'Load another .miz?',
@@ -980,6 +986,11 @@ function t(key, fallback) {
   if (key in I18N.fr) return I18N.fr[key];
   console.warn('[i18n] missing key:', key);
   return key;
+}
+
+// Pluriel : clé.one pour 0 et 1, clé.other au-delà ({n} remplacé ; un nom libre se pose après, par split/join)
+function tn(key, n) {
+  return t(key + (n > 1 ? '.other' : '.one')).replace('{n}', n);
 }
 
 const KEY_LANG = 'cpe_lang_v1';
@@ -1698,12 +1709,7 @@ function formatFreq(value) {
 }
 
 function generateFilename(originalName) {
-  const base = originalName.replace(/\.miz$/i, '');
-  const now  = new Date();
-  const pad  = function(n) { return String(n).padStart(2, '0'); };
-  const stamp = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate())
-              + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-  return base + '_radios_' + stamp + '.miz';
+  return mtbOutName(originalName, 'radios', '.miz');
 }
 
 function triggerDownload(blob, filename) {
@@ -1715,8 +1721,8 @@ function triggerDownload(blob, filename) {
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 }
 
-function showSaveToast(filename) {
-  mtbToast(t('toast.saved') + filename, 'success');
+function showSaveToast(filename, n) {
+  mtbToast(tn('toast.saved', n).split('{file}').join(filename), 'success');
 }
 
 function findSlotById(sid) {
@@ -1739,10 +1745,7 @@ function collectPatches(srcText) {
     const pos         = edit.sourcePos;
     const currentStr  = srcSlice(srcText, pos);
     const currentNum  = parseFloat(currentStr);
-    if (Math.abs(currentNum - edit.newValue) < 1e-9) {
-      console.debug('[Save] no-op ignoré :', key, currentStr, '→', newValueStr);
-      return;
-    }
+    if (Math.abs(currentNum - edit.newValue) < 1e-9) return;
     patches.push({ key, pos, newValueStr, oldValue: edit.oldValue, newValue: edit.newValue });
   });
   return patches;
@@ -1777,7 +1780,6 @@ function addCoupledPatches(patches, srcText) {
           all.push({ key: p.key + '__gf', pos: gfPos, newValueStr: p.newValueStr,
                      oldValue: slot.group.frequency.value, newValue: p.newValue, coupled: true });
           seenOffsets.add(gfPos.start.offset);
-          console.debug('[Save] couplage group.frequency', formatFreq(curGf), '→', p.newValueStr);
         }
       }
     }
@@ -1791,7 +1793,6 @@ function addCoupledPatches(patches, srcText) {
           all.push({ key: p.key + '__gmod', pos: gModPos, newValueStr: String(syncPos.modulation),
                      oldValue: curMod, newValue: syncPos.modulation, coupled: true });
           seenOffsets.add(gModPos.start.offset);
-          console.debug('[Save] couplage group.modulation', curMod, '→', syncPos.modulation);
         }
       }
     }
@@ -1799,11 +1800,6 @@ function addCoupledPatches(patches, srcText) {
 
   // Tri offset décroissant
   all.sort(function(a, b) { return b.pos.start.offset - a.pos.start.offset; });
-
-  console.debug('[Save] Patches finaux (' + all.length + ') :');
-  all.forEach(function(p) {
-    console.debug('  @' + p.pos.start.offset + ' ' + formatFreq(p.oldValue) + ' → ' + p.newValueStr + (p.coupled?' [couplé]':''));
-  });
   return all;
 }
 
@@ -1836,11 +1832,10 @@ async function handleSave() {
   const srcText  = UI_STATE.model.source._text;
   const model    = UI_STATE.model;
   const filename = generateFilename(model.source.miz.filename);
+  const nSaved   = UI_STATE.edits.size;   // le compteur au moment de « Sauvegarder »
 
   let downloaded = false;
   try {
-    const t0 = performance.now();
-
     // A : collecte + no-op
     const basePatches = collectPatches(srcText);
     if (basePatches.length === 0) {
@@ -1851,18 +1846,12 @@ async function handleSave() {
     // B : couplage + tri + patch
     const allPatches = addCoupledPatches(basePatches, srcText);
     const patchedSrc = applyPatches(srcText, allPatches);
-    const t1 = performance.now();
-    const lenDiff = patchedSrc.length - srcText.length;
-    console.log('[Save] ' + allPatches.length + ' patches, Δ=' + (lenDiff>=0?'+':'') + lenDiff + ' chars, ' + Math.round(t1-t0) + ' ms');
 
     // C : retokenize
     retokenizeSafety(patchedSrc);
-    const t2 = performance.now();
 
     // D : zip + download
     const blob = await rebuildMiz(patchedSrc, model);
-    const t3 = performance.now();
-    console.log('[Save] Zip ' + (blob.size/1024).toFixed(1) + ' KB en ' + Math.round(t3-t2) + ' ms');
     triggerDownload(blob, filename);
     downloaded = true;
 
@@ -1873,7 +1862,6 @@ async function handleSave() {
 
     // E : post-sauvegarde — ré-extraction du modèle pour persistance. Le fichier est déjà téléchargé : un échec ici ne dit
     // pas « rien n'a été téléchargé » (toast.saveCheckError), et les modifications restent en attente.
-    const t4 = performance.now();
     let newModel;
     const originalFilename = model.source.miz.filename;
     const otherFilesData   = model.source.miz._otherFilesData;
@@ -1889,16 +1877,13 @@ async function handleSave() {
       return;
     }
     UI_STATE.model = newModel;
-    const t5 = performance.now();
-    console.log('[Save] Ré-extraction modèle : ' + Math.round(t5-t4) + ' ms');
 
     buildTypeViews();
     UI_STATE.edits.clear();
     updateModCount();
     renderCards();
-    showSaveToast(filename);
+    showSaveToast(filename, nSaved);
     updateExportBtn();
-    console.log('[Save] ✓ ' + filename + ' | total ' + Math.round(t5-t0) + ' ms');
 
   } catch (err) {
     console.error('[Save] ERREUR :', err);
@@ -2131,13 +2116,11 @@ async function loadMiz(file) {
   UI_STATE.edits.clear();
   UI_STATE.cardStates.clear();
 
-  console.log('[CPE] Chargement...');
   mtbSpinner(t('spinner.loading'));
   // Message d'erreur : une archive illisible ou sans entrée « mission » → load.notMiz ; tout le reste → load.unreadable
   let loadKey = 'load.unreadable';
   try {
     const arrayBuffer = await file.arrayBuffer();
-    console.log('[CPE] Décompression...');
     loadKey = 'load.notMiz';
     const zip = await JSZip.loadAsync(arrayBuffer);
 
@@ -2145,7 +2128,6 @@ async function loadMiz(file) {
     if (!missionEntry) throw new Error('Fichier "mission" introuvable dans le .miz');
     loadKey = 'load.unreadable';
 
-    console.log('[CPE] Pipeline...');
     const uint8 = await missionEntry.async('uint8array');
     const text  = new TextDecoder('utf-8').decode(uint8);
     const lines = text.split('\n');
@@ -2158,18 +2140,12 @@ async function loadMiz(file) {
       }
     }
 
-    const t0 = performance.now();
     const { tokens } = DCS_TOKENIZER.tokenize(text);
     const ast        = DCS_PARSER.parse(tokens);
     const model      = DCS_EXTRACTOR.extract(ast, text, file.name, otherFilesMap, lines);
-    const elapsed    = Math.round(performance.now() - t0);
 
     UI_STATE.model = model;
 
-    // Métriques debug (console uniquement)
-    console.log("[DCS CPE] Pipeline", elapsed, "ms | slots:", model.clientGroups.length, "| types:", Object.keys(model.typeConventions).length);
-
-    console.log('[CPE] ✓ ' + file.name + ' chargé.');
     // Mettre à jour le nom du fichier dans le header
     var hdrMiz = document.getElementById('header-miz');
     if (hdrMiz) { hdrMiz.textContent = file.name; hdrMiz.className = 'header-miz'; }
@@ -2185,7 +2161,7 @@ async function loadMiz(file) {
     document.getElementById('cards-container').classList.remove('hidden');
     document.getElementById('modifications-bar').classList.remove('hidden');
     updateExportBtn();
-    mtbToast(t('toast.loaded').replace('{n}', UI_STATE.model.clientGroups.length).replace('{file}', file.name), 'success');
+    mtbToast(tn('toast.loaded', UI_STATE.model.clientGroups.length).split('{file}').join(file.name), 'success');
 
   } catch (err) {
     console.error('[CPE] Erreur chargement :', err);
@@ -2492,16 +2468,6 @@ function radioLabel(type, radioIndex) {
   return name ? `Radio ${radioIndex} — ${name}` : `Radio ${radioIndex}`;
 }
 
-// Valeur de modulation pour un canal — déduite depuis group.modulation si pas de bloc mods
-function getModulation(radio, channelNumber, groupModulation) {
-  if (radio.modulations && radio.modulations[channelNumber] !== undefined) {
-    return { value: radio.modulations[channelNumber].value, source: 'explicit' };
-  }
-  // Pas de bloc modulations (ex: Mi-24P) — tenter déduction depuis group.modulation
-  // uniquement sur le canal sync (pas d'info fiable pour les autres)
-  return { value: null, source: 'none' };
-}
-
 // Rendu du tableau de canaux d'une radio (lecture seule en Étape B)
 // ════════════════════════════════════════════════════════════════════════════
 // ÉTAPE C — ÉDITION DES CANAUX
@@ -2520,10 +2486,6 @@ function groupFreqEditKey(sid) {
 // Récupère la valeur courante d'une cellule (edit si modifié, sinon modèle)
 function currentFreqValue(sid, radioIndex, chNum, originalValue) {
   const k = editKey(sid, radioIndex, chNum);
-  return UI_STATE.edits.has(k) ? UI_STATE.edits.get(k).newValue : originalValue;
-}
-function currentGroupFreqValue(sid, originalValue) {
-  const k = groupFreqEditKey(sid);
   return UI_STATE.edits.has(k) ? UI_STATE.edits.get(k).newValue : originalValue;
 }
 
@@ -3062,20 +3024,13 @@ function exportTemplate() {
 
   const json     = JSON.stringify(template, null, 2);
   const blob     = new Blob([json], { type: 'application/json' });
-  const base     = model.source.miz.filename.replace(/\.miz$/i, '');
-  const now      = new Date();
-  const pad      = function(n) { return String(n).padStart(2, '0'); };
-  const stamp    = now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate())
-                 + '-' + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
-  const filename = base + '_radios_template_' + stamp + '.json';
+  const filename = mtbOutName(model.source.miz.filename, 'radios_template', '.json');
 
   const url = URL.createObjectURL(blob);
   const a   = document.createElement('a');
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-
-  console.log('[Template] Exporté : ' + filename + ' (' + Object.keys(configs).length + ' types)');
 }
 
 // ── Import ────────────────────────────────────────────────────────────────
@@ -3111,18 +3066,12 @@ function importTemplate(file) {
 
     // Types dans le template mais pas dans le .miz
     for (const type of tplTypes) {
-      if (!mizTypes.has(type)) {
-        nAbsentInMiz++;
-        console.log('[Template import] Type "' + type + '" absent du .miz — ignoré');
-      }
+      if (!mizTypes.has(type)) nAbsentInMiz++;
     }
 
     // Types dans le .miz mais pas dans le template
     for (const type of mizTypes) {
-      if (!tplTypes.has(type)) {
-        nAbsentInTpl++;
-        console.log('[Template import] Type "' + type + '" absent du template — laissé intact');
-      }
+      if (!tplTypes.has(type)) nAbsentInTpl++;
     }
 
     // Appliquer les edits pour chaque type présent dans les deux
@@ -3216,7 +3165,6 @@ function importTemplate(file) {
     document.getElementById('import-summary').innerHTML = summary;
     const modal = document.getElementById('import-modal');
     modal.style.display = 'flex';
-    console.log('[Template import] Terminé : ' + nEditsAdded + ' edits, ' + nAbsentInMiz + ' types ignorés');
   };
   reader.readAsText(file);
 }
@@ -3268,7 +3216,7 @@ function updateModCount() {
   const btnSave = document.getElementById('btn-save');
   if (btnSave && !btnSave.classList.contains('saving')) {
     btnSave.disabled = n === 0;
-    btnSave.title    = n === 0 ? t('footer.save.titleDisabled') : t('footer.save.titleEnabled').replace('{n}', n);
+    btnSave.title    = n === 0 ? t('footer.save.titleDisabled') : tn('footer.save.titleEnabled', n);
     document.getElementById('btn-save-note').textContent = '';
   }
   document.querySelectorAll('.type-card').forEach(function(card) {
