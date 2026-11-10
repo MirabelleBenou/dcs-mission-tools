@@ -33,11 +33,13 @@ function ipairs(t)
 end
 -- make_FA_18 (FA-18C.lua) déclare l'appareil : sans lui, FA-18C_hornet.lua ne déclarait rien
 function make_FA_18(t) return add_aircraft(t) end
--- copyTable(src, dst) de Tools.lua (Mirage F1), copie profonde de src dans dst : sans elle, les groupes de pylônes restaient vides
+-- copyTable(src, dst) de Tools.lua (Mirage F1), copie profonde de src dans dst, pour un dossier où Tools.lua manque : sans elle, les groupes de pylônes restaient vides
 function copyTable(src, dst)
+  if type(src) ~= "table" or type(dst) ~= "table" then return dst end
   for k, v in pairs(src) do
     if type(v) == "table" then local c = {}; copyTable(v, c); dst[k] = c else dst[k] = v end
   end
+  return dst
 end
 function dofile() return D end
 function loadfile() return function() return D end end
@@ -86,7 +88,7 @@ def run(dirpath, files):
     return res
 root, out = sys.argv[1], sys.argv[2]
 ORDER = {'A-10': ['A-10A.lua', 'A-10C.lua', 'A-10C_2.lua'], 'F14/Entry': ['F-14B.lua', 'F-14A.lua'],
-         'F-5E': ['F-5E.lua', 'F-5E-3.lua', 'F-5E-3_FC.lua'], 'Mirage-F1': ['Payloads.lua', 'Mirage-F1.lua', 'Mirage-F1B.lua', 'Mirage-F1C.lua', '*'],
+         'F-5E': ['F-5E.lua', 'F-5E-3.lua', 'F-5E-3_FC.lua'], 'Mirage-F1': ['Tools.lua', 'Weapons.lua', 'Payloads.lua', 'Mirage-F1.lua', 'Mirage-F1B.lua', 'Mirage-F1C.lua', '*'],
          'A-6E/Entry': ['Pylons.lua', 'A-6E.lua'], 'FA-18C': ['FA-18C.lua', 'FA-18C_hornet.lua', 'FA-18A.lua']}
 allres = {}
 dirs = sorted({os.path.dirname(p) for p in glob.glob(os.path.join(root, '**', '*.lua'), recursive=True)})

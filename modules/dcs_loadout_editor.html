@@ -11249,7 +11249,7 @@ function payloadOneOfOthers(type, n) {
   return out;
 }
 
-// Incompatibilités d'emport par appareil, d'après les manuels officiels et les guides de la communauté (table du 9 novembre 2026 ; le Mirage F1 en est retiré le 10 novembre, R575 : la règle du jeu dit la même chose).
+// Incompatibilités d'emport par appareil, d'après les manuels officiels et les guides de la communauté (table du 9 novembre 2026 ; le Mirage F1 en est retiré le 10 novembre : la règle du jeu dit la même chose).
 // Deux formes : « mix » (fam : CLSID → famille d'armes ; ok : paires de familles permises, toute autre paire de familles différentes est un conflit)
 // et « excl » (g : groupes { st, w } ; un CLSID de w posé sur une station de st est incompatible avec un CLSID d'un autre groupe posé sur une station de ce groupe-là).
 const PAYLOAD_RULES = {
@@ -12841,14 +12841,8 @@ function cmpStaggerNums() {
 const cmpStationsOf = cl => cl.map(x => x.st).filter((m, i, a) => a.indexOf(m) === i).join(', ');
 // Le libellé d'une option avant que sa raison d'être grisée n'y soit ajoutée
 const cmpOptBase = new WeakMap();
-// Les conflits qu'entraînerait le choix `c` à la station `n` (PAYLOAD_RULES, PAYLOAD_GAME_RULES) : [{ st, rule }] ; [] s'il est permis. Le grisé de cmpUpdate et le refus de cmpChoose font ce même calcul.
-// Symétrique coché, si `n` a une jumelle où `c` a un miroir `m` (payloadMirrorClsid), le choix s'évalue sur l'emport simulé où la jumelle porte `m` : permis si `c` en `n` ET `m` sur la jumelle n'ont aucun conflit.
-// Sinon, `c` seul en `n`.
-function cmpChoiceClash(n, c) {
-  if (c === '' || !cmpRuled()) return [];
-  const tw = (CMP.sym && CMP.view && cmpHas(CMP.pairs, n)) ? CMP.pyl.find(x => x.n === CMP.pairs[n]) : null;
-  const m = tw ? payloadMirrorClsid(c, tw.allowed) : '';
-  if (!tw || m === '') return payloadRuleConflicts(CMP.type, CMP.st, n, c);
+// Les conflits de la situation (A) : `c` en `n` ET le miroir `m` sur la jumelle `tw` (emport simulé) : [{ st, rule }]
+function cmpClashPair(n, c, tw, m) {
   const sim = Object.assign({}, CMP.st);
   sim[n] = c; sim[tw.n] = m;
   const out = payloadRuleConflicts(CMP.type, sim, n, c);
@@ -12858,6 +12852,19 @@ function cmpChoiceClash(n, c) {
     if (!out.some(y => y.st === e.st && y.rule === e.rule)) out.push(e);
   });
   return out.sort((a, b) => (Number(a.st) - Number(b.st)) || (a.rule < b.rule ? -1 : a.rule > b.rule ? 1 : 0));
+}
+// Les conflits qu'entraînerait le choix `c` à la station `n` (PAYLOAD_RULES, PAYLOAD_GAME_RULES) : [{ st, rule }] ; [] s'il est permis. Le grisé de cmpUpdate et le refus de cmpChoose font ce même calcul.
+// Symétrique coché, si `n` a une jumelle où `c` a un miroir `m` (payloadMirrorClsid), le choix est permis si l'une des deux situations est sans conflit :
+// (A) `c` en `n` ET `m` sur la jumelle ; (B) `c` en `n`, la jumelle inchangée. Si (A) et (B) ont des conflits, ceux de (A) sont rendus ; sinon [].
+// Sans « Symétrique », ou sans miroir : `c` seul en `n`.
+function cmpChoiceClash(n, c) {
+  if (c === '' || !cmpRuled()) return [];
+  const tw = (CMP.sym && CMP.view && cmpHas(CMP.pairs, n)) ? CMP.pyl.find(x => x.n === CMP.pairs[n]) : null;
+  const m = tw ? payloadMirrorClsid(c, tw.allowed) : '';
+  if (!tw || m === '') return payloadRuleConflicts(CMP.type, CMP.st, n, c);
+  const a = cmpClashPair(n, c, tw, m);
+  if (!a.length) return [];
+  return payloadRuleConflicts(CMP.type, CMP.st, n, c).length ? a : [];
 }
 // Le type a des règles, écrites (PAYLOAD_RULES) ou du jeu (PAYLOAD_GAME_RULES)
 const cmpRuled = () => payloadHas(PAYLOAD_RULES, CMP.type) || payloadHas(PAYLOAD_GAME_RULES, CMP.type);
@@ -12998,8 +13005,8 @@ function cmpChoose(n, c) {
         if (prev !== '' && CMP.st[pp.n] === payloadMirrorClsid(prev, pp.allowed)) CMP.st[pp.n] = '';
       } else {
         const m = payloadMirrorClsid(c, pp.allowed);
-        // l'arme miroir n'est posée que si elle ne crée aucun conflit ; sinon la jumelle ne bouge pas
-        if (m !== '' && !payloadRuleConflicts(CMP.type, CMP.st, pp.n, m).length) CMP.st[pp.n] = m;
+        // (A) le miroir est posé si `c` en `n` et lui sur la jumelle n'ont aucun conflit ; sinon (B) `c` seul se pose et la jumelle ne bouge pas
+        if (m !== '' && !cmpClashPair(n, c, pp, m).length) CMP.st[pp.n] = m;
       }
     }
   }
