@@ -22,6 +22,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Loadout Editor**: the F-5E front view is drawn in the theme's colour like the others, and the MiG-21bis attachment points sit on their pylons.
 - **All tools**: the check made after writing a mission now reads it with Lua's own table grammar, so a missing separator between two fields stops the save instead of passing unnoticed, and a mission with such a defect is refused when opened. The Loadout Editor's country and side change now writes missions saved by pydcs and the generators built on it, which leave no comma after the last field of a table, correctly.
 - **Weather Editor**: switching language no longer puts the mission's values back on screen over your unsaved changes, which stayed the ones to be saved; on a phone, the wind and cloud-base fields are wide enough to read what you type — each wind level gets a row of its own.
+- **Weather Editor**: a value typed out of range is refused and the field goes back to its previous value, with a message giving the rule — wind direction a whole number from 0 to 359, wind speed and cloud base zero or more, date and time required. **Loadout Editor**: fuel above the aircraft's maximum is refused.
 
 ## [1.4.0] — 2026-11-08
 

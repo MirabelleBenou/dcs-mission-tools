@@ -794,6 +794,11 @@ const I18N = {
     'toast.saveCheckError':    'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
     'toast.fileUnrecognized':  'Fichier non reconnu — glissez un fichier .miz',
     'toast.pickFile':          'Veuillez choisir un fichier .miz',
+    'range.dir':               'Direction : un nombre entier de 0 à 359.',
+    'range.speed':             'Vitesse : un nombre positif ou nul.',
+    'range.base':              'Base des nuages : un nombre entier positif ou nul, en mètres.',
+    'range.date':              'Date : à renseigner.',
+    'range.time':              'Heure : à renseigner.',
     'load.notMiz':             'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
     'load.unreadable':         'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
     'spinner.loading':         'Chargement\u2026',
@@ -860,6 +865,11 @@ const I18N = {
     'toast.saveCheckError':    'The downloaded file could not be checked: do not use it. Your changes are kept.',
     'toast.fileUnrecognized':  'File not recognized — drop a .miz file',
     'toast.pickFile':          'Please choose a .miz file',
+    'range.dir':               'Direction: a whole number from 0 to 359.',
+    'range.speed':             'Speed: a number of zero or more.',
+    'range.base':              'Cloud base: a whole number of zero or more, in metres.',
+    'range.date':              'Date: required.',
+    'range.time':              'Time: required.',
     'load.notMiz':             'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
     'load.unreadable':         'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
     'spinner.loading':         'Loading\u2026',
@@ -1716,7 +1726,7 @@ function setModified(inputEl, rbEl, isModified) {
 }
 
 // Enregistre ou supprime une modification dans UI_STATE.edits
-function registerEdit(key, value) {
+function originalOf(key) {
   const { weather } = UI_STATE.model;
   let original;
 
@@ -1743,6 +1753,11 @@ function registerEdit(key, value) {
     case 'iprecptns':  original = weather.clouds.iprecptns?.value ?? 0; break;
     case 'removePreset': original = false; break;
   }
+  return original;
+}
+
+function registerEdit(key, value) {
+  const original = originalOf(key);
 
   // Comparer en string pour les nombres (évite 2 vs "2" etc.)
   const changed = (String(value) !== String(original));
@@ -1802,6 +1817,14 @@ function enableEdits() {
   updatePrecipLock(document.getElementById('f-preset').value);
 }
 
+// Saisie refusée : le champ reprend ce qu'il montrait avant (la valeur modifiée s'il y en a une, sinon celle du fichier) ;
+// UI_STATE.edits, la teinte « modifié », le ↺ et le compteur ne bougent pas ; le message donne la règle.
+function refuseEdit(el, key, ruleKey) {
+  const v = key in UI_STATE.edits ? UI_STATE.edits[key] : originalOf(key);
+  el.value = v == null || (typeof v === 'number' && isNaN(v)) ? '' : String(v);
+  showToast(t(ruleKey), 'error');
+}
+
 // Branche tous les handlers d'édition (idempotent via .onchange/.onclick)
 function bindEdits() {
   const { weather } = UI_STATE.model;
@@ -1810,6 +1833,7 @@ function bindEdits() {
   const dateEl = document.getElementById('f-date');
   const rbDate = document.getElementById('rb-date');
   dateEl.onchange = () => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateEl.value) || isNaN(Date.parse(dateEl.value))) { refuseEdit(dateEl, 'date', 'range.date'); return; }
     registerEdit('date', dateEl.value);
     setModified(dateEl, rbDate, 'date' in UI_STATE.edits);
   };
@@ -1827,6 +1851,8 @@ function bindEdits() {
   const timeEl = document.getElementById('f-time');
   const rbTime = document.getElementById('rb-time');
   timeEl.onchange = () => {
+    const tm = /^(\d{2}):(\d{2})$/.exec(timeEl.value);
+    if (!tm || Number(tm[1]) > 23 || Number(tm[2]) > 59) { refuseEdit(timeEl, 'startTime', 'range.time'); return; }
     registerEdit('startTime', timeEl.value);
     setModified(timeEl, rbTime, 'startTime' in UI_STATE.edits);
   };
@@ -1847,6 +1873,7 @@ function bindEdits() {
     const ktEl    = document.getElementById(`f-wind-${prefix}-kt`);
 
     dirEl.onchange = () => {
+      if (!/^\d+$/.test(dirEl.value) || Number(dirEl.value) > 359) { refuseEdit(dirEl, editKeyDir, 'range.dir'); return; }
       registerEdit(editKeyDir, parseFloat(dirEl.value));
       setModified(dirEl, rbDir, editKeyDir in UI_STATE.edits);
     };
@@ -1862,6 +1889,13 @@ function bindEdits() {
       ktEl.textContent = !isNaN(v) ? msToKt(v) + ' kt' : '—';
     };
     speedEl.onchange = () => {
+      const sv = Number(speedEl.value);
+      if (speedEl.value === '' || !isFinite(sv) || sv < 0 || speedEl.value.charAt(0) === '-') {
+        refuseEdit(speedEl, editKeySpeed, 'range.speed');
+        const orig = speedEl.value;
+        ktEl.textContent = orig !== '' && !isNaN(parseFloat(orig)) ? msToKt(parseFloat(orig)) + ' kt' : '—';
+        return;
+      }
       registerEdit(editKeySpeed, parseFloat(speedEl.value));
       setModified(speedEl, rbSpeed, editKeySpeed in UI_STATE.edits);
     };
@@ -1926,6 +1960,7 @@ function bindEdits() {
   const baseEl = document.getElementById('f-base');
   const rbBase = document.getElementById('rb-base');
   baseEl.onchange = () => {
+    if (!/^\d+$/.test(baseEl.value)) { refuseEdit(baseEl, 'base', 'range.base'); validateBase(baseEl); return; }
     registerEdit('base', parseFloat(baseEl.value));
     setModified(baseEl, rbBase, 'base' in UI_STATE.edits);
     validateBase(baseEl);
