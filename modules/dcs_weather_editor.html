@@ -230,6 +230,7 @@
     }
     .wx-grid-4 { grid-template-columns: 120px 1fr 1fr 90px; }
     .wx-grid-2 { grid-template-columns: 1fr 1fr; }
+    .wx-grid-clouds { grid-template-columns: 2fr 1fr 1fr; gap: 10px 16px; }
     .wx-field  { display: flex; flex-direction: column; gap: 4px; }
     .wx-label  { font-size: 11px; color: var(--text-dim); }
     .wx-value  {
@@ -485,6 +486,19 @@
       border: 1px solid rgba(0,0,0,.35);
     }
 
+    /* ── Téléphone (≤ 560 px) : vent en trois colonnes, un niveau par rangée ; nuages sur deux rangées ── */
+    @media (max-width: 560px) {
+      .wx-wind-header, .wx-grid-4 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 72px; column-gap: 6px; }
+      .wx-wind-header span:first-child { display: none; }
+      .wx-grid-4 .wx-field > .wx-label { display: none; }
+      .wx-grid-4 .wx-level { grid-column: 1 / -1; margin-top: 4px; }
+      .wx-grid-4 .wx-level .wx-value { border: 0; background: none; padding: 0; min-height: 0; }
+      .wx-grid-4 .wx-field:not(.wx-level) > .wx-value.dim { padding-left: 6px; padding-right: 6px; }
+      .wx-grid-4 .btn-rollback { padding: 3px 4px; }
+      .wx-grid-clouds { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 8px; }
+      .wx-grid-clouds > .wx-field:first-child { grid-column: 1 / -1; }
+    }
+
     /* ── En-tête sur deux lignes sous 560 px (même dessin dans les quatre outils) ── */
     @media (max-width: 560px) {
       #app-header { flex-wrap: wrap; padding: 8px 10px; gap: 0 8px; }
@@ -560,7 +574,7 @@
       </div>
       <div class="wx-grid wx-grid-4" style="row-gap:8px">
         <!-- Sol -->
-        <div class="wx-field"><span class="wx-label" data-i18n="wind.ground">Sol</span><div id="f-wind-ground-label" class="wx-value dim" data-i18n="wind.ground">Sol</div></div>
+        <div class="wx-field wx-level"><span class="wx-label" data-i18n="wind.ground">Sol</span><div id="f-wind-ground-label" class="wx-value dim" data-i18n="wind.ground">Sol</div></div>
         <div class="wx-field"><span class="wx-label">&nbsp;</span><div class="wx-cell">
             <input id="f-wind-ground-dir"   class="wx-value" type="number" min="0" max="359" disabled>
             <button class="btn-rollback" id="rb-wind-ground-dir" data-i18n-title="tooltip.cancel" title="Annuler">↺</button>
@@ -571,7 +585,7 @@
           </div></div>
         <div class="wx-field"><span class="wx-label">&nbsp;</span><div id="f-wind-ground-kt" class="wx-value dim"></div></div>
         <!-- 2000 m -->
-        <div class="wx-field"><div class="wx-value dim">2 000 m</div></div>
+        <div class="wx-field wx-level"><div class="wx-value dim">2 000 m</div></div>
         <div class="wx-field"><div class="wx-cell">
             <input id="f-wind-2000-dir"   class="wx-value" type="number" min="0" max="359" disabled>
             <button class="btn-rollback" id="rb-wind-2000-dir" data-i18n-title="tooltip.cancel" title="Annuler">↺</button>
@@ -582,7 +596,7 @@
           </div></div>
         <div class="wx-field"><div id="f-wind-2000-kt" class="wx-value dim"></div></div>
         <!-- 8000 m -->
-        <div class="wx-field"><div class="wx-value dim">8 000 m</div></div>
+        <div class="wx-field wx-level"><div class="wx-value dim">8 000 m</div></div>
         <div class="wx-field"><div class="wx-cell">
             <input id="f-wind-8000-dir"   class="wx-value" type="number" min="0" max="359" disabled>
             <button class="btn-rollback" id="rb-wind-8000-dir" data-i18n-title="tooltip.cancel" title="Annuler">↺</button>
@@ -600,7 +614,7 @@
   <div class="wx-section">
     <div class="wx-section-title" data-i18n="section.clouds">☁ Nuages</div>
     <div class="wx-section-body">
-      <div class="wx-grid" style="grid-template-columns:2fr 1fr 1fr;gap:10px 16px">
+      <div class="wx-grid wx-grid-clouds">
         <div class="wx-field">
           <span class="wx-label" data-i18n="label.cloudPreset">Preset nuageux</span>
           <div class="wx-cell" style="align-items:flex-start">
@@ -944,9 +958,65 @@ function setLang(lang, fromStorage) {
   updateFlagButton();
   updateDocTitle();
   try { applyI18nStatic(); } catch(e) { console.warn('[i18n] applyI18nStatic:', e); }
+  // Seuls les textes changent : renderUI remet les valeurs du fichier, on rend donc à l'écran ce qu'il montrait.
+  let shown = null;
+  try { shown = snapshotEditable(); } catch(e) { console.warn('[i18n] snapshot:', e); }
   try { renderUI(); } catch(e) { console.warn('[i18n] renderUI:', e); }
+  try { if (shown) restoreEditable(shown); } catch(e) { console.warn('[i18n] restore:', e); }
   try { updateModCount(); } catch(e) { console.warn('[i18n] updateModCount:', e); }
-  try { populatePresetSelect(); } catch(e) { console.warn('[i18n] populatePresetSelect:', e); }
+}
+
+// Ce que les champs éditables montrent : valeur, teinte « modifié », hors plage, ↺ visible, verrou.
+const WX_FIELD_IDS = ['f-date', 'f-time',
+  'f-wind-ground-dir', 'f-wind-ground-speed', 'f-wind-2000-dir', 'f-wind-2000-speed',
+  'f-wind-8000-dir', 'f-wind-8000-speed', 'f-preset', 'f-base', 'f-precip'];
+const WX_ROLLBACK_IDS = ['rb-date', 'rb-time',
+  'rb-wind-ground-dir', 'rb-wind-ground-speed', 'rb-wind-2000-dir', 'rb-wind-2000-speed',
+  'rb-wind-8000-dir', 'rb-wind-8000-speed', 'rb-preset', 'rb-base', 'rb-precip'];
+function snapshotEditable() {
+  if (!UI_STATE || !UI_STATE.model || !UI_STATE.model.weather) return null;
+  const snap = { fields: {}, rb: {}, classes: {} };
+  WX_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    snap.fields[id] = {
+      value: el.value, disabled: el.disabled, title: el.title,
+      modified: el.classList.contains('modified'), outOfRange: el.classList.contains('out-of-range')
+    };
+  });
+  WX_ROLLBACK_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) snap.rb[id] = el.classList.contains('visible');
+  });
+  ['preset-trigger', 'preset-absent-banner', 'btn-remove-preset'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) snap.classes[id] = { modified: el.classList.contains('modified'), hidden: el.classList.contains('hidden') };
+  });
+  return snap;
+}
+function restoreEditable(snap) {
+  Object.keys(snap.fields).forEach(id => {
+    const el = document.getElementById(id), f = snap.fields[id];
+    el.value = f.value;
+    el.disabled = f.disabled;
+    el.title = f.title;
+    el.classList.toggle('modified', f.modified);
+    el.classList.toggle('out-of-range', f.outOfRange);
+  });
+  Object.keys(snap.rb).forEach(id => {
+    document.getElementById(id).classList.toggle('visible', snap.rb[id]);
+  });
+  Object.keys(snap.classes).forEach(id => {
+    const el = document.getElementById(id), c = snap.classes[id];
+    if (id === 'preset-trigger') el.classList.toggle('modified', c.modified);
+    el.classList.toggle('hidden', c.hidden);
+  });
+  // Valeurs dérivées de ce qui est montré, dans la langue courante
+  ['ground', '2000', '8000'].forEach(lv => {
+    const v = parseFloat(document.getElementById(`f-wind-${lv}-speed`).value);
+    document.getElementById(`f-wind-${lv}-kt`).textContent = !isNaN(v) ? msToKt(v) + ' kt' : '—';
+  });
+  syncPresetTrigger(document.getElementById('f-preset').value);
 }
 
 window.addEventListener('storage', function(e) {
