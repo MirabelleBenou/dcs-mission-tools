@@ -1511,15 +1511,11 @@ def build_html(module_html_js, tile_uris, versions):
       }} catch(e) {{}}
     }}
 
-    /* « ◄ Mission Tools » : la question s'il y a des modifications, puis l'accueil ; il consomme l'entrée d'historique
-       de l'outil (le popstate qu'il provoque est ignoré). */
+    /* « ◄ Mission Tools » : la question s'il y a des modifications, puis l'accueil, affiché une fois revenu sur l'entrée
+       d'historique de l'accueil ; l'entrée de l'outil est consommée (le popstate qu'il provoque est ignoré). */
     async function goHub() {{
       if (!(await confirmLeaveTool())) return;
-      if (onToolEntry()) {{
-        ignorePops++;
-        setTimeout(function() {{ ignorePops = 0; }}, 1000);
-        history.back();
-      }}
+      if (onToolEntry()) await historyBack();
       showHome();
     }}
 
@@ -1530,12 +1526,37 @@ def build_html(module_html_js, tile_uris, versions):
     function onToolEntry() {{ var st = history.state; return !!(st && st.mt === 'tool'); }}
     function pushToolEntry() {{ try {{ history.pushState(HISTORY_TOOL, ''); }} catch(e) {{}} }}
 
-    /* Le retour du navigateur (geste, bouton, history.back()) depuis un outil fait ce que fait « ◄ Mission Tools » : on
-       est déjà revenu à l'entrée de l'accueil ; avec des modifications, la question ; « Rester » rétablit l'entrée. */
+    /* Un pas en arrière dont le popstate n'est pas traité comme un geste de l'utilisateur ; rend la main quand il est arrivé
+       (ou après une seconde s'il n'arrive pas). */
+    function historyBack() {{
+      return new Promise(function(resolve) {{
+        var done = false;
+        function fin() {{ if (done) return; done = true; window.removeEventListener('popstate', fin); resolve(); }}
+        ignorePops++;
+        window.addEventListener('popstate', fin);
+        setTimeout(function() {{ if (!done) {{ ignorePops = Math.max(0, ignorePops - 1); fin(); }} }}, 1000);
+        history.back();
+      }});
+    }}
+
+    /* Règle, quel que soit le chemin : l'entrée courante est celle d'un outil si et seulement si un outil est affiché, et il
+       n'y a jamais plus d'une entrée au-dessus de l'accueil. Le retour du navigateur (geste, bouton, history.back())
+       depuis un outil fait ce que fait « ◄ Mission Tools » : on est déjà revenu à l'entrée de l'accueil ; avec des
+       modifications, la question, après laquelle l'historique est relu avant d'y toucher ; « Rester » ne remet l'entrée
+       de l'outil que si elle manque, « Revenir » n'affiche l'accueil qu'une fois revenu sur l'entrée de l'accueil.
+       Arriver sur une entrée d'outil sans outil affiché (Avancer) : on revient en arrière en silence. */
     window.addEventListener('popstate', async function() {{
       if (ignorePops > 0) {{ ignorePops--; return; }}
-      if (!activeModule || onToolEntry()) return;
-      if (!(await confirmLeaveTool())) {{ pushToolEntry(); return; }}
+      if (!activeModule) {{
+        if (onToolEntry()) {{ await historyBack(); }}
+        return;
+      }}
+      if (onToolEntry()) return;
+      if (!(await confirmLeaveTool())) {{
+        if (!onToolEntry()) pushToolEntry();
+        return;
+      }}
+      if (onToolEntry()) await historyBack();
       showHome();
     }});
 
@@ -1558,7 +1579,15 @@ def build_html(module_html_js, tile_uris, versions):
 
     /* ── Init ────────────────────────────────────────────── */
     function init() {{
-      try {{ history.replaceState(HISTORY_HOME, ''); }} catch(e) {{}}
+      /* Rechargée sur l'entrée d'un outil : on revient à l'entrée de l'accueil au lieu de la réécrire en accueil. */
+      try {{
+        if (onToolEntry()) {{
+          history.back();
+          setTimeout(function() {{ if (onToolEntry() && !activeModule) history.replaceState(HISTORY_HOME, ''); }}, 600);
+        }} else {{
+          history.replaceState(HISTORY_HOME, '');
+        }}
+      }} catch(e) {{}}
       initLang();
       applyI18nStatic();
       updateFlagButton();

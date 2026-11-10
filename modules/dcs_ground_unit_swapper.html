@@ -294,6 +294,27 @@
     .btn-chip-invert:hover { border-color: var(--olive); color: var(--olive); }
 
     /* ── Bulk bar ────────────────────────────────────────────────────────── */
+    #bulk-fold {
+      box-sizing: border-box;
+      width: 100%;
+      min-height: 44px;
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 0 20px;
+      background: var(--surface-2);
+      border: 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+    }
+    #bulk-fold:focus-visible { outline: 2px solid var(--olive); outline-offset: -2px; }
+    @media (max-width: 560px) { #bulk-fold { display: flex; } }
+    #bulk-bar[hidden] { display: none; }
     #bulk-bar {
       background: var(--surface-2);
       border-bottom: 1px solid var(--border);
@@ -600,24 +621,36 @@
     .td-type { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
     .u-grp { display: none; }
 
-    /* ── Écran étroit : sous 860 px, Coalition et Famille (en-têtes et cellules) sont masquées — les filtres les donnent ── */
+    /* ── Écran étroit : sous 860 px, Coalition et Famille (en-têtes et cellules) sont masquées — les filtres les donnent —
+       et le groupe, l'unité et le type actuel passent à la ligne au lieu d'être coupés ─────────────────────────────── */
     @media (max-width: 860px) {
       #units-table th:nth-child(2), #units-table th:nth-child(3),
       #units-table td:nth-child(2), #units-table td:nth-child(3) { display: none; }
+      #units-table td.readonly { min-width: 70px; white-space: normal; overflow-wrap: anywhere; }
+      .td-type { min-width: 100px; max-width: none; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
     }
 
-    /* ── Téléphone : sous 560 px, chaque unité tient sur deux rangées. 1re : la case, le nom de l'unité avec son groupe,
+    /* ── Les pastilles de famille, au doigt : le texte est centré dans la hauteur de 44 px ── */
+    @media (pointer: coarse) { .chip { display: inline-flex; align-items: center; } }
+
+    /* ── Téléphone : jusqu'à 580 px (le tableau en colonnes tient dès 576 px avec deux ↺ visibles ; seuil arrondi à la dizaine au-dessus), chaque unité tient sur deux rangées. 1re : la case, le nom de l'unité avec son groupe,
        le type actuel ; 2e : la liste du nouveau type et celle du niveau, côte à côte, sur toute la largeur moins la
        colonne de la case. Aucune valeur coupée : tout passe à la ligne. L'en-tête garde « tout cocher » et les
-       en-têtes triables, en une rangée qui passe à la ligne. ────────────────────────────────────────────────────── */
-    @media (max-width: 560px) {
+       en-têtes triables, en une rangée qui passe à la ligne, son trait sur toute la largeur du tableau. Le fond d'une
+       unité (survol, teinte « modifié ») est celui de sa ligne : il couvre les deux rangées d'un seul tenant. ──────── */
+    @media (max-width: 580px) {
       #units-table, #units-table thead, #units-table tbody { display: block; }
+      #units-table thead { border-bottom: 2px solid var(--olive-dim); }
       #units-table thead tr { display: flex; flex-wrap: wrap; align-items: center; }
-      #units-table th { padding: 8px 8px; }
-      #units-table th.th-chk { flex: 0 0 44px; width: 44px; padding: 0; display: flex; justify-content: center; }
+      #units-table th { padding: 8px 8px; border-bottom: 0; }
+      #units-table th.th-chk { flex: 0 0 44px; width: 44px; padding: 0; align-self: stretch; display: flex; align-items: center; justify-content: center; }
       #units-table th:nth-child(2), #units-table th:nth-child(3), #units-table th:nth-child(7) { display: none; }
       #units-table tbody tr { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr); border-bottom: 1px solid var(--border); }
+      #units-table tbody tr:hover { background: var(--surface-2); }
+      #units-table tbody tr.row-modified { background: color-mix(in srgb, var(--accent) 4%, transparent); }
       #units-table tbody td { display: block; min-width: 0; padding: 4px 8px; border-bottom: 0; overflow-wrap: anywhere; }
+      #units-table tbody td, #units-table tbody td.readonly, #units-table tbody tr:hover td, #units-table tbody tr:hover td.readonly,
+      #units-table tbody tr.row-modified td { background: transparent; }
       #units-table tbody td:nth-child(1) { grid-column: 1; grid-row: 1 / span 2; display: flex; align-items: center; justify-content: center; padding: 0; }
       #units-table tbody td:nth-child(2), #units-table tbody td:nth-child(3), #units-table tbody td:nth-child(4) { display: none; }
       #units-table tbody td:nth-child(5) { grid-column: 2; grid-row: 1; color: var(--text); }
@@ -625,7 +658,7 @@
       #units-table tbody td:nth-child(7) { grid-column: 2; grid-row: 2; }
       #units-table tbody td:nth-child(8) { grid-column: 3; grid-row: 2; }
       .u-grp { display: block; color: var(--text-dim); }
-      .td-type { white-space: normal; max-width: none; overflow: visible; text-overflow: clip; }
+      .td-type { min-width: 0; }
       #units-table .tbm-trigger, #units-table .combobox-cell { min-width: 0; max-width: none; }
       #units-table .tbm-lbl { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
       #units-table .tbm-lbl::after { display: none; }
@@ -703,7 +736,10 @@
     </div>
   </div>
 
-  <!-- Bulk edit bar -->
+  <!-- Bulk edit bar (repliable sous 560 px) -->
+  <button type="button" id="bulk-fold" aria-expanded="false">
+    <span class="mtb-chev" aria-hidden="true"></span><span data-i18n="bulk.fold">Modifier en une fois</span>
+  </button>
   <div id="bulk-bar">
     <span class="bulk-label" data-i18n="bulk.label">Modifier en une fois :</span>
     <span class="bulk-label" data-i18n="bulk.replace">Remplacer</span>
@@ -824,6 +860,7 @@ const I18N = {
     'filter.search':               'Recherche libre',
     'filter.search.ph':            'Groupe / Unité / Type\u2026',
     'bulk.label':                  'Modifier en une fois :',
+    'bulk.fold':                   'Modifier en une fois',
     'bulk.replace':                'Remplacer',
     'bulk.by':                     'par',
     'bulk.skill':                  '· Skill =',
@@ -923,6 +960,7 @@ const I18N = {
     'filter.search':               'Free search',
     'filter.search.ph':            'Group / Unit / Type\u2026',
     'bulk.label':                  'Bulk edit:',
+    'bulk.fold':                   'Bulk edit',
     'bulk.replace':                'Replace',
     'bulk.by':                     'with',
     'bulk.skill':                  '· Skill =',
@@ -2968,6 +3006,19 @@ document.getElementById('filters-fold').addEventListener('click', () => {
 });
 setFiltersFold(window.innerWidth >= 768);
 
+// « Modifier en une fois » : fermé par défaut sous 560 px (même signe de repli que les filtres, rien n'est mémorisé) ; au-dessus,
+// l'en-tête n'est pas affiché et la barre est toujours là.
+const bulkNarrow = window.matchMedia('(max-width: 560px)');
+function setBulkFold(open) {
+  document.getElementById('bulk-bar').hidden = bulkNarrow.matches && !open;
+  document.getElementById('bulk-fold').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+document.getElementById('bulk-fold').addEventListener('click', () => {
+  setBulkFold(document.getElementById('bulk-fold').getAttribute('aria-expanded') !== 'true');
+});
+bulkNarrow.addEventListener('change', () => setBulkFold(false));
+setBulkFold(false);
+
 // ═══════════════════════════════════════════════════════════════
 // EVENT DELEGATION — click sur le tableau (attaché UNE SEULE FOIS)
 // SharedCombobox + boutons rollback
@@ -3649,8 +3700,6 @@ html, body { overscroll-behavior-y: contain; }
 @media (pointer: coarse) {
   button, select, [role="button"], .tbm-trigger, .combobox-display, .combobox-cell, .chip,
   input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) { min-height: 44px !important; min-width: 44px !important; }
-  /* un lien dans une ligne de texte : sa zone de toucher grandit de chaque côté (la marge négative garde le texte en place) */
-  a[href] { padding: 16px 8px; margin: 0 -8px; }
 }
 `;
   const MTB_ICON = { success: '✅', warn: '⚠️', error: '❌', info: '' };
