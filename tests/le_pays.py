@@ -126,8 +126,8 @@ def move(browser, repo, miz, out, label, want):
                 page.click('#btn-save')
         except Exception:
             toast = page.evaluate(ar.TOAST)
-            return 'FAIL', f'no file written after Save ({opt["text"]}, {side}); toast: {toast[:100]}; Save disabled: ' \
-                           f'{page.evaluate("document.getElementById(\'btn-save\').disabled")}'
+            disabled = page.evaluate("document.getElementById('btn-save').disabled")
+            return 'FAIL', f'no file written after Save ({opt["text"]}, {side}); toast: {toast[:100]}; Save disabled: {disabled}'
         out_path = os.path.join(out, f'{label}_le_country_{want}.miz')
         dl.value.save_as(out_path)
         page.wait_for_timeout(800)
@@ -164,10 +164,15 @@ def move(browser, repo, miz, out, label, want):
 
 def country_cases(browser, repo, miz, out, label):
     """The three cases of one mission: [(name, status, detail)]."""
+    def safe(fn, *args):
+        try:
+            return fn(*args)
+        except ar.LoadRefused as e:   # a refused mission is a failed case, not a bench that cannot run
+            return 'FAIL', str(e)
     return [
-        ('Loadout Editor / sides without a country table are greyed out', *check_sides(browser, repo, miz)),
-        ('Loadout Editor / country change within the side', *move(browser, repo, miz, out, label, 'same')),
-        ('Loadout Editor / country change to the other side', *move(browser, repo, miz, out, label, 'other')),
+        ('Loadout Editor / sides without a country table are greyed out', *safe(check_sides, browser, repo, miz)),
+        ('Loadout Editor / country change within the side', *safe(move, browser, repo, miz, out, label, 'same')),
+        ('Loadout Editor / country change to the other side', *safe(move, browser, repo, miz, out, label, 'other')),
     ]
 
 

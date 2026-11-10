@@ -5,8 +5,8 @@ go to a temporary folder.
 
 | Bench | Command | Needs |
 |---|---|---|
-| Lua table separators | `python3 -B tests/test_lua_separators.py` | Python 3 and Node |
-| Round trips | `python3 -B tests/run_roundtrips.py [mission.miz ...]` | `pip install playwright lupa`, a Chromium for Playwright |
+| Lua table separators | `python3 -B tests/test_lua_separators.py` | Python 3.10 or later, and Node |
+| Round trips | `python3 -B tests/run_roundtrips.py [mission.miz ...]` | Python 3.10 or later, `pip install playwright lupa`, a Chromium for Playwright |
 
 `pip install -r tests/requirements.txt` installs the Python packages. Playwright needs a Chromium: either `playwright install chromium`,
 or point `PLAYWRIGHT_BROWSERS_PATH` at a folder that already has one.
@@ -27,18 +27,24 @@ What it proves: a mission survives each tool that writes a `.miz`, and what the 
 For each mission and for each of the Comm Plan Editor, Ground Unit Swapper, Weather Editor and Loadout Editor (opened from `modules/`
 in a headless Chromium):
 
-- **(a)** a round trip with no change, by the tool's own functions: the mission text and every entry of the archive come back identical;
+- **(a)** a round trip with no change, by the tool's own functions: the mission text and every entry of the archive come back identical
+  (the Ground Unit Swapper and the Weather Editor have no function that rebuilds the archive: the bench repeats the lines of their *Save* that do,
+  with no patch). A mission that the tool refuses — an error message, or no answer within 30 s — is a `[FAIL]` on this case, with the text of the message;
 - **(b)** one change made on screen with real clicks, then *Save*: the only data that differ from the original are in the `mission`
   entry, no entry is lost or added, the file name carries a single `_<tool>_<date>-<time>` suffix;
 - **(c)** the written file read back by the tool (no error message) and by an independent Lua interpreter ([lupa](https://pypi.org/project/lupa/)):
   every Lua entry runs and is valid UTF-8.
+
+A page error or a `console.error` during (a) or (b) is a `[FAIL]` on that case.
 
 Then, for the Loadout Editor: a country change within the side, a country change to the other side (the moved groups are exactly those
 of the checked type, at the chosen side and country, their content changing only by callsign and onboard number, nothing else
 changing, the Lua structure sound), and the check that the countries of a side that the file has no `country` table for are greyed out.
 
 One line per case — `[OK]`, `[FAIL]` or `[SKIP]` (nothing to edit or no country to go to, only for a mission given on the command line).
-The exit code is 1 at the first `[FAIL]`, 0 otherwise, 2 if the bench cannot run.
+The exit code is 1 after a `[FAIL]`, 0 otherwise, 2 only if the bench cannot run (Playwright, Chromium or lupa missing, mission not found).
+A refused mission does not stop the bench (the next tool goes on); any other `[FAIL]` does. The path of the folder that keeps the written
+missions is printed whenever the end is not all `[OK]`.
 
 ```
 python3 -B tests/run_roundtrips.py                      # the three missions of tests/fixtures/

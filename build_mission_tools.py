@@ -264,17 +264,24 @@ def check_messages_block():
 
 
 # Définitions interdites hors du bloc : function retokenizeSafety, const|let|var retokenizeSafety, affectation à retokenizeSafety
-# (retokenizeSafety = …, window.retokenizeSafety = …), const|let|var|class DCS_PARSER, affectation à DCS_PARSER, et toute propriété
-# de DCS_PARSER réaffectée (DCS_PARSER.parse = …, DCS_PARSER['parse'] = …, Object.assign(DCS_PARSER, …))
+# (retokenizeSafety = …, window.|globalThis.|self.retokenizeSafety = …, et les affectations composées +=, ||=, &&=, ??= …),
+# const|let|var|class DCS_PARSER, affectation à DCS_PARSER, et toute propriété de DCS_PARSER réaffectée (DCS_PARSER.parse = …,
+# DCS_PARSER['parse'] = …, DCS_PARSER.parse ||= …, Object.assign / Object.defineProperty / Object.defineProperties sur DCS_PARSER).
+# Une lecture ou un appel (DCS_PARSER.parse(…), x === DCS_PARSER.parse) reste permis.
+_GLOBAL_NAME = r'(?:window|globalThis|self)'
+_GLOBAL = r'(?:' + _GLOBAL_NAME + r'\s*\.\s*)'
+_ASSIGN = r'\s*(?:\*\*|<<|>>>|>>|\|\||&&|\?\?|[-+*/%&|^])?=(?![=>])'
 PARSER_DEF_RE = re.compile(
     r'\bfunction\s*\*?\s*retokenizeSafety\b'
     r'|\b(?:const|let|var)\s+retokenizeSafety\b'
-    r'|(?<![.\w])(?:window\.)?retokenizeSafety\s*=(?![=>])'
+    r'|(?<![.\w])' + _GLOBAL + r'?retokenizeSafety' + _ASSIGN +
     r'|\b(?:const|let|var|class)\s+DCS_PARSER\b'
-    r'|(?<![.\w])(?:window\.)?DCS_PARSER\s*=(?![=>])'
-    r'|\bDCS_PARSER\s*\.\s*\w+\s*=(?![=>])'
-    r'|\bDCS_PARSER\s*\[[^\]\n]*\]\s*=(?![=>])'
-    r'|\bObject\s*\.\s*assign\s*\(\s*(?:window\s*\.\s*)?DCS_PARSER\b')
+    r'|(?<![.\w])' + _GLOBAL + r'?DCS_PARSER' + _ASSIGN +
+    r'|\bDCS_PARSER\s*\.\s*\w+' + _ASSIGN +
+    r'|\bDCS_PARSER\s*\[[^\]\n]*\]' + _ASSIGN +
+    r'|\bObject\s*\.\s*assign\s*\(\s*' + _GLOBAL + r'?DCS_PARSER\b'
+    r'|\bObject\s*\.\s*define(?:Property|Properties)\s*\(\s*' + _GLOBAL + r'?DCS_PARSER\b'
+    r'|\bObject\s*\.\s*define(?:Property|Properties)\s*\(\s*' + _GLOBAL_NAME + r'\s*,\s*[\'"`](?:DCS_PARSER|retokenizeSafety)\b')
 
 
 def check_parser_block():

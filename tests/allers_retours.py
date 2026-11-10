@@ -9,6 +9,10 @@ wx: Weather Editor, le: Loadout Editor), opened from modules/ in a headless Chro
       original are in the `mission` entry (at least one), no entry lost or added, the name carries a single suffix;
   (c) the written file read back by the tool itself (no error toast, no page error) and by an independent Lua
       interpreter (miz_diff.py, lupa): every Lua entry runs and is valid UTF-8.
+A mission that the tool refuses (an error message, or no answer within 30 s) is a failure of case (a), not a crash; so is a
+page error or a console.error during (a) or (b).
+For the Ground Unit Swapper and the Weather Editor, (a) uses a copy of the zip rebuild of their Save (they have no function of that
+name): the bench writes the same few lines as their Save does, with no patch.
 Writes <out_dir>/<label>_<tool>_{a,b}.miz. Needs: pip install playwright lupa (and a Chromium for Playwright)."""
 import os
 import re
@@ -43,6 +47,13 @@ class NothingToEdit(Exception):
     pass
 
 
+class LoadRefused(Exception):
+    """The tool did not accept the mission: an error message came up, or nothing happened within the time allowed."""
+
+
+LOAD_WAIT_MS = 30000
+
+
 def tool_url(repo, mod):
     return Path(repo, MODS[mod]).resolve().as_uri()
 
@@ -58,10 +69,29 @@ def new_page(browser, errors):
     return ctx, page
 
 
-def load_mission(page, miz):
+def load_mission(page, miz, wait_ms=LOAD_WAIT_MS):
+    """Opens a mission in the tool. Waits for the bottom bar or an error message, `wait_ms` at most; a refusal or a timeout raises
+    LoadRefused (with the text of the message, if there is one)."""
     page.set_input_files('#file-input', str(miz))
-    page.wait_for_selector('#modifications-bar:not(.hidden)', timeout=180000)
-    page.wait_for_function(SPINNER_DONE, timeout=180000)
+    waited = 0
+    while waited < wait_ms:
+        state = page.evaluate("""()=>{const b=document.getElementById('modifications-bar');
+            const t=document.getElementById('mtb-toast');
+            return {bar: !!b && !b.classList.contains('hidden'),
+                    err: t && /(^|\\s)error(\\s|$)/.test(t.className) ? t.textContent.trim() : ''}}""")
+        if state['err']:
+            raise LoadRefused('the tool refused the mission: ' + state['err'][:200])
+        if state['bar']:
+            break
+        page.wait_for_timeout(200)
+        waited += 200
+    else:
+        toast = page.evaluate(TOAST)
+        raise LoadRefused(f'no answer from the tool within {wait_ms // 1000} s' + (f' (message: {toast[:200]})' if toast else ''))
+    try:
+        page.wait_for_function(SPINNER_DONE, timeout=max(1000, wait_ms - waited))
+    except Exception:
+        raise LoadRefused(f'the tool was still busy after {wait_ms // 1000} s')
 
 
 def pick(page, trigger, text):
@@ -173,18 +203,26 @@ def run_tool(browser, repo, mod, miz, out, label):
     """Runs (a), (b), (c) for one tool. Returns { 'skip': str|None, 'errors': [...], 'a': {...}, 'b': {...}, 'c': {...} };
     each of a, b, c is { 'bad': {...}, 'note': str }."""
     miz = Path(miz)
-    res = {'skip': None, 'errors': [], 'a': None, 'b': None, 'c': None}
+    res = {'skip': None, 'refused': False, 'errors': [], 'a': None, 'b': None, 'c': None}
     errors = res['errors']
     ctx, page = new_page(browser, errors)
     try:
         page.goto(tool_url(repo, mod), wait_until='load')
-        load_mission(page, miz)
+        try:
+            load_mission(page, miz)
+        except LoadRefused as e:
+            res['refused'] = True
+            res['a'] = {'bad': {'load': str(e)}, 'note': ''}
+            return res
         page.evaluate(B64)
         same, b64 = page.evaluate(JS_A[mod])
         pa = os.path.join(out, f'{label}_{mod}_a.miz')
         with open(pa, 'wb') as fh:
             fh.write(base64.b64decode(b64))
         res['a'] = {'bad': check_a(miz_diff.compare(str(miz), pa), same), 'note': 'text and entries identical'}
+        if errors:   # a page error or a console.error while the mission was opened and rebuilt
+            res['a']['bad']['page_errors'] = errors[0]
+        n_a = len(errors)
         try:
             note = edit(page, mod)
         except NothingToEdit as e:
@@ -204,10 +242,16 @@ def run_tool(browser, repo, mod, miz, out, label):
                     'note': f'{note}; {nchg} change(s) in mission, saved as {d.suggested_filename}'}
         if 'success' not in toast_b.split(' | ')[0]:
             res['b']['bad']['toast'] = 'no success toast after Save: ' + toast_b[:120]
+        if len(errors) > n_a:   # a page error or a console.error during the change or the Save
+            res['b']['bad']['page_errors'] = errors[n_a]
         # (c) the written file, read by the tool itself in a fresh page
         n_before = len(errors)
         page.goto(tool_url(repo, mod), wait_until='load')
-        load_mission(page, pb)
+        try:
+            load_mission(page, pb)
+        except LoadRefused as e:
+            res['c'] = {'bad': {'tool_read': str(e)}, 'note': ''}
+            return res
         page.wait_for_timeout(800)
         toast_c = page.evaluate(TOAST)
         bad_c = {}

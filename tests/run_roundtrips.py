@@ -12,9 +12,14 @@ tools (Comm Plan Editor, Ground Unit Swapper, Weather Editor, Loadout Editor), o
 then, for the Loadout Editor, a country change within the side, a country change to the other side, and the check that the
 countries of a side absent from the file are greyed out.
 One line per case, [OK], [FAIL] or [SKIP] (nothing to edit or no country to go to, in a mission given on the command line; a
-fixture never skips an edit). Exit code 1 at the first [FAIL], 0 when every case is [OK] or [SKIP], 2 if the bench cannot run.
-The missions written by the bench go to a temporary folder outside the repository (kept when a case fails, with its path
-printed); --out chooses another folder, which is kept.
+fixture never skips an edit). A mission that a tool refuses (an error message, or no answer within 30 s) is a [FAIL] on its case (a),
+with the text of the message, and the bench goes on with the next tool; so is a page error or a console.error during (a) or (b).
+Any other [FAIL] stops the bench. Exit code 1 after a [FAIL], 0 when every case is [OK] or [SKIP], 2 only if the bench cannot run
+(Playwright, Chromium or lupa missing, mission not found). The missions written by the bench go to a temporary folder outside the
+repository, kept (its path is printed) whenever the end is anything other than all [OK]; --out chooses another folder, which is kept.
+
+(a) for the Ground Unit Swapper and the Weather Editor: neither has a function that rebuilds the zip, so the bench repeats the lines
+of their Save that do (the mission entry, the other entries, the compression) with no patch.
 
 Needs: pip install playwright lupa (see tests/requirements.txt), and a Chromium for Playwright."""
 import argparse
@@ -57,26 +62,36 @@ def main():
     out = args.out or tempfile.mkdtemp(prefix='mt_roundtrips_')
     os.makedirs(out, exist_ok=True)
     failed = False
+    stop = False
     counts = {'OK': 0, 'FAIL': 0, 'SKIP': 0}
 
     def report(status, name, detail):
-        nonlocal failed
+        nonlocal failed, stop
         counts[status] += 1
         print(f'[{status}] {name}' + (f' : {detail}' if detail else ''), flush=True)
         if status == 'FAIL':
             failed = True
+            stop = True
 
+    le_refused = False
     try:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(args=['--no-sandbox'])
             for miz in missions:
                 label = miz.stem
+                le_refused = False
                 for mod in tools:
                     r = ar.run_tool(browser, repo, mod, miz, out, label)
                     who = f'{label} / {ar.NAMES[mod]}'
+                    if r['refused']:
+                        # the tool did not accept the mission: a failure of (a), and the bench goes on with the next tool
+                        report('FAIL', f'{who} / (a) round trip with no change', str(r['a']['bad']['load']))
+                        stop = False
+                        le_refused = le_refused or mod == 'le'
+                        continue
                     if r['skip']:
                         report('FAIL' if fixtures_run else 'SKIP', f'{who} / nothing to edit', r['skip'])
-                        if failed:
+                        if stop:
                             break
                         continue
                     for key, title in (('a', '(a) round trip with no change'), ('b', '(b) one change on screen, Save'),
@@ -86,27 +101,28 @@ def main():
                             report('FAIL', f'{who} / {title}', 'not reached: ' + '; '.join(r['errors'][:2]))
                         else:
                             report('FAIL' if case['bad'] else 'OK', f'{who} / {title}', str(case['bad']) if case['bad'] else case['note'])
-                        if failed:
+                        if stop:
                             break
-                    if failed:
+                    if stop:
                         break
-                if failed:
+                if stop:
                     break
-                if 'le' in tools:
+                if 'le' in tools and not le_refused:
                     for name, status, detail in le_pays.country_cases(browser, repo, miz, out, label):
                         report(status, f'{label} / {name}', detail)
-                        if failed:
+                        if stop:
                             break
-                if failed:
+                if stop:
                     break
             browser.close()
-    except Exception as e:   # the bench itself could not run (no Chromium, page never loaded...)
+    except Exception as e:   # the bench itself could not run (no Chromium, ...)
         print(f'[ERROR] the bench could not run: {type(e).__name__}: {str(e)[:300]}')
+        print(f'written missions kept in {out}')
         return 2
     print(f"-- {counts['OK']} OK, {counts['FAIL']} FAIL, {counts['SKIP']} SKIP --")
-    if failed:
+    if failed or counts['SKIP']:
         print(f'written missions kept in {out}')
-        return 1
+        return 1 if failed else 0
     if args.out is None:
         shutil.rmtree(out, ignore_errors=True)
     return 0

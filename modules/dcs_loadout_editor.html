@@ -11098,18 +11098,27 @@ function showToast(msg, type = 'info') {
 
 // Le panneau ouvert porte « Appliquer à la sélection » en bas à droite : tant que sa barre d'action est affichée, le toast se pose
 // 12 px au-dessus d'elle (même bord droit) ; sinon il garde la place du bloc commun, au-dessus de la barre du bas. Le bloc commun
-// repose --mtb-bottom à chaque toast : on la reprend dès que le toast s'affiche, quel que soit l'appel (showToast ou mtbToast).
+// repose --mtb-bottom à chaque toast : on la reprend dès que le toast s'affiche, quel que soit l'appel (showToast ou mtbToast), et
+// de nouveau quand la barre apparaît, disparaît ou change de hauteur pendant que le toast est affiché (elle disparue, le toast
+// retrouve la place que le bloc commun lui avait donnée).
 (function () {
-  function place() {
+  let common = '';   // la place que le bloc commun a donnée au toast affiché
+  function place(isNewToast) {
     const el = document.getElementById('mtb-toast'), bar = document.getElementById('action-bar');
-    if (!el || !bar || !el.classList.contains('show') || bar.offsetHeight <= 0) return;
-    el.style.setProperty('--mtb-bottom', Math.round(document.documentElement.clientHeight - bar.getBoundingClientRect().top + 12) + 'px');
+    if (!el || !bar || !el.classList.contains('show')) return;
+    if (isNewToast === true) common = el.style.getPropertyValue('--mtb-bottom');
+    if (bar.offsetHeight > 0) {
+      el.style.setProperty('--mtb-bottom', Math.round(document.documentElement.clientHeight - bar.getBoundingClientRect().top + 12) + 'px');
+    } else if (common) {
+      el.style.setProperty('--mtb-bottom', common);
+    }
   }
   function watch() {
-    const el = document.getElementById('mtb-toast');
-    if (!el) return;
-    new MutationObserver(place).observe(el, { attributes: true, attributeFilter: ['class'] });
-    window.addEventListener('resize', place);
+    const el = document.getElementById('mtb-toast'), bar = document.getElementById('action-bar');
+    if (!el || !bar) return;
+    new MutationObserver(() => place(true)).observe(el, { attributes: true, attributeFilter: ['class'] });
+    new ResizeObserver(() => place(false)).observe(bar);
+    window.addEventListener('resize', () => place(false));
   }
   if (document.getElementById('mtb-toast')) watch();
   else document.addEventListener('DOMContentLoaded', watch);
