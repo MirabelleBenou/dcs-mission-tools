@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-build_mission_tools.py — DCS Mission Tools v1.0.0
-Produit dcs_mission_tools.html (fichier autonome, single-file).
+build_mission_tools.py — DCS Mission Tools
+Produit dcs_mission_tools.html (fichier autonome, single-file : le shell, les quatre modules et les tuiles en base64).
+La version de la suite est APP_VERSION, ci-dessous (1.4.0) ; les gardes d'identité (blocs communs, tables de données) arrêtent le
+build, en code 1, si une copie diffère de sa source.
 
 Usage : python3 build_mission_tools.py
 Sorties : ./dist/dcs_mission_tools.html
@@ -261,17 +263,24 @@ def check_messages_block():
         print(f'  [OK] Bloc des messages identique à messages_block.py ({mod["src"]})')
 
 
-# Définitions interdites hors du bloc : function retokenizeSafety, const|let|var|class DCS_PARSER, affectation à DCS_PARSER
+# Définitions interdites hors du bloc : function retokenizeSafety, const|let|var retokenizeSafety, affectation à retokenizeSafety
+# (retokenizeSafety = …, window.retokenizeSafety = …), const|let|var|class DCS_PARSER, affectation à DCS_PARSER, et toute propriété
+# de DCS_PARSER réaffectée (DCS_PARSER.parse = …, DCS_PARSER['parse'] = …, Object.assign(DCS_PARSER, …))
 PARSER_DEF_RE = re.compile(
     r'\bfunction\s*\*?\s*retokenizeSafety\b'
+    r'|\b(?:const|let|var)\s+retokenizeSafety\b'
+    r'|(?<![.\w])(?:window\.)?retokenizeSafety\s*=(?![=>])'
     r'|\b(?:const|let|var|class)\s+DCS_PARSER\b'
-    r'|(?<![.\w])(?:window\.)?DCS_PARSER\s*=(?![=>])')
+    r'|(?<![.\w])(?:window\.)?DCS_PARSER\s*=(?![=>])'
+    r'|\bDCS_PARSER\s*\.\s*\w+\s*=(?![=>])'
+    r'|\bDCS_PARSER\s*\[[^\]\n]*\]\s*=(?![=>])'
+    r'|\bObject\s*\.\s*assign\s*\(\s*(?:window\s*\.\s*)?DCS_PARSER\b')
 
 
 def check_parser_block():
     """Garde d'identité : le bloc du parseur (parser_block.build_block()) doit figurer exactement une fois, tel quel, dans
-    chacun des quatre modules, et ni DCS_PARSER ni retokenizeSafety ne doivent être définis hors de ses marqueurs.
-    Sinon le build s'arrête avant toute écriture."""
+    chacun des quatre modules, et ni DCS_PARSER (ni aucune de ses propriétés) ni retokenizeSafety ne doivent être définis ou
+    réaffectés hors de ses marqueurs. Sinon le build s'arrête avant toute écriture, en nommant le module et la ligne."""
     block = build_parser_block()
     for mod in MODULES:
         try:
@@ -288,9 +297,14 @@ def check_parser_block():
             print(f'  [ERREUR] Un marqueur du bloc du parseur figure plusieurs fois dans {mod["src"]} '
                   f'— build arrêté', file=sys.stderr)
             sys.exit(1)
-        redef = PARSER_DEF_RE.search(html.replace(block, '', 1))
+        start = html.index(block)
+        outside = html[:start] + html[start + len(block):]
+        redef = PARSER_DEF_RE.search(outside)
         if redef:
-            print(f'  [ERREUR] {mod["src"]} définit « {redef.group(0).strip()} » hors des marqueurs du bloc du parseur '
+            # la ligne du module (le bloc retiré compte pour ses propres lignes)
+            at = redef.start()
+            line = outside.count('\n', 0, at) + 1 + (block.count('\n') if at >= start else 0)
+            print(f'  [ERREUR] {mod["src"]}, ligne {line} : « {redef.group(0).strip()} » hors des marqueurs du bloc du parseur '
                   f'— build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] Bloc du parseur identique à parser_block.py ({mod["src"]})')
@@ -941,7 +955,6 @@ def build_html(module_html_js, tile_uris, versions):
        Build : build_mission_tools.py
     ═══════════════════════════════════════════ */
     const APP_VERSION = '{APP_VERSION}';
-    console.log('[M·T v' + APP_VERSION + '] Shell DCS Mission Tools — chargement');
 
     /* ── Modules embarqués en base64 (injectés par build) ── */
     {module_html_js}
@@ -1194,7 +1207,6 @@ def build_html(module_html_js, tile_uris, versions):
           }} catch(e) {{}}
         }});
         updateWfBar();
-        console.log('[M·T] MT_onModuleSave — fichier de travail mis à jour :', filename);
       }} catch(e) {{
         console.warn('[M·T] MT_onModuleSave — erreur :', e);
       }}
@@ -1218,7 +1230,6 @@ def build_html(module_html_js, tile_uris, versions):
         input.files = dt.files;
         input.dispatchEvent(new win.Event('change', {{ bubbles: true }}));
         injectedFilePerModule[id] = wf;
-        console.log('[M·T] Fichier injecté dans module', id, ':', wf.name);
       }} catch(e) {{
         console.error('[M·T] injectWorkingFile — erreur cross-realm :', e);
       }}
@@ -1242,7 +1253,6 @@ def build_html(module_html_js, tile_uris, versions):
     function setWorkingFile(file) {{
       workingFile = file || null;
       updateWfBar();
-      console.log('[M·T] Fichier de travail :', workingFile ? workingFile.name : '(vide)');
     }}
 
     function clearWorkingFile() {{
@@ -1469,7 +1479,6 @@ def build_html(module_html_js, tile_uris, versions):
           }}
           /* ── Injection fichier de travail (cross-realm) ── */
           injectWorkingFile(iframe, id);
-          console.log('[M·T v' + APP_VERSION + '] Module ' + id + ' chargé');
         }});
 
         moduleView.appendChild(iframe);
@@ -1596,7 +1605,6 @@ def build_html(module_html_js, tile_uris, versions):
       if (typeof ResizeObserver === 'function') new ResizeObserver(syncWfBarHeight).observe(document.getElementById('wf-bar'));
       window.addEventListener('resize', syncWfBarHeight);
       syncWfBarHeight();
-      console.log('[M·T v' + APP_VERSION + '] Initialisé — ' + MODULES.length + ' modules, langue: ' + CURRENT_LANG);
     }}
 
     document.addEventListener('DOMContentLoaded', init);

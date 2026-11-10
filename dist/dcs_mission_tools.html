@@ -602,7 +602,6 @@
        Build : build_mission_tools.py
     ═══════════════════════════════════════════ */
     const APP_VERSION = '1.4.0';
-    console.log('[M·T v' + APP_VERSION + '] Shell DCS Mission Tools — chargement');
 
     /* ── Modules embarqués en base64 (injectés par build) ── */
     const MODULE_HTML = {
@@ -1093,7 +1092,6 @@ html, body { overscroll-behavior-y: contain; }
           } catch(e) {}
         });
         updateWfBar();
-        console.log('[M·T] MT_onModuleSave — fichier de travail mis à jour :', filename);
       } catch(e) {
         console.warn('[M·T] MT_onModuleSave — erreur :', e);
       }
@@ -1117,7 +1115,6 @@ html, body { overscroll-behavior-y: contain; }
         input.files = dt.files;
         input.dispatchEvent(new win.Event('change', { bubbles: true }));
         injectedFilePerModule[id] = wf;
-        console.log('[M·T] Fichier injecté dans module', id, ':', wf.name);
       } catch(e) {
         console.error('[M·T] injectWorkingFile — erreur cross-realm :', e);
       }
@@ -1141,7 +1138,6 @@ html, body { overscroll-behavior-y: contain; }
     function setWorkingFile(file) {
       workingFile = file || null;
       updateWfBar();
-      console.log('[M·T] Fichier de travail :', workingFile ? workingFile.name : '(vide)');
     }
 
     function clearWorkingFile() {
@@ -1368,7 +1364,6 @@ html, body { overscroll-behavior-y: contain; }
           }
           /* ── Injection fichier de travail (cross-realm) ── */
           injectWorkingFile(iframe, id);
-          console.log('[M·T v' + APP_VERSION + '] Module ' + id + ' chargé');
         });
 
         moduleView.appendChild(iframe);
@@ -1495,7 +1490,6 @@ html, body { overscroll-behavior-y: contain; }
       if (typeof ResizeObserver === 'function') new ResizeObserver(syncWfBarHeight).observe(document.getElementById('wf-bar'));
       window.addEventListener('resize', syncWfBarHeight);
       syncWfBarHeight();
-      console.log('[M·T v' + APP_VERSION + '] Initialisé — ' + MODULES.length + ' modules, langue: ' + CURRENT_LANG);
     }
 
     document.addEventListener('DOMContentLoaded', init);
