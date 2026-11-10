@@ -91,3 +91,21 @@ Table `DCS country -> id, name written by the mission editor, aircraft and helic
 
   Running it again on the same files rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* COUNTRY_TYPES:BEGIN */` and `/* COUNTRY_TYPES:END */`. `build_mission_tools.py` stops the build if that copy differs from `country_types.json`.
+
+## loadout_rules.json
+
+Table `DCS aircraft type -> rules between stations`, used by the **Loadout Editor** in the *Compose a loadout* window: a weapon that clashes with another one is greyed out with the station it clashes with, and a weapon that needs another one says what to fit and where; a loadout that breaks a rule cannot be kept. 32 types of the editor have rules (A-10, AV-8B, F-14, F-15E, F-4E, M-2000C, Mi-24P, MiG-29 and others). A type missing from the table has no rule from the game.
+
+- **Shape**: `{"<type>": {"r": [...], "x": [...]}, ...}`; each entry is `[sa, [ia...], sb, [ib...]]`, with `sa` and `sb` station numbers as strings (`"5"`) and `ia`, `ib` indexes into `clsids` of [`aircraft_pylons.json`](aircraft_pylons.json). `x` (exclusions): a CLSID of `ia` at `sa` does not go with a CLSID of `ib` at `sb`; `ib` is `null` for "any load" (`sb` must stay empty). `r` (requirements): a CLSID of `ia` at `sa` needs a CLSID of `ib` at `sb`. Each list is sorted by station, then by `ib`, then by `ia`.
+- **Source**: the aircraft definitions of DCS World, `CoreMods/aircraft/<type>/`: the `required` and `forbidden` lists of each payload, which the mission editor applies. [`tools/read_payload_rules.py`](../tools/read_payload_rules.py) reads them (the Lua is run with [lupa](https://pypi.org/project/lupa/), the game API replaced by stubs) and [`tools/gen_loadout_rules.py`](../tools/gen_loadout_rules.py) reduces them to what the editor can use: a rule is kept only for a weapon the station accepts in `aircraft_pylons.json`; a rule that names the same station, a station the type does not have, or a load the editor does not know is dropped, and so is a "forbidden: empty" rule.
+- **Licence**: none added, these are facts read from the game. The aircraft definitions are DCS World files and are not part of this repository.
+- **Regenerate**:
+
+  ```
+  pip install lupa
+  python3 -I tools/read_payload_rules.py "<DCS World>/CoreMods/aircraft" /tmp/payload_rules.json
+  python3 -I tools/gen_loadout_rules.py /tmp/payload_rules.json
+  ```
+
+  Running it again on the same files rewrites the same bytes.
+- **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* PAYLOAD_GAME_RULES:BEGIN */` and `/* PAYLOAD_GAME_RULES:END */`. `build_mission_tools.py` stops the build if that copy differs from `loadout_rules.json`.
