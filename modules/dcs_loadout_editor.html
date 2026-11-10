@@ -943,7 +943,6 @@ const I18N = {
     'bar.liverySame':              '« {name} » — déjà portée par les appareils cochés',
     'bar.applyN':                  'Appliquer à la sélection ({n})',
     'toast.badValue':              '❌ Valeur invalide : {field}',
-    'toast.fuelMax':               'Carburant : au plus {max} kg pour cet appareil.',
     'toast.saved':                 '{file} sauvegardé ({n} modification(s))',
     'toast.saveError':             'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.saveCheckError':        'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
@@ -1124,7 +1123,6 @@ const I18N = {
     'bar.liverySame':              '“{name}” — already worn by the selected aircraft',
     'bar.applyN':                  'Apply to selection ({n})',
     'toast.badValue':              '❌ Invalid value: {field}',
-    'toast.fuelMax':               'Fuel: at most {max} kg for this aircraft.',
     'toast.saved':                 '{file} saved ({n} change(s))',
     'toast.saveError':             'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.saveCheckError':        'The downloaded file could not be checked: do not use it. Your changes are kept.',
@@ -12102,11 +12100,8 @@ function settingsOverLimit(type, settings, targets) {
 
 // Lit les quatre champs des Réglages sans rien afficher : { out, error }. error : le texte du refus (sans pictogramme), ou null.
 function readSettings() {
-  // plafond du carburant : fuel_max du type du panneau quand il est connu, sans plafond sinon
-  const lim = panelType() !== null ? limitsFor(panelType()) : null;
-  const fuelCap = lim && typeof lim.fuel_max === 'number' ? lim.fuel_max : Infinity;
   const defs = [
-    { id: 'set-fuel',  key: 'fuel',  label: t('panel.fuel'),   int: false, max: fuelCap },
+    { id: 'set-fuel',  key: 'fuel',  label: t('panel.fuel'),   int: false, max: Infinity },
     { id: 'set-flare', key: 'flare', label: t('panel.flares'), int: true,  max: Infinity },
     { id: 'set-chaff', key: 'chaff', label: t('panel.chaff'),  int: true,  max: Infinity },
     { id: 'set-gun',   key: 'gun',   label: t('panel.gun'),    int: true,  max: 100 },
@@ -12120,7 +12115,6 @@ function readSettings() {
     const raw = el.value.trim();
     if (raw === '') continue;
     const n = Number(raw);
-    if (isFinite(n) && n >= 0 && n > d.max && d.key === 'fuel') return { out, error: t('toast.fuelMax').replace('{max}', fmtSetting(d.max)) };
     if (!isFinite(n) || n < 0 || n > d.max || (d.int && !Number.isInteger(n))) return { out, error: bad(d.label) };
     out[d.key] = n;
   }
