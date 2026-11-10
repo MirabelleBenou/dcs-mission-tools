@@ -109,3 +109,20 @@ Table `DCS aircraft type -> rules between stations`, used by the **Loadout Edito
 
   Running it again on the same files rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* PAYLOAD_GAME_RULES:BEGIN */` and `/* PAYLOAD_GAME_RULES:END */`. `build_mission_tools.py` stops the build if that copy differs from `loadout_rules.json`.
+
+## airport_names.json
+
+Table `DCS theatre -> airfield number -> airfield name`, used by the **Loadout Editor** to name the airfield a group departs from when the summary warns that the group leaves a base of its former side. An airfield missing from the table is shown by its number.
+
+- **Shape**: `{"<theatre>": {"<id>": "<name>", ...}, ...}`, keys sorted. The theatre is written as the terrain of pydcs writes it, which is also the `theatre` of a `.miz` (`Caucasus`, `Syria`, `GermanyCW`...); the id is the airfield number of the mission editor, the one a route point carries as `airdromeId`. 12 theatres, 771 airfields.
+- **Source**: the `dcs/terrain/<folder>/<folder>.py` (the theatre, first argument of `super().__init__(`) and `dcs/terrain/<folder>/airports.py` (the `id` and `name` of each airfield class) modules of [pydcs](https://github.com/pydcs/dcs) **1.0.0** (same wheel as above).
+- **Licence**: pydcs is **LGPL-3.0-or-later**; the table is derived from it and carries the same licence ([`COPYING.LESSER`](COPYING.LESSER)).
+- **Regenerate** (the modules are read as text, not executed):
+
+  ```
+  pip download --no-deps pydcs==1.0.0 -d /tmp/pydcs
+  python3 -I tools/gen_airport_names.py /tmp/pydcs/pydcs-1.0.0-py3-none-any.whl
+  ```
+
+  Running it again on the same version rewrites the same bytes.
+- **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRPORT_NAMES:BEGIN */` and `/* AIRPORT_NAMES:END */`. `build_mission_tools.py` stops the build if that copy differs from `airport_names.json`.

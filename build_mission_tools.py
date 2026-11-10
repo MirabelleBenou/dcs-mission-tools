@@ -95,6 +95,7 @@ AIRCRAFT_PYLONS_JSON = 'data/aircraft_pylons.json'
 AIRCRAFT_VIEWS_JSON = 'data/aircraft_views.json'
 COUNTRY_TYPES_JSON = 'data/country_types.json'
 LOADOUT_RULES_JSON = 'data/loadout_rules.json'
+AIRPORT_NAMES_JSON = 'data/airport_names.json'
 
 # Tables de données copiées en ligne dans le Loadout Editor : (libellé, fichier de référence, constante, marqueur)
 INLINE_TABLES = (
@@ -105,6 +106,7 @@ INLINE_TABLES = (
     ('table des vues des appareils', AIRCRAFT_VIEWS_JSON, 'AIRCRAFT_VIEWS', 'AIRCRAFT_VIEWS'),
     ('table des pays et de leurs types', COUNTRY_TYPES_JSON, 'COUNTRY_TYPES', 'COUNTRY_TYPES'),
     ('table des règles d\'emport du jeu', LOADOUT_RULES_JSON, 'PAYLOAD_GAME_RULES', 'PAYLOAD_GAME_RULES'),
+    ('table des noms d\'aérodromes', AIRPORT_NAMES_JSON, 'AIRPORT_NAMES', 'AIRPORT_NAMES'),
 )
 
 
