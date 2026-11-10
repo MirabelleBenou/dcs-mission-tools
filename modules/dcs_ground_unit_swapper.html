@@ -2329,9 +2329,7 @@ const DCS_PARSER = (() => {
 // Contrôle d'après écriture : le texte se découpe, puis le parseur (grammaire des tables de Lua) l'accepte. Lève une
 // erreur sinon ; l'appelant n'écrit alors rien.
 function retokenizeSafety(patchedSrc) {
-  const t0 = performance.now();
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
-  const elapsed = Math.round(performance.now() - t0);
   if (errors.length > 0) {
     throw new Error('Retokenize failed: ' + errors[0].message + ' L' + (errors[0].line+1) + ':C' + (errors[0].col+1));
   }
@@ -2340,7 +2338,6 @@ function retokenizeSafety(patchedSrc) {
   } catch (e) {
     throw new Error('Retokenize failed: ' + (e && e.message ? e.message : String(e)) + (e && e.tokenLine !== undefined ? ' L' + e.tokenLine + ':C' + (Number(e.tokenCol) + 1) : ''));
   }
-  console.log('[Save] Retokenize OK : 0 erreurs, ' + tokens.length.toLocaleString() + ' tokens, ' + elapsed + ' ms');
 }
 /* ===== FIN DU PARSEUR ===== */
 
@@ -3843,12 +3840,26 @@ html, body { overscroll-behavior-y: contain; }
     b.focus();
   });
 
+  /* Nom d'un fichier écrit par un outil : <nom d'origine>_<jeton>_AAAAMMJJ-HHMMSS<ext>, heure locale. Les suffixes de cette
+     forme qui finissent le nom d'origine (jetons radios, swapped, weather, loadout) sont retirés d'abord, tous : un fichier
+     déjà sauvegardé par un outil ne voit pas son nom grandir d'un outil à l'autre. Un nom sans suffixe ne change pas. */
+  const MTB_STAMPED = /(?:_(?:radios|swapped|weather|loadout)_\d{8}-\d{6})+$/;
+  function mtbOutName(original, token, ext, when) {
+    const stem = String(original == null ? '' : original).replace(/\.miz$/i, '');
+    const base = stem.replace(MTB_STAMPED, '') || stem;
+    const d = when || new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    const stamp = d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds());
+    return base + '_' + token + '_' + stamp + ext;
+  }
+
   if (document.body) mtbMount();
   else document.addEventListener('DOMContentLoaded', mtbMount);
   window.mtbToast = mtbShowToast;
   window.mtbConfirm = mtbShowConfirm;
   window.mtbSpinner = mtbShowSpinner;
   window.mtbSpinnerHide = mtbHideSpinner;
+  window.mtbOutName = mtbOutName;
 })();
 /* ===== FIN DES MESSAGES ===== */
 

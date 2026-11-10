@@ -7,6 +7,9 @@ Lua : aucun séparateur avant le premier champ, exactement un `,` ou `;` entre d
 autre suite lève une `ParseError`, au chargement comme après l'écriture) et `retokenizeSafety` (découpe le texte écrit, puis le
 passe au parseur ; lève une erreur si l'un ou l'autre refuse). Le bloc s'appuie sur `DCS_TOKENIZER`, qui reste dans chaque
 module, devant lui.
+Origine : le parseur est celui du Comm Plan Editor, que les trois autres outils avaient recopié ; il est devenu commun aux quatre
+le 10 novembre 2026, aligné à cette occasion sur la grammaire des tables de Lua (`,` ou `;` entre deux champs, aucun avant le premier
+ni doublé).
 Le bloc est identique à l'octet dans les quatre modules : build_mission_tools.py le garde (build en code 1 sinon), et
 tests/test_lua_separators.py le fait tourner sous Node.
 
@@ -174,9 +177,7 @@ const DCS_PARSER = (() => {
 // Contrôle d'après écriture : le texte se découpe, puis le parseur (grammaire des tables de Lua) l'accepte. Lève une
 // erreur sinon ; l'appelant n'écrit alors rien.
 function retokenizeSafety(patchedSrc) {
-  const t0 = performance.now();
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
-  const elapsed = Math.round(performance.now() - t0);
   if (errors.length > 0) {
     throw new Error('Retokenize failed: ' + errors[0].message + ' L' + (errors[0].line+1) + ':C' + (errors[0].col+1));
   }
@@ -185,7 +186,6 @@ function retokenizeSafety(patchedSrc) {
   } catch (e) {
     throw new Error('Retokenize failed: ' + (e && e.message ? e.message : String(e)) + (e && e.tokenLine !== undefined ? ' L' + e.tokenLine + ':C' + (Number(e.tokenCol) + 1) : ''));
   }
-  console.log('[Save] Retokenize OK : 0 erreurs, ' + tokens.length.toLocaleString() + ' tokens, ' + elapsed + ' ms');
 }
 """
 

@@ -4,10 +4,12 @@
 Rend le texte JavaScript du bloc : le toast, la fenêtre de confirmation et le sablier de la suite, le CSS du bandeau, la
 police Roboto Mono (@font-face en tête de la chaîne CSS, woff2 en base64, les mêmes octets que Mission Plan), et
 deux gestes communs : le signe de repli (.mtb-chev) et le menu des actions rares de la barre du bas (.mtb-menu-wrap).
-Trois points d'entrée, et rien d'autre de public :
+Quatre points d'entrée, et rien d'autre de public :
   - mtbToast(msg, type)                       type : success, info (défaut), warn, error ;
   - mtbConfirm({ title, text, ok, cancel })   rend une Promise<boolean> ;
-  - mtbSpinner(msg) / mtbSpinnerHide().
+  - mtbSpinner(msg) / mtbSpinnerHide() ;
+  - mtbOutName(original, token, ext)          le nom d'un fichier écrit, <nom>_<jeton>_AAAAMMJJ-HHMMSS<ext>, sans empiler les
+                                              suffixes d'un outil à l'autre.
 Le bloc ne dépend d'aucune fonction de la page : les textes lui sont passés déjà traduits. Le CSS est dans le bloc
 (chaîne injectée en tête du <head>) ; les éléments #mtb-toast, #mtb-modal et #mtb-spinner sont créés par le bloc en fin de
 <body>. L'accent est la variable --accent, que chaque page pose dans son :root. Le bandeau (.mtb-banner.warn / .info) n'est
@@ -236,12 +238,26 @@ html, body { overscroll-behavior-y: contain; }
     b.focus();
   });
 
+  /* Nom d'un fichier écrit par un outil : <nom d'origine>_<jeton>_AAAAMMJJ-HHMMSS<ext>, heure locale. Les suffixes de cette
+     forme qui finissent le nom d'origine (jetons radios, swapped, weather, loadout) sont retirés d'abord, tous : un fichier
+     déjà sauvegardé par un outil ne voit pas son nom grandir d'un outil à l'autre. Un nom sans suffixe ne change pas. */
+  const MTB_STAMPED = /(?:_(?:radios|swapped|weather|loadout)_\d{8}-\d{6})+$/;
+  function mtbOutName(original, token, ext, when) {
+    const stem = String(original == null ? '' : original).replace(/\.miz$/i, '');
+    const base = stem.replace(MTB_STAMPED, '') || stem;
+    const d = when || new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    const stamp = d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds());
+    return base + '_' + token + '_' + stamp + ext;
+  }
+
   if (document.body) mtbMount();
   else document.addEventListener('DOMContentLoaded', mtbMount);
   window.mtbToast = mtbShowToast;
   window.mtbConfirm = mtbShowConfirm;
   window.mtbSpinner = mtbShowSpinner;
   window.mtbSpinnerHide = mtbHideSpinner;
+  window.mtbOutName = mtbOutName;
 })();
 """
 

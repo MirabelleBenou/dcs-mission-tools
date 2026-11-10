@@ -837,6 +837,7 @@ const I18N = {
     'country.keep':                '— inchangé —',
     'country.current':             'pays actuel',
     'country.noType':              'n\'a pas ce type',
+    'country.noCamp':              'camp absent du fichier',
     'country.mixed':               'Appareils cochés de camps différents : cochez-en d\'un seul camp pour changer de pays.',
     'country.none':                'Cochez des appareils de ce type pour changer leur pays.',
     'country.hint':                'Tout le groupe change de pays, et de camp si le pays est d\'un autre camp ; son indicatif est réécrit si le pays d\'arrivée l\'écrit autrement (nom ou numéro).',
@@ -1017,6 +1018,7 @@ const I18N = {
     'country.keep':                '— unchanged —',
     'country.current':             'current country',
     'country.noType':              'does not fly this type',
+    'country.noCamp':              'side not in this file',
     'country.mixed':               'Checked aircraft from different sides: check aircraft from one side only to change country.',
     'country.none':                'Check aircraft of this type to change their country.',
     'country.hint':                'The whole group changes country, and side if the country belongs to another side; its callsign is rewritten if the new country writes it differently (name or number).',
@@ -10005,9 +10007,7 @@ const DCS_PARSER = (() => {
 // Contrôle d'après écriture : le texte se découpe, puis le parseur (grammaire des tables de Lua) l'accepte. Lève une
 // erreur sinon ; l'appelant n'écrit alors rien.
 function retokenizeSafety(patchedSrc) {
-  const t0 = performance.now();
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
-  const elapsed = Math.round(performance.now() - t0);
   if (errors.length > 0) {
     throw new Error('Retokenize failed: ' + errors[0].message + ' L' + (errors[0].line+1) + ':C' + (errors[0].col+1));
   }
@@ -10016,7 +10016,6 @@ function retokenizeSafety(patchedSrc) {
   } catch (e) {
     throw new Error('Retokenize failed: ' + (e && e.message ? e.message : String(e)) + (e && e.tokenLine !== undefined ? ' L' + e.tokenLine + ':C' + (Number(e.tokenCol) + 1) : ''));
   }
-  console.log('[Save] Retokenize OK : 0 erreurs, ' + tokens.length.toLocaleString() + ' tokens, ' + elapsed + ' ms');
 }
 /* ===== FIN DU PARSEUR ===== */
 
@@ -10731,6 +10730,21 @@ function lxCoalitions(ast) {
   return res;
 }
 
+// Les camps dont le fichier a une table `country` sous coalition.<camp> : { blue: bool, red: bool, neutrals: bool }. Un camp sans cette
+// table (pydcs et les générateurs qui s'appuient sur lui l'omettent pour un camp sans unité) ne peut recevoir aucun groupe.
+function lxCampTables(ast) {
+  const mission = ast.kind === 'assignment' ? ast.value : ast;
+  const res = { blue: false, red: false, neutrals: false };
+  const coalNode = lxGet(mission, 'coalition');
+  if (!coalNode) return res;
+  for (const key of ['blue', 'red', 'neutrals']) {
+    const side = lxGet(coalNode, key);
+    const countries = side ? lxGet(side, 'country') : null;
+    res[key] = !!(countries && countries.kind === 'table');
+  }
+  return res;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // PAYS — FONCTIONS PURES (ni DOM, ni t(), ni stockage) : début
 // Table COUNTRY_TYPES : id, nom écrit par l'éditeur, types permis, forme et listes d'indicatifs.
@@ -10767,9 +10781,11 @@ function cntCategory(type) {
 
 // Les pays proposés pour un camp : ids = mission.coalitions du camp ; types = les types à voler (appareils du groupe qui passe) ;
 // current = les id de pays actuels des appareils cochés. Rend [{ id, name, reason }] triés par nom ; reason : null, 'current'
-// (tous les appareils cochés sont déjà de ce pays) ou 'noType' (le pays n'a pas l'un des types). Un id absent de la table est écarté.
+// (tous les appareils cochés sont déjà de ce pays), 'noCamp' (le fichier n'a pas de table `country` pour ce camp) ou 'noType' (le pays
+// n'a pas l'un des types) — dans cet ordre de priorité. Un id absent de la table est écarté.
 // names (facultatif) : { <id>: nom } des entrées du fichier ; le nom d'une entrée existante l'emporte sur celui de la table.
-function cntOptions(ids, types, current, names) {
+// campTable (facultatif, vrai par défaut) : le fichier a une table `country` pour ce camp.
+function cntOptions(ids, types, current, names, campTable) {
   const out = [], seen = new Set();
   for (const id of ids) {
     if (seen.has(id)) continue;
@@ -10778,6 +10794,7 @@ function cntOptions(ids, types, current, names) {
     if (c === null) continue;
     let reason = null;
     if (current.length > 0 && current.every(x => x === id)) reason = 'current';
+    else if (campTable === false) reason = 'noCamp';
     else if (types.some(tp => !cntFlies(id, tp))) reason = 'noType';
     out.push({ id, name: (names && typeof names[id] === 'string') ? names[id] : c.name, reason });
   }
@@ -11061,6 +11078,7 @@ const UI_STATE = {
   choice:        { type: null, loadout: null, livery: null, country: null },   // carte d'emport / de livrée, pays choisi
   coalitions:    { blue: [], red: [], neutrals: [] },   // mission.coalitions : les id de pays de chaque camp
   entryNames:    { blue: {}, red: {}, neutrals: {} },   // le nom écrit par chaque entrée de pays du fichier, par id
+  campTables:    { blue: true, red: true, neutrals: true },   // le fichier a-t-il une table `country` sous coalition.<camp> ?
   byGroup:       new Map(),   // rang du groupe → ses appareils (ordre du groupe)
   campIndex:     null,        // rang du groupe → ses liens à son camp (campLinks), calculés sur le fichier lu
   dupIds:        new Set(),   // unitId portés par plusieurs appareils (ou absents) : aucune modification
@@ -12322,6 +12340,7 @@ function setModel(model) {
   UI_STATE.byType = byType;
   UI_STATE.coalitions = model.coalitions || { blue: [], red: [], neutrals: [] };
   UI_STATE.entryNames = model.entryNames || { blue: {}, red: {}, neutrals: {} };
+  UI_STATE.campTables = model.campTables || { blue: true, red: true, neutrals: true };
   const byGroup = new Map();
   for (const u of model.aircraft) {
     if (!byGroup.has(u.gk)) byGroup.set(u.gk, []);
@@ -12374,6 +12393,7 @@ async function loadMiz(file) {
     const aircraft = lxWalkAircraft(ast);
     const coalitions = lxCoalitions(ast);
     const entryNames = lxEntryNames(ast);
+    const campTables = lxCampTables(ast);
     const nPlayers = aircraft.filter(u => u.role === 'player').length;
     if (nPlayers !== extracted.clientGroups.length) {
       console.warn('[Load] Joueurs : parcours', nPlayers, '≠ extracteur', extracted.clientGroups.length);
@@ -12395,7 +12415,7 @@ async function loadMiz(file) {
     UI_STATE.collapsed = new Set();
     UI_STATE.filters = { coalition: '', type: '', role: '', search: '' };
     UI_STATE.showModifiedOnly = false;
-    setModel({ source: extracted.source, aircraft, coalitions, entryNames, campIndex: lxBuildCampIndex(ast, lxWarehousesText(otherFilesMap)) });
+    setModel({ source: extracted.source, aircraft, coalitions, entryNames, campTables, campIndex: lxBuildCampIndex(ast, lxWarehousesText(otherFilesMap)) });
     buildLoadoutDefs();
     if (reopened) restoreLoadoutDefs(UI_STATE.lastSaved.defs);
     UI_STATE.choice = { type: null, loadout: null, livery: null, country: null };
@@ -12665,7 +12685,7 @@ function renderCountry(type) {
     for (const u of checked) for (const m of groupMembers(u)) types.add(m.type);
     const seen = new Set();
     for (const camp of cntCampOrder(curCamp(checked[0]))) {
-      const list = cntOptions(UI_STATE.coalitions[camp] || [], [...types], checked.map(u => curCountry(u).id), UI_STATE.entryNames[camp]).filter(o => !seen.has(o.id));
+      const list = cntOptions(UI_STATE.coalitions[camp] || [], [...types], checked.map(u => curCountry(u).id), UI_STATE.entryNames[camp], (UI_STATE.campTables || {})[camp] !== false).filter(o => !seen.has(o.id));
       list.forEach(o => seen.add(o.id));
       if (list.length) groups.push({ camp, opts: list });
     }
@@ -12680,7 +12700,7 @@ function renderCountry(type) {
     html += '<optgroup label="' + escHtml(t('country.camp.' + g.camp)) + '">';
     for (const o of g.opts) {
       html += '<option value="' + o.id + '"' + (o.reason ? ' disabled' : '') + '>' +
-        escHtml(o.name + (o.reason ? ' — ' + t(o.reason === 'current' ? 'country.current' : 'country.noType') : '')) + '</option>';
+        escHtml(o.name + (o.reason ? ' — ' + t('country.' + o.reason) : '')) + '</option>';
     }
     html += '</optgroup>';
   }
@@ -14015,7 +14035,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     }
     UI_STATE.edits = new Map();
     rememberSaved(savedBytes, UI_STATE.loadoutDefs);
-    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast), entryNames: lxEntryNames(verdict.ast), campIndex: lxBuildCampIndex(verdict.ast, lxWarehousesText(otherFilesMap)) });
+    setModel({ source: extracted.source, aircraft: verdict.aircraft, coalitions: lxCoalitions(verdict.ast), entryNames: lxEntryNames(verdict.ast), campTables: lxCampTables(verdict.ast), campIndex: lxBuildCampIndex(verdict.ast, lxWarehousesText(otherFilesMap)) });
     renderAll();
 
     showToast(t('toast.saved').replace('{file}', outName).replace('{n}', nMod), 'success');
@@ -14305,12 +14325,26 @@ html, body { overscroll-behavior-y: contain; }
     b.focus();
   });
 
+  /* Nom d'un fichier écrit par un outil : <nom d'origine>_<jeton>_AAAAMMJJ-HHMMSS<ext>, heure locale. Les suffixes de cette
+     forme qui finissent le nom d'origine (jetons radios, swapped, weather, loadout) sont retirés d'abord, tous : un fichier
+     déjà sauvegardé par un outil ne voit pas son nom grandir d'un outil à l'autre. Un nom sans suffixe ne change pas. */
+  const MTB_STAMPED = /(?:_(?:radios|swapped|weather|loadout)_\d{8}-\d{6})+$/;
+  function mtbOutName(original, token, ext, when) {
+    const stem = String(original == null ? '' : original).replace(/\.miz$/i, '');
+    const base = stem.replace(MTB_STAMPED, '') || stem;
+    const d = when || new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    const stamp = d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds());
+    return base + '_' + token + '_' + stamp + ext;
+  }
+
   if (document.body) mtbMount();
   else document.addEventListener('DOMContentLoaded', mtbMount);
   window.mtbToast = mtbShowToast;
   window.mtbConfirm = mtbShowConfirm;
   window.mtbSpinner = mtbShowSpinner;
   window.mtbSpinnerHide = mtbHideSpinner;
+  window.mtbOutName = mtbOutName;
 })();
 /* ===== FIN DES MESSAGES ===== */
 
