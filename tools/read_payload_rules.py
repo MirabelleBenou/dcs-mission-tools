@@ -25,6 +25,20 @@ function make_payload_rules_list(stations, clsids)
   return r
 end
 function add_aircraft(t) CAPT[#CAPT+1] = t; return t end
+-- ipairs sur un bouchon (une table du jeu qu'on ne définit pas) ne finissait jamais : le bouchon rend un élément à tout indice
+local real_ipairs = ipairs
+function ipairs(t)
+  if rawequal(t, D) then return function() return nil end, t, 0 end
+  return real_ipairs(t)
+end
+-- make_FA_18 (FA-18C.lua) déclare l'appareil : sans lui, FA-18C_hornet.lua ne déclarait rien
+function make_FA_18(t) return add_aircraft(t) end
+-- copyTable(src, dst) de Tools.lua (Mirage F1), copie profonde de src dans dst : sans elle, les groupes de pylônes restaient vides
+function copyTable(src, dst)
+  for k, v in pairs(src) do
+    if type(v) == "table" then local c = {}; copyTable(v, c); dst[k] = c else dst[k] = v end
+  end
+end
 function dofile() return D end
 function loadfile() return function() return D end end
 function require() return D end
@@ -72,13 +86,16 @@ def run(dirpath, files):
     return res
 root, out = sys.argv[1], sys.argv[2]
 ORDER = {'A-10': ['A-10A.lua', 'A-10C.lua', 'A-10C_2.lua'], 'F14/Entry': ['F-14B.lua', 'F-14A.lua'],
-         'F-5E': ['F-5E.lua', 'F-5E-3.lua', 'F-5E-3_FC.lua'], 'Mirage-F1': ['Payloads.lua', 'Mirage-F1.lua', 'Mirage-F1B.lua', 'Mirage-F1C.lua'],
+         'F-5E': ['F-5E.lua', 'F-5E-3.lua', 'F-5E-3_FC.lua'], 'Mirage-F1': ['Payloads.lua', 'Mirage-F1.lua', 'Mirage-F1B.lua', 'Mirage-F1C.lua', '*'],
          'A-6E/Entry': ['Pylons.lua', 'A-6E.lua'], 'FA-18C': ['FA-18C.lua', 'FA-18C_hornet.lua', 'FA-18A.lua']}
 allres = {}
 dirs = sorted({os.path.dirname(p) for p in glob.glob(os.path.join(root, '**', '*.lua'), recursive=True)})
 for d in dirs:
     rel = os.path.relpath(d, root)
-    files = [os.path.join(d, f) for f in ORDER.get(rel, sorted(os.listdir(d))) if f.endswith('.lua') and os.path.exists(os.path.join(d, f))]
+    names = ORDER.get(rel, sorted(os.listdir(d)))
+    if '*' in names:  # '*' : puis les autres fichiers du dossier, par ordre alphabétique (les variantes d'un appareil)
+        names = [n for n in names if n != '*'] + [n for n in sorted(os.listdir(d)) if n not in names]
+    files = [os.path.join(d, f) for f in names if f.endswith('.lua') and os.path.exists(os.path.join(d, f))]
     r = run(d, files)
     print(rel, '->', {k: len(v) for k, v in r.items()})
     allres.update(r)
