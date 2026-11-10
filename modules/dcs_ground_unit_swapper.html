@@ -6,13 +6,13 @@
 
   Version    : 1.4.0
   Licence    : AGPL-3.0-or-later
-  Auteur     : 4th VEAW / Mirabelle Benou
-  Dépendances: JSZip 3.10.1 (cdnjs) — chargée via <script src>
+  Dépendances: JSZip 3.10.1 — inlinée (aucune dépendance externe)
   Usage      : Ouvrir dans Chrome/Firefox, charger un .miz, modifier, sauvegarder.
 
   Architecture : Single-file HTML autonome.
-    - Parser DCS (tokenizer + parser + applyPatches + retokenizeSafety) copié
-      depuis dcs_comm_plan_editor_v2_phase1C.html (inchangé, pas de refactor).
+    - Moteur .miz : le tokeniseur et applyPatches sont ceux du Comm Plan Editor ; le parseur et
+      retokenizeSafety sont dans le bloc commun « PARSEUR DE LA SUITE » (parser_block.py), identique
+      à l'octet dans les quatre outils.
     - Extracteur ground units (extractGroundUnits) : spécifique à cet outil.
     - Sérialiseur patches (collectSwapPatches) : spécifique à cet outil.
 -->
@@ -891,7 +891,8 @@ const I18N = {
     'footer.importJson.title':     'Importer un fichier JSON de modifications',
     'footer.save':                 '💾 Sauvegarder',
     'footer.save.titleDisabled':   'Aucune modification à sauvegarder',
-    'footer.save.titleEnabled':    'Sauvegarder {n} modification(s)',
+    'footer.save.titleEnabled.one':   'Sauvegarder {n} modification',
+    'footer.save.titleEnabled.other': 'Sauvegarder {n} modifications',
     'family.armor':   '\uD83D\uDEE1\uFE0F Blindé',
     'family.arti':    '\uD83C\uDFAF Artillerie',
     'family.sam':     '\uD83D\uDE80 SAM',
@@ -902,20 +903,26 @@ const I18N = {
     'family.infra':   '\uD83C\uDFD7\uFE0F Infra/C2',
     'family.unknown': '\u2753 Inconnu',
     // Dynamique
-    'toast.unitsLoaded':    '{n} unit\u00e9s charg\u00e9es depuis {file}',
-    'toast.bulkApplied':    '{n} unité(s) modifiée(s) en une fois',
-    'toast.saved':          '{file} sauvegard\u00e9 ({n} modification(s))',
+    'toast.unitsLoaded.one':   '{n} unit\u00e9 charg\u00e9e depuis {file}',
+    'toast.unitsLoaded.other': '{n} unit\u00e9s charg\u00e9es depuis {file}',
+    'toast.bulkApplied.one':   '{n} unité modifiée en une fois',
+    'toast.bulkApplied.other': '{n} unités modifiées en une fois',
+    'toast.saved.one':      '{file} sauvegard\u00e9 \u2014 {n} modification',
+    'toast.saved.other':    '{file} sauvegard\u00e9 \u2014 {n} modifications',
     'toast.saveError':      'La sauvegarde a échoué : rien n\'a été téléchargé, vos modifications sont gardées.',
     'toast.saveCheckError': 'Le fichier téléchargé n\'a pas pu être vérifié : ne l\'utilisez pas. Vos modifications sont gardées.',
     'toast.pickFile':       'Veuillez choisir un fichier .miz',
     'load.notMiz':          'Ce fichier n\'est pas une mission DCS lisible (.miz). Choisissez un fichier enregistré par l\'éditeur de mission.',
     'load.unreadable':      'La mission de ce fichier n\'a pas pu être lue. Réenregistrez-la dans l\'éditeur de mission de DCS, puis réessayez.',
-    'toast.exported':       '{file} export\u00e9 ({n} modifications)',
+    'toast.exported.one':   '{file} export\u00e9 \u2014 {n} modification',
+    'toast.exported.other': '{file} export\u00e9 \u2014 {n} modifications',
     'toast.loadFirst':      'Chargez un fichier .miz d\'abord',
     'toast.jsonInvalid':    'Fichier JSON invalide',
     'toast.jsonUnrecognized': 'Format JSON non reconnu',
-    'toast.importPartial':  'Import : {a} modif(s) appliqu\u00e9e(s), {i} ignor\u00e9e(s)',
-    'toast.importOk':       'Import : {a} modification(s) appliqu\u00e9e(s)',
+    'toast.importOk.one':   'Import : {a} modification appliqu\u00e9e',
+    'toast.importOk.other': 'Import : {a} modifications appliqu\u00e9es',
+    'toast.importIgnored.one':   ', {i} ignor\u00e9e',
+    'toast.importIgnored.other': ', {i} ignor\u00e9es',
     'confirm.pendingLost':  'Les modifications en attente seront perdues.',
     'confirm.pendingLost.title':  'Charger un autre .miz ?',
     'confirm.pendingLost.ok':     'Charger',
@@ -925,7 +932,7 @@ const I18N = {
     'confirm.import.ok':    'Importer',
     'confirm.import.cancel':'Annuler',
     'spinner.extracting':   'Extraction des unit\u00e9s\u2026',
-    'spinner.patching':     'Application des patches\u2026',
+    'spinner.patching':     '\u00c9criture des modifications\u2026',
     'spinner.rebuilding':   'Reconstruction du .miz\u2026',
     'info.excluded':        '{n} unit\u00e9(s) pilotable(s) exclue(s)',
     'count.modification':   'modification',
@@ -991,7 +998,8 @@ const I18N = {
     'footer.importJson.title':     'Import a JSON file of changes',
     'footer.save':                 '💾 Save',
     'footer.save.titleDisabled':   'No changes to save',
-    'footer.save.titleEnabled':    'Save {n} change(s)',
+    'footer.save.titleEnabled.one':   'Save {n} change',
+    'footer.save.titleEnabled.other': 'Save {n} changes',
     'family.armor':   '\uD83D\uDEE1\uFE0F Armor',
     'family.arti':    '\uD83C\uDFAF Artillery',
     'family.sam':     '\uD83D\uDE80 SAM',
@@ -1002,20 +1010,26 @@ const I18N = {
     'family.infra':   '\uD83C\uDFD7\uFE0F Infra/C2',
     'family.unknown': '\u2753 Unknown',
     // Dynamic
-    'toast.unitsLoaded':    '{n} units loaded from {file}',
-    'toast.bulkApplied':    '{n} unit(s) modified via bulk edit',
-    'toast.saved':          '{file} saved ({n} change(s))',
+    'toast.unitsLoaded.one':   '{n} unit loaded from {file}',
+    'toast.unitsLoaded.other': '{n} units loaded from {file}',
+    'toast.bulkApplied.one':   '{n} unit changed in one go',
+    'toast.bulkApplied.other': '{n} units changed in one go',
+    'toast.saved.one':      '{file} saved \u2014 {n} change',
+    'toast.saved.other':    '{file} saved \u2014 {n} changes',
     'toast.saveError':      'Saving failed: nothing was downloaded, your changes are kept.',
     'toast.saveCheckError': 'The downloaded file could not be checked: do not use it. Your changes are kept.',
     'toast.pickFile':       'Please choose a .miz file',
     'load.notMiz':          'This file is not a readable DCS mission (.miz). Pick a file saved by the Mission Editor.',
     'load.unreadable':      'The mission in this file could not be read. Save it again in the DCS Mission Editor, then try again.',
-    'toast.exported':       '{file} exported ({n} modifications)',
+    'toast.exported.one':   '{file} exported \u2014 {n} change',
+    'toast.exported.other': '{file} exported \u2014 {n} changes',
     'toast.loadFirst':      'Load a .miz file first',
     'toast.jsonInvalid':    'Invalid JSON file',
     'toast.jsonUnrecognized': 'Unrecognized JSON format',
-    'toast.importPartial':  'Import: {a} change(s) applied, {i} ignored',
-    'toast.importOk':       'Import: {a} change(s) applied',
+    'toast.importOk.one':   'Import: {a} change applied',
+    'toast.importOk.other': 'Import: {a} changes applied',
+    'toast.importIgnored.one':   ', {i} ignored',
+    'toast.importIgnored.other': ', {i} ignored',
     'confirm.pendingLost':  'Pending changes will be lost.',
     'confirm.pendingLost.title':  'Load another .miz?',
     'confirm.pendingLost.ok':     'Load',
@@ -1025,7 +1039,7 @@ const I18N = {
     'confirm.import.ok':    'Import',
     'confirm.import.cancel':'Cancel',
     'spinner.extracting':   'Extracting units\u2026',
-    'spinner.patching':     'Applying patches\u2026',
+    'spinner.patching':     'Writing changes\u2026',
     'spinner.rebuilding':   'Rebuilding the .miz\u2026',
     'info.excluded':        '{n} playable unit(s) excluded',
     'count.modification':   'change',
@@ -1044,6 +1058,11 @@ function t(key, fallback) {
   if (key in I18N.fr) return I18N.fr[key];
   console.warn('[i18n] clé manquante:', key);
   return key;
+}
+
+// Pluriel : clé.one pour 0 et 1, clé.other au-delà ; ph : le repère du nombre ({n} par défaut). Un nom libre se pose après, par split/join.
+function tn(key, n, ph) {
+  return t(key + (n > 1 ? '.other' : '.one')).replace(ph || '{n}', n);
 }
 
 const KEY_LANG = 'gus_lang_v1';
@@ -1885,6 +1904,8 @@ class Combobox {
     this._filtered = q ? all.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)) : all;
     this._hlIndex = -1;
     this._renderList();
+    // chaque saisie surligne le premier résultat visible (aucun si la liste est vide) ; sans saisie, rien n'est surligné
+    if (q && this._filtered.length > 0) this._setHL(0);
     if (this._open && !this._popup.hasAttribute('hidden')) placeTypePopup(this._popup, this._display);
   }
 
@@ -2047,6 +2068,8 @@ const SharedCombobox = (() => {
     _filtered = q ? all.filter(o => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q)) : all;
     _hlIndex = -1;
     _renderList();
+    // chaque saisie surligne le premier résultat visible (aucun si la liste est vide) ; sans saisie, rien n'est surligné
+    if (q && _filtered.length > 0) _setHL(0);
     if (_activeCell && !_popup.hasAttribute('hidden')) _position(_activeCell);
   }
 
@@ -2329,9 +2352,7 @@ const DCS_PARSER = (() => {
 // Contrôle d'après écriture : le texte se découpe, puis le parseur (grammaire des tables de Lua) l'accepte. Lève une
 // erreur sinon ; l'appelant n'écrit alors rien.
 function retokenizeSafety(patchedSrc) {
-  const t0 = performance.now();
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
-  const elapsed = Math.round(performance.now() - t0);
   if (errors.length > 0) {
     throw new Error('Retokenize failed: ' + errors[0].message + ' L' + (errors[0].line+1) + ':C' + (errors[0].col+1));
   }
@@ -2340,7 +2361,6 @@ function retokenizeSafety(patchedSrc) {
   } catch (e) {
     throw new Error('Retokenize failed: ' + (e && e.message ? e.message : String(e)) + (e && e.tokenLine !== undefined ? ' L' + e.tokenLine + ':C' + (Number(e.tokenCol) + 1) : ''));
   }
-  console.log('[Save] Retokenize OK : 0 erreurs, ' + tokens.length.toLocaleString() + ' tokens, ' + elapsed + ' ms');
 }
 /* ===== FIN DU PARSEUR ===== */
 
@@ -2678,18 +2698,15 @@ async function loadMiz(file) {
 
     await new Promise(r => setTimeout(r, 0)); // yield pour afficher le spinner
 
-    const t0 = performance.now();
     const { tokens, errors: tokErrors } = DCS_TOKENIZER.tokenize(missionSrc);
     if (tokErrors.length > 0) {
       console.warn('[Load] Tokenizer errors:', tokErrors);
     }
     const ast = DCS_PARSER.parse(tokens);
-    console.log('[Load] Parse OK en', Math.round(performance.now() - t0), 'ms');
 
     await new Promise(r => setTimeout(r, 0));
 
     const model = extractGroundUnits(ast, missionSrc, file.name, otherFilesMap);
-    console.log('[Load] Unités extraites :', model.units.length, '— types :', model.indices.types.size, '— exclus :', model.excludedCount);
 
     UI_STATE.model   = model;
     UI_STATE.edits   = new Map();
@@ -2711,7 +2728,7 @@ async function loadMiz(file) {
     hdrMiz.textContent = file.name;
     hdrMiz.classList.remove('empty');
 
-    showToast(t('toast.unitsLoaded').replace('{n}', model.units.length).replace('{file}', file.name), 'success');
+    showToast(tn('toast.unitsLoaded', model.units.length).split('{file}').join(file.name), 'success');
   } catch (err) {
     console.error('[Load] Erreur :', err);
     showToast(t(loadKey), 'error');
@@ -3234,7 +3251,7 @@ function updateSaveBtn() {
   const hasEdits = UI_STATE.edits.size > 0;
   document.getElementById('btn-save').disabled = !hasEdits;
   document.getElementById('btn-save').title = hasEdits
-    ? t('footer.save.titleEnabled').replace('{n}', UI_STATE.edits.size)
+    ? tn('footer.save.titleEnabled', UI_STATE.edits.size)
     : t('footer.save.titleDisabled');
   document.getElementById('btn-export-json').disabled = !hasEdits;
 }
@@ -3349,7 +3366,7 @@ document.getElementById('btn-bulk-apply').addEventListener('click', () => {
 
   // Re-render complet
   applyFiltersAndRender();
-  showToast(t('toast.bulkApplied').replace('{n}', applied), 'success');
+  showToast(tn('toast.bulkApplied', applied), 'success');
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -3364,9 +3381,6 @@ document.getElementById('btn-save').addEventListener('click', async () => {
 
     const srcText = UI_STATE.model.source._text;
     const patches = collectSwapPatches(UI_STATE.edits, UI_STATE.unitsById);
-
-    console.log('[Save] Patches :', patches.length);
-    patches.forEach(p => console.debug('  @' + p.pos.start.offset + ' → ' + p.newValueStr));
 
     const patchedSrc = applyPatches(srcText, patches);
     retokenizeSafety(patchedSrc); // throw si KO
@@ -3386,16 +3400,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     const blob = await newZip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 
     // Nom de fichier sortant
-    const origName = UI_STATE.model.source.mizFilename.replace(/\.miz$/i, '');
-    const now = new Date();
-    const ts = now.getFullYear().toString()
-      + String(now.getMonth()+1).padStart(2,'0')
-      + String(now.getDate()).padStart(2,'0')
-      + '-'
-      + String(now.getHours()).padStart(2,'0')
-      + String(now.getMinutes()).padStart(2,'0')
-      + String(now.getSeconds()).padStart(2,'0');
-    const outName = `${origName}_swapped_${ts}.miz`;
+    const outName = mtbOutName(UI_STATE.model.source.mizFilename, 'swapped', '.miz');
 
     const dl = new Blob([blob], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(dl);
@@ -3426,7 +3431,7 @@ document.getElementById('btn-save').addEventListener('click', async () => {
     renderAll();
     updateHeaderChk();
 
-    showToast(t('toast.saved').replace('{file}', outName).replace('{n}', savedCount), 'success');
+    showToast(tn('toast.saved', savedCount).split('{file}').join(outName), 'success');
   } catch (err) {
     console.error('[Save] Erreur :', err);
     showToast(t(downloaded ? 'toast.saveCheckError' : 'toast.saveError'), 'error');
@@ -3526,23 +3531,14 @@ document.getElementById('btn-export-json').addEventListener('click', () => {
 
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
-  const origName = UI_STATE.model.source.mizFilename.replace(/\.miz$/i, '');
-  const now = new Date();
-  const ts = now.getFullYear().toString()
-    + String(now.getMonth()+1).padStart(2,'0')
-    + String(now.getDate()).padStart(2,'0')
-    + '-'
-    + String(now.getHours()).padStart(2,'0')
-    + String(now.getMinutes()).padStart(2,'0')
-    + String(now.getSeconds()).padStart(2,'0');
-  const fname = `${origName}_edits_${ts}.json`;
+  const fname = mtbOutName(UI_STATE.model.source.mizFilename, 'edits', '.json');
 
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = fname;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 5000);
-  showToast(t('toast.exported').replace('{file}', fname).replace('{n}', editsArr.length), 'success');
+  showToast(tn('toast.exported', editsArr.length).split('{file}').join(fname), 'success');
 });
 
 document.getElementById('btn-import-json').addEventListener('click', () => {
@@ -3576,8 +3572,8 @@ document.getElementById('json-file-input').addEventListener('change', async (e) 
     const proceed = await mtbConfirm({
       title:  t('confirm.import.title'),
       text:   t('confirm.import')
-        .replace('{exported}', payload.mizFilename)
-        .replace('{current}', currentMiz),
+        .split('{exported}').join(payload.mizFilename)
+        .split('{current}').join(currentMiz),
       ok:     t('confirm.import.ok'),
       cancel: t('confirm.import.cancel')
     });
@@ -3601,9 +3597,7 @@ document.getElementById('json-file-input').addEventListener('change', async (e) 
   }
 
   applyFiltersAndRender();
-  const msg = ignored > 0
-    ? t('toast.importPartial').replace('{a}', applied).replace('{i}', ignored)
-    : t('toast.importOk').replace('{a}', applied);
+  const msg = tn('toast.importOk', applied, '{a}') + (ignored > 0 ? tn('toast.importIgnored', ignored, '{i}') : '');
   showToast(msg, applied > 0 ? 'success' : 'warn');
 });
 
@@ -3843,12 +3837,26 @@ html, body { overscroll-behavior-y: contain; }
     b.focus();
   });
 
+  /* Nom d'un fichier écrit par un outil : <nom d'origine>_<jeton>_AAAAMMJJ-HHMMSS<ext>, heure locale. Les suffixes de cette
+     forme qui finissent le nom d'origine (jetons radios, swapped, weather, loadout) sont retirés d'abord, tous : un fichier
+     déjà sauvegardé par un outil ne voit pas son nom grandir d'un outil à l'autre. Un nom sans suffixe ne change pas. */
+  const MTB_STAMPED = /(?:_(?:radios|swapped|weather|loadout)_\d{8}-\d{6})+$/;
+  function mtbOutName(original, token, ext, when) {
+    const stem = String(original == null ? '' : original).replace(/\.miz$/i, '');
+    const base = stem.replace(MTB_STAMPED, '') || stem;
+    const d = when || new Date();
+    const p2 = n => String(n).padStart(2, '0');
+    const stamp = d.getFullYear() + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + p2(d.getHours()) + p2(d.getMinutes()) + p2(d.getSeconds());
+    return base + '_' + token + '_' + stamp + ext;
+  }
+
   if (document.body) mtbMount();
   else document.addEventListener('DOMContentLoaded', mtbMount);
   window.mtbToast = mtbShowToast;
   window.mtbConfirm = mtbShowConfirm;
   window.mtbSpinner = mtbShowSpinner;
   window.mtbSpinnerHide = mtbHideSpinner;
+  window.mtbOutName = mtbOutName;
 })();
 /* ===== FIN DES MESSAGES ===== */
 

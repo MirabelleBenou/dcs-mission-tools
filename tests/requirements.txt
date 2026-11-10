@@ -1,0 +1,5 @@
+# The two benches (see README.md)
+playwright
+lupa
+# Only to rebuild the pydcs fixture and the demo mission (tests/fixtures/*.py); the benches do not need it
+# pydcs==1.0.0
