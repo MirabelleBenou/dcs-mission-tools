@@ -13488,8 +13488,19 @@ function lxLineStart(src, offset) { return src.lastIndexOf('\n', offset - 1) + 1
 function lxTabs(n) { return '\t'.repeat(n); }
 function lxRange(a, b, str) { return { pos: { start: { offset: a }, end: { offset: b } }, newValueStr: str }; }
 
+// Le premier caractère qui compte à partir de `from` (blancs et commentaires `--` jusqu'à la fin de la ligne sautés), '' en fin de texte.
+function lxNextChar(src, from) {
+  let i = from;
+  for (;;) {
+    while (i < src.length && ' \t\r\n'.indexOf(src[i]) >= 0) i++;
+    if (src[i] === '-' && src[i + 1] === '-') { while (i < src.length && src[i] !== '\n') i++; continue; }
+    return i < src.length ? src[i] : '';
+  }
+}
+
 // Bornes d'une entrée de table : du début de sa ligne (clé précédée de tabulations seulement) à la fin de la ligne de fermeture,
-// retour à la ligne compris ; `digits` : la place du numéro de « -- end of [n] », s'il y en a un.
+// retour à la ligne compris ; `digits` : la place du numéro de « -- end of [n] », s'il y en a un. La dernière entrée d'une table peut
+// n'avoir aucune virgule (format de pydcs) : la valeur finit alors la ligne (blancs et un commentaire au plus) et le « } » de la table suit.
 function lxEntryExtent(src, entry) {
   if (!entry || !entry.keyPos) throw new Error('entrée sans clé');
   const ks = entry.keyPos.start.offset;
@@ -13497,8 +13508,11 @@ function lxEntryExtent(src, entry) {
   if (!/^\t*$/.test(src.slice(ls, ks))) throw new Error('début d\'entrée : ligne inattendue');
   const ve = entry.value.pos.end.offset;
   const tail = src.slice(ve, ve + 400);
-  const m = /^,[ \t]*(?:--[^\r\n]*)?\r?\n/.exec(tail);
-  if (!m) throw new Error('fin d\'entrée : ligne inattendue');
+  let m = /^,[ \t]*(?:--[^\r\n]*)?\r?\n/.exec(tail);
+  if (!m) {
+    m = /^[ \t]*(?:--[^\r\n]*)?\r?\n/.exec(tail);
+    if (!m || lxNextChar(src, ve + m[0].length) !== '}') throw new Error('fin d\'entrée : ligne inattendue');
+  }
   let digits = null;
   const d = /-- end of \[(\d+)\]/.exec(m[0]);
   if (d) {
@@ -13514,6 +13528,15 @@ function lxCloseLine(src, table) {
   const ls = lxLineStart(src, close);
   if (src[close] !== '}' || !/^\t*$/.test(src.slice(ls, close))) throw new Error('fermeture de table : ligne inattendue');
   return ls;
+}
+
+// Où poser la virgule qui manque au dernier champ de `table` avant d'y ajouter une entrée : juste après sa valeur (format de pydcs, pas
+// de virgule après le dernier champ). -1 : table vide, ou dernier champ déjà suivi d'un séparateur (format de l'éditeur de DCS).
+function lxMissingComma(src, table) {
+  if (!table.entries.length) return -1;
+  const ve = table.entries[table.entries.length - 1].value.pos.end.offset;
+  const c = lxNextChar(src, ve);
+  return c === ',' || c === ';' ? -1 : ve;
 }
 
 // Retire de `patches` ceux qui tombent dans [a, b) et les rend ; un patch à cheval sur une borne est une erreur.
@@ -13695,6 +13718,7 @@ function lxCampPatches(src, struct, camp, moves, where, patches, wanted, outAll)
     if (n === 0) removed.add(ei);
   }
   const out = [];
+  const appended = [];               // tables où une entrée est ajoutée à la fin : leur dernier champ doit avoir son séparateur
   const bodyOf = item => {
     const a = item.ge.value.pos.start.offset, b = item.ge.value.pos.end.offset;
     const inner = lxTake(patches, a, b);
@@ -13722,6 +13746,7 @@ function lxCampPatches(src, struct, camp, moves, where, patches, wanted, outAll)
       const c = lxIndentAt(src, info.catNode.pos.start.offset) + 1;
       sameInd(items, c);
       const at = lxCloseLine(src, info.catNode);
+      appended.push(info.catNode);
       out.push(lxRange(at, at, lxTabs(c) + '["group"] = \n' + lxTabs(c) + lxGroupsText(c, bodies) + ', -- end of ["group"]\n'));
     } else {
       if (!pendingCats.has(ei)) pendingCats.set(ei, []);
@@ -13734,6 +13759,7 @@ function lxCampPatches(src, struct, camp, moves, where, patches, wanted, outAll)
     let text = '';
     for (const [cat, bodies, items] of cats) { sameInd(items, c + 1); text += lxCatText(c, cat, bodies); }
     const at = lxCloseLine(src, en.ce.value);
+    appended.push(en.ce.value);
     out.push(lxRange(at, at, text));
   }
   for (const ei of removed) {
@@ -13764,7 +13790,12 @@ function lxCampPatches(src, struct, camp, moves, where, patches, wanted, outAll)
       wanted.entries.push({ camp, id: ne.id, exists: true });
     });
     if (S.table.entries.length === 0) out.push(lxRange(S.table.pos.start.offset, S.table.pos.end.offset, '{\n' + text + lxTabs(ci - 1) + '}'));
-    else { const at = lxCloseLine(src, S.table); out.push(lxRange(at, at, text)); }
+    else { const at = lxCloseLine(src, S.table); appended.push(S.table); out.push(lxRange(at, at, text)); }
+  }
+  // la virgule qui manque au dernier champ d'une table qui reçoit une entrée ; si ce champ est lui-même retiré, celui d'avant garde la sienne
+  for (const tb of appended) {
+    const c = lxMissingComma(src, tb);
+    if (c >= 0 && !out.some(p => p.pos.start.offset < c && p.pos.end.offset > c)) out.push(lxRange(c, c, ','));
   }
   wanted.camps.set(camp, ord + fresh.length);
   for (const p of out) outAll.push(p);
@@ -13815,7 +13846,9 @@ function collectPatches(src) {
 function verifyWrite(patchedSrc, wanted) {
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
   if (errors.length > 0) return { error: 'tokeniseur : ' + errors[0].message + ' L' + (errors[0].line + 1) };
-  const ast = DCS_PARSER.parse(tokens);
+  let ast;
+  try { ast = DCS_PARSER.parse(tokens); }
+  catch (err) { return { error: 'parseur : ' + err.message }; }
   const struct = {};
   const re = lxWalkAircraft(ast, struct);
   if (re.length !== UI_STATE.aircraft.length) return { error: 'appareils : ' + re.length + ' ≠ ' + UI_STATE.aircraft.length };
