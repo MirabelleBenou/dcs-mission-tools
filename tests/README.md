@@ -6,7 +6,7 @@ go to a temporary folder.
 | Bench | Command | Needs |
 |---|---|---|
 | Lua table separators | `python3 -B tests/test_lua_separators.py` | Python 3.10 or later, and Node |
-| Round trips | `python3 -B tests/run_roundtrips.py [mission.miz ...]` | Python 3.10 or later, `pip install playwright lupa`, a Chromium for Playwright |
+| Round trips | `python3 -B tests/run_roundtrips.py [mission.miz ...]` | Python 3.10 or later, `pip install playwright lupa`, a Chromium for Playwright, `dist/dcs_mission_tools.html` built |
 
 `pip install -r tests/requirements.txt` installs the Python packages. Playwright needs a Chromium: either `playwright install chromium`,
 or point `PLAYWRIGHT_BROWSERS_PATH` at a folder that already has one.
@@ -23,9 +23,14 @@ first wrong case prints a `[FAIL]` line that names it, and the exit code is 1.
 
 ## Round trips — `run_roundtrips.py`
 
+**The trials go through the shell.** A tool no longer runs on its own: a module file opened alone shows one line that points to Mission Tools.
+So every case opens `dist/dcs_mission_tools.html` (the built file, never `modules/`), enters the tool by its tile, and does in the tool's
+iframe what a person does on screen; a mission is loaded through the tool's own `#file-input`, as the shell does with the working file.
+**Rebuild `dist/` before running the bench** (`python3 build_mission_tools.py`); the bench exits with code 2 if `dist/` is not built.
+
 What it proves: a mission survives each tool that writes a `.miz`, and what the tools write is a mission that DCS-side Lua reads.
-For each mission and for each of the Comm Plan Editor, Ground Unit Swapper, Weather Editor and Loadout Editor (opened from `modules/`
-in a headless Chromium):
+For each mission and for each of the Comm Plan Editor, Ground Unit Swapper, Weather Editor and Loadout Editor (opened from its tile in the
+shell, in a headless Chromium):
 
 - **(a)** a round trip with no change, by the tool's own functions: the mission text and every entry of the archive come back identical
   (the Ground Unit Swapper and the Weather Editor have no function that rebuilds the archive: the bench repeats the lines of their *Save* that do,
@@ -52,7 +57,7 @@ python3 -B tests/run_roundtrips.py my_mission.miz       # a mission of your own 
 python3 -B tests/run_roundtrips.py --tools le --out /tmp/rt   # one tool, and keep the written missions in /tmp/rt
 ```
 
-Options: `--repo DIR` (the repository root; default: the parent of `tests/`), `--out DIR` (where the written missions go; default: a
+Options: `--repo DIR` (the repository root, where `dist/` was built; default: the parent of `tests/`), `--out DIR` (where the written missions go; default: a
 temporary folder, removed when everything passes), `--tools cp,gu,wx,le`.
 
 ### The files
@@ -63,8 +68,10 @@ temporary folder, removed when everything passes), `--tools cp,gu,wx,le`.
 - `fixtures/accents.miz` — the demo mission with difficult names (accents, Cyrillic, escaped quotes, `$&` and `$'`, a backslash, markup)
   and two joined entries with non-ASCII names; `fixtures/fixture_accents.py <demo_mission.miz> <out.miz>` builds it (standard library only).
 - `miz_diff.py` — compares two `.miz`: Lua entries by running them, other entries byte for byte (`python3 -B tests/miz_diff.py before.miz after.miz`).
-- `allers_retours.py` — cases (a), (b), (c) for one mission (`python3 -B tests/allers_retours.py . mission.miz label out_dir [cp,gu,wx,le]`).
-- `le_pays.py` — the Loadout Editor country cases for one mission (`python3 -B tests/le_pays.py . mission.miz label out_dir`).
+- `allers_retours.py` — cases (a), (b), (c) for one mission (`python3 -B tests/allers_retours.py . mission.miz label out_dir [cp,gu,wx,le]`); it also holds
+  `ToolPage`, the page that enters a tool through its tile and then works in the tool's iframe.
+- `le_pays.py` — the Loadout Editor country cases for one mission (`python3 -B tests/le_pays.py . mission.miz label out_dir`); it opens the tool
+  through the shell with the same `ToolPage`.
 - `deplacements.py` — compares a mission before and after a country change (`python3 -B tests/deplacements.py before.miz after.miz`).
 
 The fixtures hold no real unit or person name. `.miz` files are otherwise ignored by git (`.gitignore`): the three above

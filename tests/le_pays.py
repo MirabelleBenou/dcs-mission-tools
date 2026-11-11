@@ -8,6 +8,8 @@ the list for the sides check; for a move, the first type that offers a country w
   - within the side: the first enabled country of the side of the checked aircraft is chosen, Apply to selection, Save;
   - other side: the first enabled country of another side is chosen, Apply, Save.
 A move with no country to go to (for any type) is reported [SKIP].
+The Loadout Editor is opened through the shell (dist/dcs_mission_tools.html, by its tile): allers_retours.new_page gives a page that
+works in the tool's iframe, so this file reads as it did for the module alone. Rebuild dist/ before running.
 For each move, the file written is compared with the original: the moved groups are exactly those that left, all of them
 at the chosen side and country, their content changing only by `callsign` and `onboard_num`; no other group changes;
 nothing changes outside mission.coalition; and the written Lua has a sound structure (deplacements.structure), compared

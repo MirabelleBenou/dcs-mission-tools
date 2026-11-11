@@ -5,7 +5,7 @@
 
 With no mission, it runs the three missions of tests/fixtures/ (demo_mission.miz, pydcs.miz, accents.miz); with arguments,
 the missions given (a private mission saved by DCS's mission editor is passed that way). For each mission and each of the four
-tools (Comm Plan Editor, Ground Unit Swapper, Weather Editor, Loadout Editor), opened from modules/ in a headless Chromium:
+tools (Comm Plan Editor, Ground Unit Swapper, Weather Editor, Loadout Editor), in a headless Chromium, the bench runs:
   (a) a round trip with no change;
   (b) one change made on screen, then Save;
   (c) the written file read back by the tool and by a real Lua interpreter (lupa);
@@ -15,13 +15,17 @@ One line per case, [OK], [FAIL] or [SKIP] (nothing to edit or no country to go t
 fixture never skips an edit). A mission that a tool refuses (an error message, or no answer within 30 s) is a [FAIL] on its case (a),
 with the text of the message, and the bench goes on with the next tool; so is a page error or a console.error during (a) or (b).
 Any other [FAIL] stops the bench. Exit code 1 after a [FAIL], 0 when every case is [OK] or [SKIP], 2 only if the bench cannot run
-(Playwright, Chromium or lupa missing, mission not found). The missions written by the bench go to a temporary folder outside the
+(Playwright, Chromium or lupa missing, mission not found, dist/ not built). The missions written by the bench go to a temporary folder outside the
 repository, kept (its path is printed) whenever the end is anything other than all [OK]; --out chooses another folder, which is kept.
+
+The trials go through the shell: a tool file opened on its own only points to Mission Tools, so every case opens
+dist/dcs_mission_tools.html (the built file), enters the tool by its tile, and works in the tool's iframe. Rebuild dist/
+(python3 build_mission_tools.py) before running the bench.
 
 (a) for the Ground Unit Swapper and the Weather Editor: neither has a function that rebuilds the zip, so the bench repeats the lines
 of their Save that do (the mission entry, the other entries, the compression) with no patch.
 
-Needs: pip install playwright lupa (see tests/requirements.txt), and a Chromium for Playwright."""
+Needs: pip install playwright lupa (see tests/requirements.txt), and a Chromium for Playwright; dist/dcs_mission_tools.html built."""
 import argparse
 import os
 import shutil
@@ -58,6 +62,10 @@ def main():
         if not m.is_file():
             print(f'[ERROR] mission not found: {m}')
             return 2
+    shell = Path(repo, ar.SHELL)
+    if not shell.is_file():
+        print(f'[ERROR] {shell} not found: build it first (python3 build_mission_tools.py)')
+        return 2
     tools = [t for t in args.tools.split(',') if t]
     out = args.out or tempfile.mkdtemp(prefix='mt_roundtrips_')
     os.makedirs(out, exist_ok=True)

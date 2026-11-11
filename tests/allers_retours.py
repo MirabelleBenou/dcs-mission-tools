@@ -2,7 +2,10 @@
 """allers_retours.py <repo> <mission.miz> <label> <out_dir> [tools=cp,gu,wx,le]
 
 Round trips of one mission through each tool that writes a .miz (cp: Comm Plan Editor, gu: Ground Unit Swapper,
-wx: Weather Editor, le: Loadout Editor), opened from modules/ in a headless Chromium:
+wx: Weather Editor, le: Loadout Editor). The trials go through the shell: a tool no longer opens on its own (a module file shows
+one line that points to Mission Tools), so each case opens dist/dcs_mission_tools.html in a headless Chromium, enters the tool by
+its tile, and does in the tool's iframe what it did in the module alone. Rebuild dist/ (python3 build_mission_tools.py) before
+running them: the bench reads the built file, never modules/.
   (a) a round trip WITHOUT any change, by the tool's own functions (text read back, applyPatches with no patch,
       retokenizeSafety, rebuild of the zip as Save does): the mission text and every entry must come back identical;
   (b) one change made on screen with real clicks, then Save, the downloaded file kept: the only data that differ from the
@@ -23,8 +26,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import miz_diff  # noqa: E402
 
-MODS = {'cp': 'modules/dcs_comm_plan_editor.html', 'gu': 'modules/dcs_ground_unit_swapper.html',
-        'wx': 'modules/dcs_weather_editor.html', 'le': 'modules/dcs_loadout_editor.html'}
+SHELL = 'dist/dcs_mission_tools.html'   # the built file: the only page the tools run in
+MODS = ('cp', 'gu', 'wx', 'le')
 NAMES = {'cp': 'Comm Plan Editor', 'gu': 'Ground Unit Swapper', 'wx': 'Weather Editor', 'le': 'Loadout Editor'}
 TOKENS = {'cp': 'radios', 'gu': 'swapped', 'wx': 'weather', 'le': 'loadout'}
 STAMPED = re.compile(r'_(?:radios|swapped|weather|loadout)_\d{8}-\d{6}')
@@ -55,13 +58,56 @@ LOAD_WAIT_MS = 30000
 
 
 def tool_url(repo, mod):
-    return Path(repo, MODS[mod]).resolve().as_uri()
+    """The address of a tool: the built shell, with the tool's id after a `#` (the shell ignores it; ToolPage.goto reads it)."""
+    p = Path(repo, SHELL).resolve()
+    if not p.is_file():
+        raise FileNotFoundError(f'{p} not found: build it first (python3 build_mission_tools.py)')
+    return p.as_uri() + '#' + mod
+
+
+# What stays on the page itself when a tool is open; everything else (locator, evaluate, click, set_input_files, wait_for_*...) is
+# done in the tool's iframe.
+_PAGE_LEVEL = {'keyboard', 'mouse', 'expect_download', 'on', 'add_init_script', 'set_default_timeout', 'context', 'close', 'url'}
+
+
+class ToolPage:
+    """A page of the shell that acts as the page of one tool: `goto(tool_url(...))` opens the shell, enters the tool by its tile, and
+    waits for the tool in its iframe; from then on locator, evaluate, click, wait_for_* ... apply to that iframe, and keyboard,
+    downloads and events to the page. The cases written for a module opened alone therefore run unchanged in the shell."""
+
+    def __init__(self, page):
+        self._page = page
+        self._frame = None
+
+    def goto(self, url, **kw):
+        base, _, mod = url.partition('#')
+        self._frame = None
+        self._page.goto(base, wait_until='load')
+        if not mod:
+            return None
+        self._page.locator(f'.module-card[aria-label="{NAMES[mod]}"]').click()
+        self._page.wait_for_selector(f'#iframe-{mod}', state='attached')
+        frame = self._page.locator(f'#iframe-{mod}').element_handle().content_frame()
+        frame.wait_for_function("document.readyState === 'complete' && typeof UI_STATE !== 'undefined'", timeout=60000)
+        # the tool is the tool: it keeps its « ◄ Mission Tools » and shows no line that points to Mission Tools
+        shown = frame.evaluate("({back: !!document.querySelector('.mt-back-injected'), file: !!document.getElementById('file-input'),"
+                               " header: !!document.getElementById('app-header'), line: !!document.querySelector('a[href^=\"https://mirabellebenou.github.io/\"]')})")
+        if not (shown['back'] and shown['file'] and shown['header']) or shown['line']:
+            raise RuntimeError(f'the shell did not open {NAMES[mod]} as a tool: {shown}')
+        self._frame = frame
+        return None
+
+    def __getattr__(self, name):
+        if self._frame is not None and name not in _PAGE_LEVEL and hasattr(self._frame, name):
+            return getattr(self._frame, name)
+        return getattr(self._page, name)
 
 
 def new_page(browser, errors):
-    """A page with a 1280 x 900 viewport, French, downloads accepted; page errors and console errors go to `errors`."""
+    """A page with a 1280 x 900 viewport, French, downloads accepted; page errors and console errors (those of the shell and of the
+    tool's iframe) go to `errors`. Returns (context, ToolPage)."""
     ctx = browser.new_context(viewport={'width': 1280, 'height': 900}, accept_downloads=True, locale='fr-FR')
-    page = ctx.new_page()
+    page = ToolPage(ctx.new_page())
     page.set_default_timeout(120000)
     page.on('pageerror', lambda e: errors.append('pageerror ' + str(e)[:200]))
     page.on('console', lambda m: errors.append('console.error ' + m.text[:200]) if m.type == 'error' else None)

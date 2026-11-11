@@ -46,7 +46,7 @@ The landing page presents each editor as a tile. Active tools open in place.
 | **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.4.0` |
 | **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.4.0` |
 
-> Each tool is a standalone HTML editor; the page bundles the live tools and shares a single working `.miz` between them.
+> The tools live in one self-contained page, which shares a single working `.miz` between them; a tool file opened on its own only points to Mission Tools.
 
 ### 📡 Comm Plan Editor — in detail
 
@@ -169,7 +169,7 @@ The module sources are read from `modules/` and the output is written to `dist/d
 ```
 .
 ├── build_mission_tools.py     # shell + bundler (embeds modules + tiles)
-├── modules/                   # standalone editors (source of truth)
+├── modules/                   # the four tools, bundled by the build (source of truth)
 │   ├── dcs_comm_plan_editor.html
 │   ├── dcs_ground_unit_swapper.html
 │   ├── dcs_weather_editor.html
@@ -183,7 +183,7 @@ The module sources are read from `modules/` and the output is written to `dist/d
 └── LICENSE
 ```
 
-> The **source of truth** is each standalone module (never the built file). Filenames carry **no version** — versioning lives in GitHub tags / releases.
+> The **source of truth** is each module in `modules/` (never the built file); the modules run only inside the built page. Filenames carry **no version** — versioning lives in GitHub tags / releases.
 
 ## 🗺️ Roadmap
 
