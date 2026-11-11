@@ -19,6 +19,44 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+<script data-lang-key="gus_lang_v1">
+/* ===== GARDE DU MODULE SEUL ===== */
+(function () {
+  if (window.parent !== window) return;
+  var TXT = {
+    fr: { only: 'Cet outil fait partie de Mission Tools : ouvrez dcs_mission_tools.html, ou la version en ligne.', online: 'la version en ligne' },
+    en: { only: 'This tool is part of Mission Tools: open dcs_mission_tools.html, or the online version.', online: 'the online version' }
+  };
+  var HREF = 'https://mirabellebenou.github.io/dcs-mission-tools/';
+  var me = document.currentScript;
+  var key = me && me.getAttribute('data-lang-key');
+  var lang = null;
+  try { lang = localStorage.getItem(key); } catch (e) {}
+  if (lang !== 'fr' && lang !== 'en') lang = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
+  try { window.stop(); } catch (e) {}
+  var root = document.documentElement;
+  root.lang = lang;
+  root.style.colorScheme = 'light dark';
+  var body = document.body;
+  if (!body) { body = document.createElement('body'); root.appendChild(body); }
+  body.textContent = '';
+  body.style.margin = '0';
+  var p = document.createElement('p');
+  p.style.cssText = 'margin:0;padding:16px 20px;font:14px/1.5 system-ui,sans-serif;overflow-wrap:anywhere';
+  var t = TXT[lang], i = t.only.indexOf(t.online);
+  if (i < 0) p.textContent = t.only;
+  else {
+    var a = document.createElement('a');
+    a.href = HREF;
+    a.textContent = t.online;
+    p.appendChild(document.createTextNode(t.only.slice(0, i)));
+    p.appendChild(a);
+    p.appendChild(document.createTextNode(t.only.slice(i + t.online.length)));
+  }
+  body.appendChild(p);
+})();
+/* ===== FIN DE LA GARDE ===== */
+</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DCS Ground Unit Swapper</title>
   <style>
