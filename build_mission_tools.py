@@ -290,8 +290,8 @@ _KEY_LANG_RE = re.compile(r"^const KEY_LANG = '([0-9A-Za-z_]+)'", re.MULTILINE)
 
 def check_shell_only_block():
     """Garde d'identité : la garde du module seul (shell_only_block.build_block()) doit figurer exactement une fois, telle quelle,
-    dans chacun des quatre modules, dans une balise <script data-lang-key="<KEY_LANG du module>">, premier <script> du document,
-    posée dans le <head> (dès le début de la page). Sinon le build s'arrête avant toute écriture, en nommant le module."""
+    dans chacun des quatre modules, dans une balise <script data-lang-key="<KEY_LANG du module>">, premier élément du <body> (la page seule
+    est peinte : posée dans le <head>, la garde arrêtait l'analyse avant le <body>, et rien ne se peignait). Sinon le build s'arrête avant toute écriture, en nommant le module."""
     block = build_shell_only_block()
     for mod in MODULES:
         try:
@@ -318,9 +318,13 @@ def check_shell_only_block():
                   f'<script data-lang-key="{key.group(1)}"> — build arrêté', file=sys.stderr)
             sys.exit(1)
         at = html.index(tag)
-        head = html.find('<head>')
-        if html.find('<script') != at or head < 0 or head > at or html.find('</head>') < at:
-            print(f'  [ERREUR] {mod["src"]} : la garde du module seul n\'est pas le premier script, dans le <head> '
+        head, head_end = html.find('<head>'), html.find('</head>')
+        body = re.search(r'<body[^>]*>\s*', html)
+        if head < 0 or head_end < head or '<script' in html[head:head_end]:
+            print(f'  [ERREUR] {mod["src"]} : le <head> porte un script — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if not body or body.start() < head_end or body.end() != at:
+            print(f'  [ERREUR] {mod["src"]} : la garde du module seul n\'est pas le premier élément du <body> '
                   f'— build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] Garde du module seul identique à shell_only_block.py ({mod["src"]})')
@@ -1687,9 +1691,13 @@ def main():
         print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
         sys.exit(1)
     print('  [OK] Bloc des messages identique à messages_block.py (shell construit)')
-    if SHELL_ONLY_BEGIN in html.replace(module_html_js, '', 1):
-        print('  [ERREUR] La garde du module seul figure dans le shell lui-même — build arrêté', file=sys.stderr)
-        sys.exit(1)
+    shell_text = html.replace(module_html_js, '', 1)
+    shell_only_body = build_shell_only_block().replace(SHELL_ONLY_BEGIN, '').replace(SHELL_ONLY_END, '').strip()
+    for what, found in (('son marqueur de début', SHELL_ONLY_BEGIN in shell_text), ('son marqueur de fin', SHELL_ONLY_END in shell_text),
+                        ('le corps du bloc', shell_only_body in shell_text), ('la balise data-lang-key', 'data-lang-key' in shell_text)):
+        if found:
+            print(f'  [ERREUR] La garde du module seul figure dans le shell lui-même ({what}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
     print('  [OK] Garde du module seul absente du shell lui-même')
 
     os.makedirs(os.path.dirname(os.path.join(SCRIPT_DIR, OUT_FILE)), exist_ok=True)

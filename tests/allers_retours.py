@@ -27,6 +27,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import miz_diff  # noqa: E402
 
 SHELL = 'dist/dcs_mission_tools.html'   # the built file: the only page the tools run in
+# What a tool file opened on its own shows (shell_only_block.py): the link's exact address and the line, in French and in English.
+# Opened from its tile, a tool must show neither.
+ONLINE_HREF = 'https://mirabellebenou.github.io/dcs-mission-tools/'
+SHELL_ONLY_TEXTS = ['Cet outil fait partie de Mission Tools : ouvrez dcs_mission_tools.html, ou la version en ligne.',
+                    'This tool is part of Mission Tools: open dcs_mission_tools.html, or the online version.']
 MODS = ('cp', 'gu', 'wx', 'le')
 NAMES = {'cp': 'Comm Plan Editor', 'gu': 'Ground Unit Swapper', 'wx': 'Weather Editor', 'le': 'Loadout Editor'}
 TOKENS = {'cp': 'radios', 'gu': 'swapped', 'wx': 'weather', 'le': 'loadout'}
@@ -90,8 +95,11 @@ class ToolPage:
         frame = self._page.locator(f'#iframe-{mod}').element_handle().content_frame()
         frame.wait_for_function("document.readyState === 'complete' && typeof UI_STATE !== 'undefined'", timeout=60000)
         # the tool is the tool: it keeps its « ◄ Mission Tools » and shows no line that points to Mission Tools
-        shown = frame.evaluate("({back: !!document.querySelector('.mt-back-injected'), file: !!document.getElementById('file-input'),"
-                               " header: !!document.getElementById('app-header'), line: !!document.querySelector('a[href^=\"https://mirabellebenou.github.io/\"]')})")
+        shown = frame.evaluate(
+            "([href, texts]) => ({back: !!document.querySelector('.mt-back-injected'), file: !!document.getElementById('file-input'),"
+            " header: !!document.getElementById('app-header'),"
+            " line: Array.from(document.querySelectorAll('a')).some(a => a.getAttribute('href') === href)"
+            " || texts.some(x => document.body.innerText.includes(x))})", [ONLINE_HREF, SHELL_ONLY_TEXTS])
         if not (shown['back'] and shown['file'] and shown['header']) or shown['line']:
             raise RuntimeError(f'the shell did not open {NAMES[mod]} as a tool: {shown}')
         self._frame = frame
