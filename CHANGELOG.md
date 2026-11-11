@@ -31,6 +31,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Loadout Editor**: countries of a side that the mission file does not list (pydcs and the generators built on it leave out a side without units) are greyed out in the country list — moving a group there could not be saved and blocked every later save; a message no longer covers *Apply to selection*.
 - **Ground Unit Swapper**: in a cell's type list, Enter picks the first match after typing, as in every other list of the suite.
 - **All tools**: a file, unit or livery name containing `$&` or `$'` shows as it is in messages.
+- **Comm Plan Editor**: the Mirage F1CE and F1BE radios are now named as in the DCS World mission editor — TRAP 136 and TRAP 137B, as on the F1EE, instead of TRAP 138 and TRAP 139 — and show their frequency band.
 
 ## [1.4.0] — 2026-11-08
 
