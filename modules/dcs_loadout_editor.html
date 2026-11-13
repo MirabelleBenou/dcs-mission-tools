@@ -12004,7 +12004,7 @@ function renderSettingsInfo(type) {
 function settingsOverLimit(type, settings, targets, shown) {
   const lim = limitsFor(type);
   if (!lim) return null;
-  if (settings.fuel !== undefined && typeof lim.fuel_max === 'number' && settings.fuel > lim.fuel_max) {
+  if (settings.fuel !== undefined && typeof lim.fuel_max === 'number' && settings.fuel > lim.fuel_max + 0.005) {
     return uTxt(t('toast.overFuel')).replace('{v}', fmtNum(shown && shown.fuel !== undefined ? shown.fuel : massIn(settings.fuel))).replace('{max}', fmtNum(massIn(lim.fuel_max)));
   }
   const cl = chargeLimit(lim);

@@ -34,6 +34,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Ground Unit Swapper**: in a cell's type list, Enter picks the first match after typing, as in every other list of the suite.
 - **All tools**: a file, unit or livery name containing `$&` or `$'` shows as it is in messages.
 - **Comm Plan Editor**: the Mirage F1CE and F1BE radios are now named as in the DCS World mission editor — TRAP 136 and TRAP 137B, as on the F1EE, instead of TRAP 138 and TRAP 139 — and show their frequency band.
+- **Loadout Editor**: the maximum fuel shown under the fuel field is now accepted when typed, also for the few aircraft whose maximum has more than two decimals (F-15ESE, Spitfire LF Mk. IX).
 
 ## [1.4.0] — 2026-11-08
 
