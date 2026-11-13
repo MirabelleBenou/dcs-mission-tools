@@ -11,6 +11,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Loadout Editor**: a group can now move to a country of another side — the country list shows every side, current side first, and the callsign follows the new country. The summary warns, without blocking, when a group departs from an airfield, ship or FARP of its former side, is targeted by another group's task, has tasks against groups, or is named in triggers. Airfield names from pydcs.
 - **All tools**: with unsaved changes, the browser asks before the page is closed or reloaded; pull-to-refresh is off; the back gesture or button in a tool returns to the suite's home screen, asking first like the ◄ button does.
 - **Tests**: a round-trip bench (`tests/run_roundtrips.py`) opens a mission in each tool, saves it with and without a change, and reads the result back in the tool and with a real Lua interpreter; it runs on the three sample missions in `tests/fixtures/` or on any mission given to it.
+- **Loadout Editor**: weights can be shown in kg or lbs — a *kg | lbs* switch in *Settings* applies to the Weight column, *Compose a loadout* and the fuel field; the choice is remembered, and the mission file stays in kg.
 
 ### Changed
 - **All tools**: the tools now run only inside Mission Tools — the single self-contained page, online or offline. A tool file opened on its own shows one line that points to Mission Tools; only the full page is published.

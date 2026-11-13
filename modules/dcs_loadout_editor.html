@@ -350,6 +350,9 @@
       color: var(--text-2); user-select: none; display: flex; align-items: center; gap: 8px;
     }
     details.panel-sec > summary::-webkit-details-marker { display: none; }
+    .unit-sw { margin-left: auto; display: inline-flex; gap: 4px; }
+    .unit-sw button { font: 12px var(--font-mono); text-transform: none; letter-spacing: 0; background: transparent; color: var(--text-dim); border: 1px solid var(--border); border-radius: 3px; padding: 0 10px; min-height: 28px; cursor: pointer; }
+    .unit-sw button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
     .sec-body { padding: 0 14px 12px; display: flex; flex-direction: column; gap: 8px; }
 
     .ld-card, .lv-card {
@@ -759,10 +762,10 @@
         </div>
       </details>
       <details class="panel-sec" open>
-        <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.settings">Réglages</span></summary>
+        <summary><span class="mtb-chev" aria-hidden="true"></span><span data-i18n="panel.settings">Réglages</span><span class="unit-sw" id="unit-sw" role="group" aria-label="Unité de masse" title="Unité des masses et du carburant ; le fichier reste en kg"><button type="button" id="unit-kg" aria-pressed="true">kg</button><button type="button" id="unit-lbs" aria-pressed="false">lbs</button></span></summary>
         <div class="sec-body">
           <div class="set-grid">
-            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (kg)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-slider"><input type="range" id="set-fuel-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-fuel-pct-val">—</span></div><div class="set-note"><span id="max-fuel"></span></div></div>
+            <div class="set-field"><label for="set-fuel"><span data-i18n="panel.fuel">Carburant</span> (<span id="set-fuel-unit">kg</span>)</label><input type="number" id="set-fuel" min="0" step="any" inputmode="decimal"><div class="set-slider"><input type="range" id="set-fuel-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-fuel-pct-val">—</span></div><div class="set-note"><span id="max-fuel"></span></div></div>
             <div class="set-field"><label for="set-flare" data-i18n="panel.flares">Leurres</label><input type="number" id="set-flare" min="0" step="1" inputmode="numeric"><div class="set-note"><span id="max-flare"></span></div></div>
             <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"><div class="set-note"><span id="max-chaff"></span></div></div>
             <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-slider"><input type="range" id="set-gun-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-gun-pct-val">—</span></div><div class="set-note"><span id="max-gun"></span></div></div>
@@ -860,9 +863,9 @@ const I18N = {
     'table.col.loadout':           'Emport',
     'table.col.mass':              'Masse',
     'table.col.mass.title':        'Estimation : à vide + carburant + emports (canon non compté)',
-    'mass.tip':                    'À vide {e} + carburant {f} + emports {s} = {m} kg · max {max} kg',
+    'mass.tip':                    'À vide {e} + carburant {f} + emports {s} = {m} {u} · max {max} {u}',
     'mass.tipOver':                ' — au-delà, permis',
-    'cmp.takeoff':                 ' · Au décollage, carburant {f} kg : {y} (max {max} kg)',
+    'cmp.takeoff':                 ' · Au décollage, carburant {f} {u} : {y} (max {max} {u})',
     'table.col.livery':            'Livrée',
     'table.empty':                 'Aucun appareil ne correspond aux filtres actifs.',
     'table.type.count.one':        '{n} appareil',
@@ -893,15 +896,17 @@ const I18N = {
     'panel.noPylons':              'Aucun pylône',
     'panel.fuel':                  'Carburant',
     'set.fuelPct':                 'Carburant en % du maximum',
+    'unit.label':                  'Unité de masse',
+    'unit.tip':                    'Unité des masses et du carburant ; le fichier reste en kg',
     'panel.flares':                'Leurres',
     'panel.chaff':                 'Paillettes',
     'panel.gun':                   'Canon',
     'panel.settings.hint':         'Les valeurs affichées sont celles des appareils cochés ; seul un champ modifié s\'applique.',
     'set.gunPct':                  'Canon en %',
-    'set.fuelMax':                 'max {n} kg',
+    'set.fuelMax':                 'max {n} {u}',
     'set.gunRange':                '0 – 100 %',
     'set.charge':                  'leurres{fs} + paillettes{cs} ≤ {n}',
-    'toast.overFuel':              '❌ Au-delà du maximum : carburant {v} kg, limite {max} kg',
+    'toast.overFuel':              '❌ Au-delà du maximum : carburant {v} {u}, limite {max} {u}',
     'toast.overCharge':            '❌ Au-delà du maximum : leurres{fs} + paillettes{cs} ≤ {n} ({used} demandé pour {unit})',
     'panel.sel.same':              'Sélection de ce type : {n}',
     'panel.sel.other':             '{n} d\'un autre type (ignoré(s))',
@@ -1001,7 +1006,7 @@ const I18N = {
     'bar.campTriggers':            'cité par des déclencheurs : {0}',
     'bar.cur':                     ' (actuellement {cur})',
     'bar.loadoutSame':             '{l} — déjà porté par les appareils cochés',
-    'bar.set.fuel':                'carburant {v} kg',
+    'bar.set.fuel':                'carburant {v} {u}',
     'bar.set.flare':               'leurres {v}',
     'bar.set.chaff':               'paillettes {v}',
     'bar.set.gun':                 'canon {v} %',
@@ -1054,9 +1059,9 @@ const I18N = {
     'table.col.loadout':           'Loadout',
     'table.col.mass':              'Weight',
     'table.col.mass.title':        'Estimate: empty + fuel + stores (gun not counted)',
-    'mass.tip':                    'Empty {e} + fuel {f} + stores {s} = {m} kg · max {max} kg',
+    'mass.tip':                    'Empty {e} + fuel {f} + stores {s} = {m} {u} · max {max} {u}',
     'mass.tipOver':                ' — above, allowed',
-    'cmp.takeoff':                 ' · Take-off, fuel {f} kg: {y} (max {max} kg)',
+    'cmp.takeoff':                 ' · Take-off, fuel {f} {u}: {y} (max {max} {u})',
     'table.col.livery':            'Livery',
     'table.empty':                 'No aircraft match the active filters.',
     'table.type.count.one':        '{n} aircraft',
@@ -1087,15 +1092,17 @@ const I18N = {
     'panel.noPylons':              'No pylons',
     'panel.fuel':                  'Fuel',
     'set.fuelPct':                 'Fuel as a % of the maximum',
+    'unit.label':                  'Weight unit',
+    'unit.tip':                    'Unit for weights and fuel; the file stays in kg',
     'panel.flares':                'Flares',
     'panel.chaff':                 'Chaff',
     'panel.gun':                   'Gun',
     'panel.settings.hint':         'Values shown are those of the selected aircraft; only a changed field is applied.',
     'set.gunPct':                  'Gun in %',
-    'set.fuelMax':                 'max {n} kg',
+    'set.fuelMax':                 'max {n} {u}',
     'set.gunRange':                '0 – 100 %',
     'set.charge':                  'flares{fs} + chaff{cs} ≤ {n}',
-    'toast.overFuel':              '❌ Above the maximum: fuel {v} kg, limit {max} kg',
+    'toast.overFuel':              '❌ Above the maximum: fuel {v} {u}, limit {max} {u}',
     'toast.overCharge':            '❌ Above the maximum: flares{fs} + chaff{cs} ≤ {n} ({used} requested for {unit})',
     'panel.sel.same':              'Selected of this type: {n}',
     'panel.sel.other':             '{n} of another type (ignored)',
@@ -1195,7 +1202,7 @@ const I18N = {
     'bar.campTriggers':            'named in triggers: {0}',
     'bar.cur':                     ' (currently {cur})',
     'bar.loadoutSame':             '{l} — already carried by the selected aircraft',
-    'bar.set.fuel':                'fuel {v} kg',
+    'bar.set.fuel':                'fuel {v} {u}',
     'bar.set.flare':               'flares {v}',
     'bar.set.chaff':               'chaff {v}',
     'bar.set.gun':                 'gun {v} %',
@@ -1255,6 +1262,45 @@ function initLang() {
   document.documentElement.lang = CURRENT_LANG;
 }
 
+// Unité d'affichage des masses : kg (défaut) ou lbs, gardée d'une visite à l'autre ; tout se calcule en kg, seuls l'affichage et la saisie convertissent
+const KEY_MASS_UNIT = 'mass_unit_v1';
+const LB_KG = 0.45359237;
+let MASS_UNIT = 'kg';
+function initMassUnit() {
+  let v = null;
+  try { v = localStorage.getItem(KEY_MASS_UNIT); } catch(e) {}
+  MASS_UNIT = v === 'lbs' ? 'lbs' : 'kg';
+}
+function massIn(kg) { return MASS_UNIT === 'lbs' ? kg / LB_KG : kg; }
+function massTxt(kg) { return cmpNum(massIn(kg)); }
+function fuelToKg(v) { return MASS_UNIT === 'lbs' ? Math.round(v * LB_KG * 100) / 100 : v; }
+function uTxt(s) { return String(s).split('{u}').join(MASS_UNIT); }
+function applyMassUnitUi() {
+  const sw = document.getElementById('unit-sw');
+  if (!sw) return;
+  sw.setAttribute('aria-label', t('unit.label')); sw.title = t('unit.tip');
+  document.getElementById('unit-kg').setAttribute('aria-pressed', String(MASS_UNIT === 'kg'));
+  document.getElementById('unit-lbs').setAttribute('aria-pressed', String(MASS_UNIT === 'lbs'));
+  const fu = document.getElementById('set-fuel-unit');
+  if (fu) fu.textContent = MASS_UNIT;
+}
+function setMassUnit(u) {
+  if (u !== 'kg' && u !== 'lbs') return;
+  if (u === MASS_UNIT) return;
+  const el = document.getElementById('set-fuel');
+  let kgRaw = null;
+  if (el && SET_TOUCH.has('fuel')) {
+    const raw = el.value.trim(), n = Number(raw);
+    if (raw !== '' && isFinite(n)) kgRaw = MASS_UNIT === 'lbs' ? n * LB_KG : n;
+  }
+  MASS_UNIT = u;
+  try { localStorage.setItem(KEY_MASS_UNIT, u); } catch(e) {}
+  applyMassUnitUi();
+  if (kgRaw !== null) el.value = fmtNum(massIn(kgRaw));
+  try { if (UI_STATE.model) renderAll(); } catch(e) { console.warn('[unit] renderAll:', e); }
+  try { if (CMP.open) cmpUpdate(); } catch(e) { console.warn('[unit] composer:', e); }
+}
+
 function setLang(lang, fromStorage) {
   if (lang !== 'fr' && lang !== 'en') return;
   if (lang === CURRENT_LANG) return;
@@ -1281,6 +1327,7 @@ function applyI18nStatic() {
   });
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  applyMassUnitUi();
 }
 
 function updateDocTitle() { document.title = t('doc.title'); }
@@ -11904,8 +11951,9 @@ function fillSettings(type) {
     const el = document.getElementById('set-' + key);
     const touched = SET_TOUCH.has(key);
     const r = type === null ? { lo: Infinity, hi: -Infinity } : settingRef(type, key);
-    el.placeholder = r.lo === Infinity || r.lo === r.hi ? '' : fmtNum(r.lo) + ' – ' + fmtNum(r.hi);
-    if (!touched) el.value = r.lo !== Infinity && r.lo === r.hi ? fmtNum(r.lo) : '';
+    const sh = key === 'fuel' ? massIn : (x => x);
+    el.placeholder = r.lo === Infinity || r.lo === r.hi ? '' : fmtNum(sh(r.lo)) + ' – ' + fmtNum(sh(r.hi));
+    if (!touched) el.value = r.lo !== Infinity && r.lo === r.hi ? fmtNum(sh(r.lo)) : '';
   }
   syncFuelSlider(); syncGunSlider();
 }
@@ -11917,7 +11965,7 @@ function syncFuelSlider() {
   const ty = panelType();
   const lim = ty !== null ? AIRCRAFT_LIMITS[ty] : null;
   const max = lim && typeof lim.fuel_max === 'number' && lim.fuel_max > 0 ? lim.fuel_max : null;
-  const raw = el.value.trim(), kg = Number(raw);
+  const raw = el.value.trim(), kg = MASS_UNIT === 'lbs' ? Number(raw) * LB_KG : Number(raw);
   let pct = 0, txt = '—';
   if (max !== null && raw !== '' && isFinite(kg)) { pct = Math.max(0, Math.min(100, Math.round(kg / max * 100))); txt = pct + ' %'; }
   setFuelSliderView(pct, txt, max === null);
@@ -11942,7 +11990,7 @@ function renderSettingsInfo(type) {
   fillSettings(type);
   const lim = limitsFor(type);
   const cl = chargeLimit(lim);
-  const fuelMax = lim && typeof lim.fuel_max === 'number' ? t('set.fuelMax').replace('{n}', fmtNum(lim.fuel_max)) : '';
+  const fuelMax = lim && typeof lim.fuel_max === 'number' ? uTxt(t('set.fuelMax')).replace('{n}', fmtNum(massIn(lim.fuel_max))) : '';
   const charge = cl ? chargeRule(cl) : '';
   const info = { fuel: fuelMax, flare: charge, chaff: charge, gun: t('set.gunRange') };
   for (const key of ['fuel', 'flare', 'chaff', 'gun']) {
@@ -11953,11 +12001,11 @@ function renderSettingsInfo(type) {
 // Refus au-delà du maximum : carburant au-dessus de fuel_max, ou leurres × taille + paillettes × taille
 // au-dessus de charge_total pour un appareil visé (un champ vide compte pour la valeur actuelle de l'appareil).
 // Renvoie le message du refus, ou null.
-function settingsOverLimit(type, settings, targets) {
+function settingsOverLimit(type, settings, targets, shown) {
   const lim = limitsFor(type);
   if (!lim) return null;
   if (settings.fuel !== undefined && typeof lim.fuel_max === 'number' && settings.fuel > lim.fuel_max) {
-    return t('toast.overFuel').replace('{v}', fmtNum(settings.fuel)).replace('{max}', fmtNum(lim.fuel_max));
+    return uTxt(t('toast.overFuel')).replace('{v}', fmtNum(shown && shown.fuel !== undefined ? shown.fuel : massIn(settings.fuel))).replace('{max}', fmtNum(massIn(lim.fuel_max)));
   }
   const cl = chargeLimit(lim);
   if (cl && (settings.flare !== undefined || settings.chaff !== undefined)) {
@@ -11985,19 +12033,20 @@ function readSettings() {
     { id: 'set-chaff', key: 'chaff', label: t('panel.chaff'),  int: true,  max: Infinity },
     { id: 'set-gun',   key: 'gun',   label: t('panel.gun'),    int: true,  max: 100 },
   ];
-  const out = {};
+  const out = {}, typed = {};
   const bad = label => t('toast.badValue').replace('{field}', label).replace(/^\S+\s/, '');
   for (const d of defs) {
     if (!SET_TOUCH.has(d.key)) continue;   // champ non touché : valeur de référence, ne compte pas
     const el = document.getElementById(d.id);
-    if (el.validity && el.validity.badInput) return { out, error: bad(d.label) };   // saisie illisible : le champ « vide » n'est pas vide
+    if (el.validity && el.validity.badInput) return { out, typed, error: bad(d.label) };   // saisie illisible : le champ « vide » n'est pas vide
     const raw = el.value.trim();
     if (raw === '') continue;
     const n = Number(raw);
-    if (!isFinite(n) || n < 0 || n > d.max || (d.int && !Number.isInteger(n))) return { out, error: bad(d.label) };
-    out[d.key] = n;
+    if (!isFinite(n) || n < 0 || n > d.max || (d.int && !Number.isInteger(n))) return { out, typed, error: bad(d.label) };
+    out[d.key] = d.key === 'fuel' ? fuelToKg(n) : n;
+    typed[d.key] = n;
   }
-  return { out, error: null };
+  return { out, typed, error: null };
 }
 
 // Un nombre de la barre : comme la masse de la fenêtre Composer (cmpNum) ; les décimales saisies sont gardées
@@ -12102,7 +12151,7 @@ function applyPlan(type) {
   }
   if (Object.keys(rs.out).length > 0 || rs.error) {
     const el = elig;
-    const over = rs.error ? null : settingsOverLimit(type, rs.out, el);
+    const over = rs.error ? null : settingsOverLimit(type, rs.out, el, rs.typed);
     const error = rs.error || (over ? over.replace(/^\S+\s/, '') : null);
     const targets = error ? [] : el.filter(u => {
       const cur = curPayload(u);
@@ -12110,7 +12159,7 @@ function applyPlan(type) {
       for (const [k, v] of Object.entries(rs.out)) next[k] = v;
       return !deepEqValues(cur, next);
     });
-    plan.settings = { values: rs.out, error, targets, eligible: el.length > 0 };
+    plan.settings = { values: rs.out, shown: rs.typed, error, targets, eligible: el.length > 0 };
   }
   const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
   if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv), eligible: checked.some(u => !skipReason(u, type, visSet, 'livery')) };
@@ -12370,9 +12419,9 @@ function massCell(u) {
   const m = unitMass(u);
   if (!m) return '<td class="c-mass"><span class="none">' + escHtml(t('livery.none')) + '</span></td>';
   const over = Math.round(m.kg) > m.max;
-  const txt = cmpNum(m.kg) + ' kg' + (m.unknown ? ' + ?' : '');
-  const tip = t('mass.tip').replace('{e}', cmpNum(m.e)).replace('{f}', cmpNum(m.f)).replace('{s}', cmpNum(m.s) + (m.unknown ? ' + ?' : ''))
-    .replace('{m}', cmpNum(m.kg)).replace('{max}', cmpNum(m.max)) + (over ? t('mass.tipOver') : '');
+  const txt = massTxt(m.kg) + ' ' + MASS_UNIT + (m.unknown ? ' + ?' : '');
+  const tip = uTxt(t('mass.tip')).replace('{e}', massTxt(m.e)).replace('{f}', massTxt(m.f)).replace('{s}', massTxt(m.s) + (m.unknown ? ' + ?' : ''))
+    .replace('{m}', massTxt(m.kg)).replace('{max}', massTxt(m.max)) + (over ? t('mass.tipOver') : '');
   return '<td class="c-mass' + (over ? ' mass-over' : '') + '" title="' + escHtml(tip) + '">' + escHtml(txt) + '</td>';
 }
 
@@ -12585,7 +12634,7 @@ function renderActionBar(type) {
     if (s.error) rows.push([t('bar.k.settings'), escHtml(s.error), 'warn']);
     else {
       const txt = ['fuel', 'flare', 'chaff', 'gun'].filter(k => s.values[k] !== undefined)
-        .map(k => t('bar.set.' + k).replace('{v}', fmtSetting(s.values[k]))).join(' · ');
+        .map(k => uTxt(t('bar.set.' + k)).replace('{v}', fmtSetting(k === 'fuel' && s.shown && s.shown.fuel !== undefined ? s.shown.fuel : s.values[k]))).join(' · ');
       rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : ' → ' + escHtml(tn('panel.count', 0))), s.targets.length ? '' : 'off']);
     }
   }
@@ -12682,6 +12731,7 @@ function renderBars() {
 // ÉVÈNEMENTS
 // ═══════════════════════════════════════════════════════════════
 initLang();
+initMassUnit();
 applyI18nStatic();
 updateFlagButton();
 updateDocTitle();
@@ -12895,7 +12945,7 @@ function cmpFuel(type) {
   if (el && !(el.validity && el.validity.badInput)) {
     const raw = el.value.trim();
     const n = Number(raw);
-    if (raw !== '' && isFinite(n) && n >= 0) return n;
+    if (raw !== '' && isFinite(n) && n >= 0) return fuelToKg(n);
   }
   const vis = new Set(UI_STATE.filtered.map(x => x.unitId));
   const us = cmpChecked(type).filter(u => !skipReason(u, type, vis, 'payload'));
@@ -13119,7 +13169,7 @@ function cmpUpdate() {
       w = (i !== undefined && !CMP.pyl.find(x => x.n === n).extra) ? AIRCRAFT_PYLONS.weights[i] : null;
       if (w === null || w === undefined) w = null;
     }
-    row.querySelector('.cmp-kg').textContent = w === null ? '—' : cmpNum(w) + ' kg';
+    row.querySelector('.cmp-kg').textContent = w === null ? '—' : massTxt(w) + ' ' + MASS_UNIT;
     const nm = row.querySelector('.cmp-nomirror');
     if (nm) {
       const tw = (CMP.sym && CMP.view && c !== '' && cmpHas(CMP.pairs, n)) ? CMP.pyl.find(x => x.n === CMP.pairs[n]) : null;
@@ -13150,9 +13200,9 @@ function cmpUpdate() {
   const am = AIRCRAFT_MASSES[CMP.type], f = cmpFuel(CMP.type);
   if (am && f !== null) {
     const y = am.empty + f + total;
-    takeoff = '<span class="' + (Math.round(y) > am.max ? 'cmp-over' : '') + '">' + escHtml(t('cmp.takeoff')).replace('{f}', escHtml(cmpNum(f))).replace('{y}', escHtml(cmpNum(y) + ' kg' + (unknown ? ' + ?' : ''))).replace('{max}', escHtml(cmpNum(am.max))) + '</span>';
+    takeoff = '<span class="' + (Math.round(y) > am.max ? 'cmp-over' : '') + '">' + escHtml(uTxt(t('cmp.takeoff'))).replace('{f}', escHtml(massTxt(f))).replace('{y}', escHtml(massTxt(y) + ' ' + MASS_UNIT + (unknown ? ' + ?' : ''))).replace('{max}', escHtml(massTxt(am.max))) + '</span>';
   }
-  document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(cmpNum(total) + ' kg' + (unknown ? ' + ?' : '')) + '</b>' + takeoff;
+  document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(massTxt(total) + ' ' + MASS_UNIT + (unknown ? ' + ?' : '')) + '</b>' + takeoff;
   const ap = document.getElementById('cmp-apply');
   ap.textContent = t('cmp.apply');
   const blocked = cmpBlocked();
@@ -13322,6 +13372,12 @@ SET_KEYS.forEach(k => document.getElementById('set-' + k).addEventListener('inpu
   if (ty !== null) renderActionBar(ty);
 }));
 document.getElementById('set-fuel').addEventListener('input', syncFuelSlider);
+// Le sélecteur d'unité est dans le <summary> : un clic dessus ne replie pas la section
+document.getElementById('unit-sw').addEventListener('click', e => {
+  e.stopPropagation(); e.preventDefault();
+  const b = e.target.closest('button');
+  if (b) setMassUnit(b.id === 'unit-lbs' ? 'lbs' : 'kg');
+});
 document.getElementById('set-gun').addEventListener('input', syncGunSlider);
 document.getElementById('set-gun-pct').addEventListener('input', () => {
   const pc = Number(document.getElementById('set-gun-pct').value);
@@ -13334,7 +13390,8 @@ document.getElementById('set-fuel-pct').addEventListener('input', () => {
   const lim = ty !== null ? AIRCRAFT_LIMITS[ty] : null;
   if (!lim || typeof lim.fuel_max !== 'number') return;
   const pc = Number(sl.value);
-  document.getElementById('set-fuel').value = pc >= 100 ? String(lim.fuel_max) : String(Math.round(lim.fuel_max * pc / 100));
+  const kgV = pc >= 100 ? lim.fuel_max : Math.round(lim.fuel_max * pc / 100);
+  document.getElementById('set-fuel').value = MASS_UNIT === 'lbs' ? fmtNum(massIn(kgV)) : String(kgV);
   setFuelSliderView(pc, pc + ' %', false);
   document.getElementById('set-fuel').dispatchEvent(new Event('input', { bubbles: true }));
 });
