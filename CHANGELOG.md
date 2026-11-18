@@ -2,7 +2,7 @@
 
 All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [2.0.0] — 2026-11-18
 
 ### Added
 - **Repository**: releases are published by a workflow — pushing a branch `release/v<x.y.z>` with the release text, the files and a manifest creates the release and its tag (new `.github/workflows/release.yml` and `tools/release.py`); finished branches are deleted after 7 days. The tools themselves do not change.
@@ -15,6 +15,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Loadout Editor**: weights can be shown in kg or lbs — a *kg | lbs* switch in *Settings* applies to the Weight column, *Compose a loadout* and the fuel field; the choice is remembered, and the mission file stays in kg.
 
 ### Changed
+- **Ground Unit Swapper, on a phone**: the *Bulk edit* bar folds under its title, like the filters, and starts folded on screens 560 px wide or less, so the unit list starts higher.
 - **All tools**: the tools now run only inside Mission Tools — the single self-contained page, online or offline. A tool file opened on its own shows one line that points to Mission Tools; only the full page is published.
 - **All tools**: messages now look and behave the same across the suite — they appear bottom right, just above the bottom bar so they never hide *Save*, marked ✅ ⚠️ ❌ by kind, errors staying 6 s; confirmations open in the suite's own window (Cancel, Escape or a tap outside to back out) instead of the browser's dialog; every tool shows the same loading spinner while a mission is read, and the Weather Editor's custom-weather notice moves under the header, like the Ground Unit Swapper's.
 - **All tools**: messages say what happened in plain words — an unreadable file, a failed save or a wrong comm plan each get one clear sentence instead of a technical error; the Comm Plan Editor and the Weather Editor confirm a loaded mission like the other tools; the home screen refuses a file that is not a mission before keeping it, and leaving a tool says what happens to unsaved changes; every drop zone reads the same, and the Loadout Editor gets its own icon.
@@ -105,4 +106,8 @@ First **unified** release of the suite: the three tools and the shell are aligne
 
 > Per-tool version numbers from before are consolidated starting with this `1.2.0` release.
 
-[1.2.0]: https://github.com/MirabelleBenou/dcs-briefing-generator/releases
+[2.0.0]: https://github.com/MirabelleBenou/dcs-mission-tools/compare/v1.4.0...v2.0.0
+[1.4.0]: https://github.com/MirabelleBenou/dcs-mission-tools/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/MirabelleBenou/dcs-mission-tools/compare/V1.2.1...v1.3.0
+[1.2.1]: https://github.com/MirabelleBenou/dcs-mission-tools/compare/V1.2.0...V1.2.1
+[1.2.0]: https://github.com/MirabelleBenou/dcs-mission-tools/releases/tag/V1.2.0

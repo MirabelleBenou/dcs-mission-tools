@@ -12,7 +12,7 @@
 
 A single-page **workshop** that bundles a suite of surgical `.miz` editors for DCS World virtual pilots and wings. It runs entirely in your browser — **online for those who don't want to download**, or as **one offline HTML file** you can keep, share, and use without internet. Drop a `.miz`, edit it, save — the mission **never leaves your machine**, and your original is left untouched.
 
-Developped with the help of Claude AI (I'm not a dev !)
+Developed with the help of Claude AI (I'm not a dev !)
 
 ---
 
@@ -20,7 +20,7 @@ Developped with the help of Claude AI (I'm not a dev !)
 
 Mission Tools is designed to be used **where you actually fly** — on a tablet next to your stick, or on your phone. Editing your mission shouldn't mean alt-tabbing out of the cockpit.
 
-- **Touch-first UI** — large tap targets, drag-and-drop the `.miz`, no tiny desktop-only controls
+- **Touch-first UI** — touch-friendly controls (every button, list and field at least 44 px to the finger), drag-and-drop the `.miz`, no tiny desktop-only controls
 - **Responsive layout** — adapts from desktop down to phone
 - **Rotation-safe** — keeps working when you flip the tablet between landscape and portrait
 - **No install** — open a link or a single file in the mobile browser; works offline once loaded
@@ -41,10 +41,10 @@ The landing page presents each editor as a tile. Active tools open in place.
 
 | Tool                            | What it does                                                                                                                | Status      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v1.4.0` |
-| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family                                               | ✅ `v1.4.0` |
-| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v1.4.0` |
-| **Loadout Editor** (`L·E`)      | Bulk-apply aircraft loadouts and liveries to many aircraft at once                                                          | ✅ `v1.4.0` |
+| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v2.0.0` |
+| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family — among the types already in the mission      | ✅ `v2.0.0` |
+| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v2.0.0` |
+| **Loadout Editor** (`L·E`)      | Bulk-apply loadouts, liveries, fuel and countermeasures; compose a loadout on a front view; move a group to another country | ✅ `v2.0.0` |
 
 > The tools live in one self-contained page, which shares a single working `.miz` between them; a tool file opened on its own only points to Mission Tools.
 
@@ -62,7 +62,7 @@ The Comm Plan Editor reads your mission's **communications plan** and lets you e
 The Ground Unit Swapper lets you **bulk-swap ground unit types and skill** across the mission, with powerful filtering — handy for re-theming a mission or adjusting threat density.
 
 - **Filter** by coalition, group and **family** — Armor, Artillery, **AirDef** (SAM + AAA), Radar / EWR, **Unarmed** (logistics + infrastructure / C2), Infantry
-- **Swap by type** — change unit types in bulk; livery is preserved
+- **Swap by type** — change unit types in bulk, among the types already in the mission (add a new type in the DCS Mission Editor first); livery is preserved
 - **Skill editable** — Average / Good / High / Excellent
 - **Safe by design** — `Client` / `Player` units excluded; **group and unit names are strictly read-only** so CTLD / MOOSE / scripted logic keeps working
 - **Bilingual FR / EN**, choice remembered
@@ -84,7 +84,10 @@ The Loadout Editor **applies a loadout that already exists in the mission** — 
 - **Copy an existing loadout** to every selected aircraft of the same type (players and AI) — a loadout is its pylons, shown by weapon name, lettered A, B, C… when the file is opened
 - **Pick, then apply** — click a loadout or a livery card, check the bar at the bottom of the panel (it says how many aircraft change and what they carry now), then press *Apply*
 - **Fuel, flares, chaff and gun in bulk** — an empty field changes nothing; each field shows the current value of the checked aircraft and the type's limit, and a value above the limit is refused
-- **Liveries** applied within the same type and country
+- **Liveries** — applied to aircraft of any country; the summary warns when the DCS Mission Editor does not offer the livery for that country
+- **Compose a loadout** — station by station on a front view of the aircraft (45 types), following the station rules of the DCS World mission editor (54 types): a clashing weapon is greyed out, a missing companion is named
+- **Estimated weight** — empty weight, fuel and stores for 167 aircraft types, in kg or lbs
+- **Change a group's country** — within its side or to the other side; the callsign follows the new country and the summary warns about links to the former side
 - **Written back safely** — each payload is replaced whole, then re-read and verified before the download is offered
 - **Bilingual FR / EN**, choice remembered
 
@@ -115,7 +118,7 @@ The Loadout Editor **applies a loadout that already exists in the mission** — 
 
 ![weather-editor](docs/screenshots/weather_editor.jpg)
 
-**Loadout Editor** — loadouts by letter, settings and livery applied to the selection in one click
+**Loadout Editor** — loadouts by letter, estimated weight, settings and livery applied to the selection in one click
 
 ![loadout-editor](docs/screenshots/loadout_editor.jpg)
 
@@ -162,21 +165,25 @@ python3 build_mission_tools.py        # → dist/dcs_mission_tools.html
 
 The module sources are read from `modules/` and the output is written to `dist/dcs_mission_tools.html`, the distributable (and the file published on Releases). The version shown on each tool's card is read from the tool's own `APP_VERSION` at build time.
 
-`docs/index.html` (the hosted page) is a byte-for-byte copy of `dist/dcs_mission_tools.html`, made at each milestone.
+`docs/index.html` (the hosted page) is a byte-for-byte copy of `dist/dcs_mission_tools.html`, made at each release.
 
 ### Project structure
 
 ```
 .
-├── build_mission_tools.py     # shell + bundler (embeds modules + tiles)
+├── build_mission_tools.py     # shell + bundler (embeds modules + tiles), with the build guards
+├── *_block.py                 # shared blocks copied byte-for-byte into each tool (parser, messages, lists, radio, standalone guard)
 ├── modules/                   # the four tools, bundled by the build (source of truth)
 │   ├── dcs_comm_plan_editor.html
 │   ├── dcs_ground_unit_swapper.html
 │   ├── dcs_weather_editor.html
 │   └── dcs_loadout_editor.html
 ├── tiles/                     # landing tiles (512² WebP): cp, gu, wx, le
-├── data/                      # weapon names and aircraft limits (from pydcs, LGPL-3.0-or-later) and their licence
-├── tools/                     # gen_weapon_names.py, gen_aircraft_limits.py — regenerate the data/ tables
+├── data/                      # aircraft and weapon tables (pydcs, LGPL-3.0-or-later; DCS World), front views, their licences
+├── tools/                     # gen_*.py and read_payload_rules.py regenerate data/; release.py and menage_branches.py run the workflows
+├── tests/                     # round-trip bench and tests
+├── .github/workflows/         # release and branch cleanup
+├── docs/                      # hosted page (index.html) and README screenshots
 ├── dist/                      # built output: dcs_mission_tools.html
 ├── CHANGELOG.md
 ├── README.md
@@ -193,7 +200,7 @@ The workflow checks all of it, creates the release with its files, publishes it 
 
 ## 🗺️ Roadmap
 
-- ⏳ **UI polish** across shell and tools
+- 💡 Suggestions are welcome on the [Issues](https://github.com/MirabelleBenou/dcs-mission-tools/issues) page.
 
 ## 🤝 Contributing
 

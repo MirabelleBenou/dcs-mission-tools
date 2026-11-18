@@ -2,7 +2,7 @@
 """
 build_mission_tools.py — DCS Mission Tools
 Produit dcs_mission_tools.html (fichier autonome, single-file : le shell, les quatre modules et les tuiles en base64).
-La version de la suite est APP_VERSION, ci-dessous (1.4.0) ; les gardes d'identité (blocs communs, tables de données) arrêtent le
+La version de la suite est APP_VERSION, ci-dessous ; les gardes d'identité (blocs communs, tables de données) arrêtent le
 build, en code 1, si une copie diffère de sa source.
 
 Usage : python3 build_mission_tools.py
@@ -30,7 +30,7 @@ from parser_block import build_block as build_parser_block, BLOCK_BEGIN as PARSE
 from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN as SHELL_ONLY_BEGIN, BLOCK_END as SHELL_ONLY_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-APP_VERSION = '1.4.0'
+APP_VERSION = '2.0.0'
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [
@@ -60,11 +60,15 @@ def encode_module_b64(path):
     return base64.b64encode(html.encode('utf-8')).decode('ascii')
 
 
-# APP_VERSION déclarée dans le script du module : const APP_VERSION = '1.4.0';
+# APP_VERSION déclarée dans le script du module : const APP_VERSION = 'x.y.z';
 _APP_VERSION_RE = re.compile(
     r"""^[ \t]*(?:const|let|var)[ \t]+APP_VERSION[ \t]*=[ \t]*(['"])([0-9A-Za-z][0-9A-Za-z.+\-]*)\1""",
     re.MULTILINE,
 )
+
+
+# Texte de la pastille de version du module : <div class="header-version">v<version></div>
+_HEADER_VERSION_RE = re.compile(r'<div class="header-version">([^<]*)</div>')
 
 
 def read_module_versions(modules):
@@ -85,6 +89,13 @@ def read_module_versions(modules):
         match = _APP_VERSION_RE.search(html)
         if not match:
             print(f'  [ERREUR] APP_VERSION introuvable dans {mod["src"]} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if match.group(2) != APP_VERSION:
+            print(f'  [ERREUR] {mod["src"]} : APP_VERSION « {match.group(2)} » diffère de celle du build « {APP_VERSION} » — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        head = _HEADER_VERSION_RE.search(html)
+        if not head or head.group(1) != 'v' + APP_VERSION:
+            print(f'  [ERREUR] {mod["src"]} : .header-version « {head.group(1) if head else "introuvable"} » diffère de « v{APP_VERSION} » (version du build) — build arrêté', file=sys.stderr)
             sys.exit(1)
         versions[mod['id']] = match.group(2)
         print(f'  [OK] Version {mod["id"]} — v{versions[mod["id"]]} (lue dans {mod["src"]})')
