@@ -1,0 +1,12 @@
+{
+  "tag": "v1.2.1",
+  "title": "Trial \u2014 release workflow",
+  "commit": "a1f0cf58cb27560dab6e8f2b2ec0c14703f823fa",
+  "assets": [
+    {
+      "name": "dcs_mission_tools.html",
+      "size": 4956618,
+      "sha256": "0ac06a7334c738401a8320bb794dc012a810c69837a549b68488f1d58c514c70"
+    }
+  ]
+}
