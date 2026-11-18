@@ -38,9 +38,15 @@ Table `DCS aircraft type -> limits`, sorted by key, used by the **Loadout Editor
 Table `DCS aircraft type -> empty and maximum weight`, sorted by key, used by the **Loadout Editor** for the weight estimate of each aircraft (empty weight + fuel + stores, gun not counted). A type missing from the table has no estimate.
 
 - **Fields**: `empty` and `max` (kg, integers): the empty weight and the recommended maximum weight.
-- **Source**: the aircraft definitions of DCS World (`M_empty`, `M_max`, in `CoreMods/aircraft/<type>/`), read on 6 November 2026 and checked against the mission editor. The Mi-8MT was read in the mission editor (its module was not installed).
+- **Source**: the aircraft descriptions of DCS World 2.9.31, read on 15 November 2026 by a mission script that calls `Unit.getDescByName` for each type of `aircraft_limits.json` (`massEmpty`, `massMax`); 167 of the 170 types have both weights, the B-17G, C-47 and Ju-88A4 have none and stay out of the table.
 - **Licence**: none added; these are values.
-- **Regenerate**: no script; the values were entered by hand.
+- **Regenerate**:
+
+  ```
+  python3 -I tools/gen_aircraft_masses.py <log>
+  ```
+
+  The log has one line `type;massEmpty;massMax;fuelMassMax` per type (`nil` when there is no value) and ends with a line `FIN;<n>;<n>`, `<n>` being the number of type lines. Weights are rounded to the nearest kilogram. Running it again on the same log rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_MASSES:BEGIN */` and `/* AIRCRAFT_MASSES:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_masses.json`.
 
 ## aircraft_pylons.json
