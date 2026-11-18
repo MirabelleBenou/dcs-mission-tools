@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <!--
-  Loadout Editor v2.0.0
+  Loadout Editor
   =====================
   Applique en masse un emport (existant dans la mission, ou composé station par station dans
   la fenêtre « Composer un emport »), une livrée, des réglages (carburant, leurres, paillettes,
   canon) et un pays ou un camp à des appareils du même type, joueurs et IA, dans un fichier
   .miz DCS World.
 
-  Version    : 2.0.0
   Licence    : AGPL-3.0-or-later
   Dépendances: JSZip 3.10.1 — inliné (aucune dépendance externe)
   Usage      : Ouvrir dans Chrome/Firefox, charger un .miz, cocher des appareils, appliquer, sauvegarder.
@@ -99,14 +98,6 @@
       white-space: nowrap;
       color: var(--text);
     }
-    .header-version {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-dim);
-      background: var(--surface-2);
-      padding: 2px 6px;
-      border-radius: 3px;
-    }
     .header-miz {
       margin-left: auto;
       font-family: var(--font-mono);
@@ -144,7 +135,6 @@
       #app-header .header-title { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       #app-header .header-lang-btn { order: 1; margin-left: 0; flex-shrink: 0; }
       #app-header::after { content: ""; order: 2; flex: 0 0 100%; height: 0; }
-      #app-header .header-version { order: 3; flex-shrink: 0; margin-top: 6px; }
       #app-header .header-miz { order: 3; flex: 1 1 0; min-width: 0; max-width: none; margin-left: 0; margin-top: 6px; text-align: left; }
     }
 
@@ -657,7 +647,6 @@
 <header id="app-header">
   <div class="header-logo">L·E</div>
   <div class="header-title" data-i18n="app.title">DCS Loadout Editor</div>
-  <div class="header-version">v2.0.0</div>
   <div class="header-miz empty" id="header-miz" data-i18n="header.noFile">Aucun fichier chargé</div>
   <button class="header-lang-btn" id="btn-lang" title="Switch language / Changer de langue"></button>
 </header>
@@ -823,7 +812,6 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 <script>
 'use strict';
 
-const APP_VERSION = '2.0.0';
 
 // ═══════════════════════════════════════════════════════════════
 // I18N — Internationalisation FR/EN

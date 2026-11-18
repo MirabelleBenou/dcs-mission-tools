@@ -41,10 +41,10 @@ The landing page presents each editor as a tile. Active tools open in place.
 
 | Tool                            | What it does                                                                                                                | Status      |
 | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ `v2.0.0` |
-| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family — among the types already in the mission      | ✅ `v2.0.0` |
-| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ `v2.0.0` |
-| **Loadout Editor** (`L·E`)      | Bulk-apply loadouts, liveries, fuel and countermeasures; compose a loadout on a front view; move a group to another country | ✅ `v2.0.0` |
+| **Comm Plan Editor** (`C·P`)    | Edit the communications plan — radio frequencies and presets                                                                | ✅ live     |
+| **Ground Unit Swapper** (`G·U`) | Bulk-swap ground unit types and skill, filtered by coalition / group / family — among the types already in the mission      | ✅ live     |
+| **Weather Editor** (`W·X`)      | Edit date/time, wind layers, clouds and precipitation — 34 presets                                                          | ✅ live     |
+| **Loadout Editor** (`L·E`)      | Bulk-apply loadouts, liveries, fuel and countermeasures; compose a loadout on a front view; move a group to another country | ✅ live     |
 
 > The tools live in one self-contained page, which shares a single working `.miz` between them; a tool file opened on its own only points to Mission Tools.
 
@@ -163,7 +163,7 @@ The page is **built**, not hand-written: `build_mission_tools.py` reads the modu
 python3 build_mission_tools.py        # → dist/dcs_mission_tools.html
 ```
 
-The module sources are read from `modules/` and the output is written to `dist/dcs_mission_tools.html`, the distributable (and the file published on Releases). The version shown on each tool's card is read from the tool's own `APP_VERSION` at build time.
+The module sources are read from `modules/` and the output is written to `dist/dcs_mission_tools.html`, the distributable (and the file published on Releases). The suite has a single version number, `APP_VERSION` in `build_mission_tools.py`, shown on the home screen; the tools carry none.
 
 `docs/index.html` (the hosted page) is a byte-for-byte copy of `dist/dcs_mission_tools.html`, made at each release.
 

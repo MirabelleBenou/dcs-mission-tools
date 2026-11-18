@@ -2,8 +2,8 @@
 """
 build_mission_tools.py — DCS Mission Tools
 Produit dcs_mission_tools.html (fichier autonome, single-file : le shell, les quatre modules et les tuiles en base64).
-La version de la suite est APP_VERSION, ci-dessous ; les gardes d'identité (blocs communs, tables de données) arrêtent le
-build, en code 1, si une copie diffère de sa source.
+APP_VERSION, ci-dessous, est la seule source du numéro de version : les modules n'en portent aucun.
+Le build s'arrête, en code 1, si un module en porte un ou si une copie de bloc commun ou de table de données diffère.
 
 Usage : python3 build_mission_tools.py
 Sorties : ./dist/dcs_mission_tools.html
@@ -60,24 +60,19 @@ def encode_module_b64(path):
     return base64.b64encode(html.encode('utf-8')).decode('ascii')
 
 
-# APP_VERSION déclarée dans le script du module : const APP_VERSION = 'x.y.z';
-_APP_VERSION_RE = re.compile(
-    r"""^[ \t]*(?:const|let|var)[ \t]+APP_VERSION[ \t]*=[ \t]*(['"])([0-9A-Za-z][0-9A-Za-z.+\-]*)\1""",
-    re.MULTILINE,
+# Garde : les modules ne portent aucun numéro de version (celui de la suite est APP_VERSION, ci-dessus).
+_MODULE_VERSION_RES = (
+    ('APP_VERSION', re.compile(r'\bAPP_VERSION\b')),
+    ('class="header-version"', re.compile(r'class="header-version"')),
 )
 
 
-# Texte de la pastille de version du module : <div class="header-version">v<version></div>
-_HEADER_VERSION_RE = re.compile(r'<div class="header-version">([^<]*)</div>')
+def check_modules_unversioned(modules):
+    """Arrête le build si une source de module porte un numéro de version.
 
-
-def read_module_versions(modules):
-    """Lit la version de chaque module dans l'APP_VERSION de sa source.
-
-    Une source absente, illisible ou sans APP_VERSION lisible arrête le build
-    (message sur stderr, code de sortie 1) avant toute écriture.
+    Une source illisible, ou qui contient APP_VERSION ou class="header-version",
+    arrête le build (message sur stderr, code de sortie 1) avant toute écriture.
     """
-    versions = {}
     for mod in modules:
         abs_path = os.path.join(SCRIPT_DIR, mod['src'])
         try:
@@ -86,20 +81,11 @@ def read_module_versions(modules):
         except OSError as exc:
             print(f'  [ERREUR] Source illisible : {mod["src"]} ({exc}) — build arrêté', file=sys.stderr)
             sys.exit(1)
-        match = _APP_VERSION_RE.search(html)
-        if not match:
-            print(f'  [ERREUR] APP_VERSION introuvable dans {mod["src"]} — build arrêté', file=sys.stderr)
-            sys.exit(1)
-        if match.group(2) != APP_VERSION:
-            print(f'  [ERREUR] {mod["src"]} : APP_VERSION « {match.group(2)} » diffère de celle du build « {APP_VERSION} » — build arrêté', file=sys.stderr)
-            sys.exit(1)
-        head = _HEADER_VERSION_RE.search(html)
-        if not head or head.group(1) != 'v' + APP_VERSION:
-            print(f'  [ERREUR] {mod["src"]} : .header-version « {head.group(1) if head else "introuvable"} » diffère de « v{APP_VERSION} » (version du build) — build arrêté', file=sys.stderr)
-            sys.exit(1)
-        versions[mod['id']] = match.group(2)
-        print(f'  [OK] Version {mod["id"]} — v{versions[mod["id"]]} (lue dans {mod["src"]})')
-    return versions
+        for label, rx in _MODULE_VERSION_RES:
+            if rx.search(html):
+                print(f'  [ERREUR] {mod["src"]} : {label} présent — les modules ne portent aucun numéro de version (celui de la suite est APP_VERSION du build) — build arrêté', file=sys.stderr)
+                sys.exit(1)
+        print(f'  [OK] Version {mod["id"]} — aucun numéro dans {mod["src"]}')
 
 
 WEAPON_NAMES_JSON = 'data/weapon_names.json'
@@ -401,17 +387,12 @@ def build_tile_uris(modules):
     return uris
 
 
-def build_html(module_html_js, tile_uris, versions):
+def build_html(module_html_js, tile_uris):
 
     tile_cp = tile_uris.get('cp', '')
     tile_gu = tile_uris.get('gu', '')
     tile_wx = tile_uris.get('wx', '')
     tile_le = tile_uris.get('le', '')
-
-    ver_cp = versions.get('cp', '')
-    ver_gu = versions.get('gu', '')
-    ver_wx = versions.get('wx', '')
-    ver_le = versions.get('le', '')
 
     messages_block = build_messages_block()
 
@@ -752,16 +733,6 @@ def build_html(module_html_js, tile_uris, versions):
       font-size: 17px;
       font-weight: 600;
       color: #F2F2F2;
-    }}
-    .card-version {{
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-dim);
-      background: #303030;
-      padding: 1px 5px;
-      border-radius: 2px;
-      margin-left: auto;
-      flex-shrink: 0;
     }}
     .card-descriptor {{
       font-size: 14px;
@@ -1198,7 +1169,6 @@ def build_html(module_html_js, tile_uris, versions):
         id:         'cp',
         logo:       'C·P',
         name:       'Comm Plan Editor',
-        version:    'v{ver_cp}',
         accent:     '#FFB000',
         accentDim:  'rgba(255,176,0,0.15)',
         accentGlow: 'rgba(255,176,0,0.25)',
@@ -1209,7 +1179,6 @@ def build_html(module_html_js, tile_uris, versions):
         id:         'gu',
         logo:       'G·U',
         name:       'Ground Unit Swapper',
-        version:    'v{ver_gu}',
         accent:     '#9CAE5A',
         accentDim:  'rgba(156,174,90,0.15)',
         accentGlow: 'rgba(156,174,90,0.25)',
@@ -1220,7 +1189,6 @@ def build_html(module_html_js, tile_uris, versions):
         id:         'wx',
         logo:       'W·X',
         name:       'Weather Editor',
-        version:    'v{ver_wx}',
         accent:     '#5AB8C9',
         accentDim:  'rgba(90,184,201,0.15)',
         accentGlow: 'rgba(90,184,201,0.25)',
@@ -1231,7 +1199,6 @@ def build_html(module_html_js, tile_uris, versions):
         id:         'le',
         logo:       'L·E',
         name:       'Loadout Editor',
-        version:    'v{ver_le}',
         accent:     '#D46A4C',
         accentDim:  'rgba(212,106,76,0.15)',
         accentGlow: 'rgba(212,106,76,0.25)',
@@ -1413,7 +1380,6 @@ def build_html(module_html_js, tile_uris, versions):
             '<div class="card-header-row">' +
               '<div class="card-logo">' + mod.logo + '</div>' +
               '<div class="card-name">' + mod.name + '</div>' +
-              '<div class="card-version">' + mod.version + '</div>' +
             '</div>' +
             '<div class="card-descriptor">' + t(mod.descKey) + '</div>' +
             '<div class="card-launch-hint">' + t('launch') + '</div>' +
@@ -1680,8 +1646,8 @@ def build_html(module_html_js, tile_uris, versions):
 def main():
     print(f'=== build_mission_tools.py — DCS Mission Tools v{APP_VERSION} ===')
 
-    print('\n[1/4] Lecture des versions des modules…')
-    versions = read_module_versions(MODULES)
+    print('\n[1/4] Contrôle des sources des modules…')
+    check_modules_unversioned(MODULES)
     check_inline_tables()
     check_radio_block()
     check_listes_block()
@@ -1696,7 +1662,7 @@ def main():
     tile_uris = build_tile_uris(MODULES)
 
     print(f'\n[4/4] Génération {OUT_FILE}…')
-    html = build_html(module_html_js, tile_uris, versions)
+    html = build_html(module_html_js, tile_uris)
     err = check_messages_text(html.replace(module_html_js, '', 1), 'le shell construit')
     if err:
         print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)

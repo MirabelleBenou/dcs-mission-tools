@@ -15,6 +15,7 @@ All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog]
 - **Loadout Editor**: weights can be shown in kg or lbs — a *kg | lbs* switch in *Settings* applies to the Weight column, *Compose a loadout* and the fuel field; the choice is remembered, and the mission file stays in kg.
 
 ### Changed
+- **All tools**: the suite now has a single version number, shown on the home screen; the tools and their cards no longer show their own.
 - **Ground Unit Swapper, on a phone**: the *Bulk edit* bar folds under its title, like the filters, and starts folded on screens 560 px wide or less, so the unit list starts higher.
 - **All tools**: the tools now run only inside Mission Tools — the single self-contained page, online or offline. A tool file opened on its own shows one line that points to Mission Tools; only the full page is published.
 - **All tools**: messages now look and behave the same across the suite — they appear bottom right, just above the bottom bar so they never hide *Save*, marked ✅ ⚠️ ❌ by kind, errors staying 6 s; confirmations open in the suite's own window (Cancel, Escape or a tap outside to back out) instead of the browser's dialog; every tool shows the same loading spinner while a mission is read, and the Weather Editor's custom-weather notice moves under the header, like the Ground Unit Swapper's.
