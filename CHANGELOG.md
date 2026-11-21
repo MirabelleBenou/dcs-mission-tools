@@ -1,6 +1,18 @@
 # Changelog
 
-All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog](https://keepachangelog.com/). Versioning follows [SemVer](https://semver.org/).
+All notable changes to **DCS Mission Tools**, newest first.
+
+Each release is a GitHub release tagged `MT-V<major>.<minor>.<patch>` (up to 2.0.0, tags read `v<x.y.z>`):
+- **major**: a redesign, or a file format that breaks;
+- **minor**: a new tool, screen or function, or a change visible everywhere;
+- **patch**: fixes.
+
+Between two releases, the hosted version shows its build number at the bottom of the home screen — `MT-V2.0.0+3` is the third update since 2.0.0. A released file shows none.
+
+## Unreleased
+
+**Build number on the hosted version**
+- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+1` for this one; a downloaded release shows none.
 
 ## [2.0.0] — 2026-11-18
 

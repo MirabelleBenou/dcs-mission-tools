@@ -16,8 +16,8 @@ import release  # noqa: E402
 
 REPO = 'owner/suite'
 TOKEN = 'ghs_TOPSECRETTOKEN0123456789'
-TITRE = 'v2.0.0 — 20 November 2026'
-CHANGELOG = '# Changelog\n\n## [Unreleased]\n\n### Added\n- z\n\n## [2.0.0] — 2026-11-20\n\n### Added\n- y\n\n## [1.4.0] — 2026-11-08\n'
+TITRE = 'MT-V2.0.0 — 20 November 2026'
+CHANGELOG = '# Changelog\n\n## [Unreleased]\n\n### Added\n- z\n\n## MT-V2.0.0 — 2026-11-20\n\n### Added\n- y\n\n## [1.4.0] — 2026-11-08\n'
 HTML = b'<!DOCTYPE html><html>not really a page but bytes</html>'
 
 
@@ -94,7 +94,7 @@ class FakeApi:
         raise AssertionError(f'unexpected call {methode} {chemin}')
 
 
-def monte(tmp_path, *, branche='release/v2.0.0', tag='v2.0.0', changelog=CHANGELOG, notes='Release text\n',
+def monte(tmp_path, *, branche='release/MT-V2.0.0', tag='MT-V2.0.0', changelog=CHANGELOG, notes='Release text\n',
           assets=None, manifeste=True, manifest_edit=None, main_avance=False, hors_release=False, extra_asset=None,
           essai=False):
     """Depot origin nu, un commit C sur main, la branche release, puis un clone `action` sur la tete de la branche."""
@@ -161,21 +161,21 @@ def test_publication_reussie(tmp_path):
     base = f'/repos/{REPO}'
     up = f'https://uploads.github.com{base}/releases/101/assets?name='
     assert api.calls == [
-        ('GET', f'{base}/git/ref/tags/v2.0.0'),
+        ('GET', f'{base}/git/ref/tags/MT-V2.0.0'),
         ('GET', f'{base}/releases?per_page=100&page=1'),
         ('POST', f'{base}/releases'),
         ('POST', up + 'dcs_hq.html'),
         ('POST', up + 'dcs_route_planner.html'),
         ('GET', f'{base}/releases/101/assets?per_page=100'),
         ('PATCH', f'{base}/releases/101'),
-        ('GET', f'{base}/releases/tags/v2.0.0'),
-        ('GET', f'{base}/git/ref/tags/v2.0.0'),
+        ('GET', f'{base}/releases/tags/MT-V2.0.0'),
+        ('GET', f'{base}/git/ref/tags/MT-V2.0.0'),
     ]
     b = api.bodies[0]
-    assert b == {'tag_name': 'v2.0.0', 'target_commitish': c, 'name': TITRE, 'body': 'Release text\n',
+    assert b == {'tag_name': 'MT-V2.0.0', 'target_commitish': c, 'name': TITRE, 'body': 'Release text\n',
                  'draft': True, 'prerelease': False}
     r = api.releases[101]
-    assert r['draft'] is False and api.tags['v2.0.0'] == c
+    assert r['draft'] is False and api.tags['MT-V2.0.0'] == c
     assert br not in branches(origin)
 
 
@@ -189,7 +189,7 @@ def test_pas_de_manifeste_aucun_appel(tmp_path, capsys):
 
 
 def _m_tag_branche(m):
-    m['tag'] = 'v1.8.0'
+    m['tag'] = 'MT-V1.8.0'
 
 
 def _m_cle_en_trop(m):
@@ -223,7 +223,7 @@ def test_controle_en_defaut(tmp_path, cas, opts, controle):
 
 def test_controle_4_tag_existant(tmp_path):
     deps, api, origin, c, br = monte(tmp_path)
-    api.tags['v2.0.0'] = 'a' * 40
+    api.tags['MT-V2.0.0'] = 'a' * 40
     assert release.run(deps, br) == 1
     assert api.writes == []
     assert 'Control or step: 4' in sur_origin(origin, br, '.release/FAILED.md')
@@ -231,7 +231,7 @@ def test_controle_4_tag_existant(tmp_path):
 
 def test_controle_4_brouillon_existant(tmp_path):
     deps, api, origin, c, br = monte(tmp_path)
-    api.releases[7] = {'id': 7, 'tag_name': 'v2.0.0', 'draft': True}
+    api.releases[7] = {'id': 7, 'tag_name': 'MT-V2.0.0', 'draft': True}
     assert release.run(deps, br) == 1
     assert api.writes == []
     assert 'Control or step: 4' in sur_origin(origin, br, '.release/FAILED.md')
@@ -499,20 +499,22 @@ def _cl(titre):
 
 # A1 : le tag et la branche
 
-def test_a1_branche_v_minuscule_publie(tmp_path):
-    deps, api, origin, c, br = monte(tmp_path, branche='release/v2.0.0', tag='v2.0.0')
+def test_a1_branche_mt_v_publie(tmp_path):
+    deps, api, origin, c, br = monte(tmp_path, branche='release/MT-V2.0.0', tag='MT-V2.0.0')
     assert release.run(deps, br) == 0
-    assert api.releases[101]['tag_name'] == 'v2.0.0'
+    assert api.releases[101]['tag_name'] == 'MT-V2.0.0'
 
 
 @pytest.mark.parametrize('branche,tag', [('release/V2.0.0', 'V2.0.0'), ('release/MP-V2.0.0', 'MP-V2.0.0'),
-                                         ('release/V2.0.0', 'v2.0.0'), ('release/MP-V2.0.0', 'v2.0.0')])
+                                         ('release/V2.0.0', 'MT-V2.0.0'), ('release/MP-V2.0.0', 'MT-V2.0.0'),
+                                         ('release/v2.0.1', 'v2.0.1'), ('release/v2.0.1', 'MT-V2.0.1'),
+                                         ('release/MT-v2.0.1', 'MT-V2.0.1')])
 def test_a1_autres_formes_refusees(tmp_path, branche, tag):
     deps, api, origin, c, br = monte(tmp_path, branche=branche, tag=tag)
     assert release.run(deps, br) == 1
     assert api.calls == [] and api.writes == []
     f = sur_origin(origin, br, '.release/FAILED.md')
-    assert 'Control or step: 1' in f and 'release/v<x.y.z>' in f
+    assert 'Control or step: 1' in f and 'release/MT-V<x.y.z>' in f
 
 
 def test_a1_manifeste_mp_sur_branche_essai(tmp_path):
@@ -520,36 +522,37 @@ def test_a1_manifeste_mp_sur_branche_essai(tmp_path):
     assert release.run(deps, br) == 1
     assert api.calls == []
     t = sur_origin(origin, br, '.release/CHECK.md')
-    assert t.strip().splitlines()[-1].startswith('1. FAILED') and 'must look like v<x.y.z>' in t
+    assert t.strip().splitlines()[-1].startswith('1. FAILED') and 'must look like MT-V<x.y.z>' in t
 
 
 # A2 : le CHANGELOG du commit C
 
 def test_a2_titre_date_passe(tmp_path):
-    deps, api, origin, c, br = monte(tmp_path, changelog=_cl('## [2.0.0] — 2026-11-20'))
+    deps, api, origin, c, br = monte(tmp_path, changelog=_cl('## MT-V2.0.0 — 2026-11-20'))
     assert release.run(deps, br) == 0
 
 
 def test_a2_message_de_reussite(tmp_path, capsys):
     deps, api, origin, c, br = monte(tmp_path, branche='release/essai-un')
     assert release.run(deps, br) == 0
-    assert '3. OK - CHANGELOG line "## [2.0.0] — 2026-11-20" found for v2.0.0' in sur_origin(origin, br, '.release/CHECK.md')
+    assert '3. OK - CHANGELOG line "## MT-V2.0.0 — 2026-11-20" found for MT-V2.0.0' in sur_origin(origin, br, '.release/CHECK.md')
 
 
 @pytest.mark.parametrize('ligne', [
-    '', '## [1.4.0] — 2026-11-08', '## [2.0.0]', '## [2.0.0] - 2026-11-20', '### [2.0.0] — 2026-11-20',
-    '## [2.0.0] — 2026-11-20 extra', '## [2x0x0] — 2026-11-20', ' ## [2.0.0] — 2026-11-20', '## [2.0.0] — 2026-11-2'])
+    '', '## [1.4.0] — 2026-11-08', '## MT-V2.0.0', '## MT-V2.0.0 - 2026-11-20', '### MT-V2.0.0 — 2026-11-20',
+    '## MT-V2.0.0 — 2026-11-20 extra', '## MT-V2x0x0 — 2026-11-20', ' ## MT-V2.0.0 — 2026-11-20', '## MT-V2.0.0 — 2026-11-2',
+    '## [2.0.0] — 2026-11-20', '## v2.0.0 — 2026-11-20', '## MT-v2.0.0 — 2026-11-20'])
 def test_a2_refus(tmp_path, ligne):
     deps, api, origin, c, br = monte(tmp_path, changelog=_cl(ligne))
     assert release.run(deps, br) == 1
     assert api.writes == []
     f = sur_origin(origin, br, '.release/FAILED.md')
     assert 'Control or step: 3' in f
-    assert 'CHANGELOG.md at the commit has no line "## [2.0.0] — YYYY-MM-DD"' in f
+    assert 'CHANGELOG.md at the commit has no line "## MT-V2.0.0 — YYYY-MM-DD"' in f
 
 
 def test_a2_points_echappes(tmp_path):
-    deps, api, origin, c, br = monte(tmp_path, tag='v2.0.0', changelog=_cl('## [2x0x0] — 2026-11-20'))
+    deps, api, origin, c, br = monte(tmp_path, tag='MT-V2.0.0', changelog=_cl('## MT-V2x0x0 — 2026-11-20'))
     assert release.run(deps, br) == 1
 
 
@@ -557,7 +560,7 @@ def test_a2_changelog_absent(tmp_path):
     deps, api, origin, c, br = monte(tmp_path)
     git(deps.root, 'checkout', '-q', '--detach', f'{c}')
     c2 = c  # le commit C porte CHANGELOG.md : on teste avec un manifeste dont C n'a pas le fichier
-    m = {'tag': 'v2.0.0', 'commit': c2}
+    m = {'tag': 'MT-V2.0.0', 'commit': c2}
     git(deps.root, 'rm', '-q', 'CHANGELOG.md')
     git(deps.root, 'commit', '-q', '-m', 'sans changelog')
     m['commit'] = git(deps.root, 'rev-parse', 'HEAD')
@@ -573,17 +576,17 @@ CHANGELOG_BASE = (
     'All notable changes to **DCS Mission Tools**. Format based on [Keep a Changelog](https://keepachangelog.com/). '
     'Versioning follows [SemVer](https://semver.org/).\n\n'
     '## [Unreleased]\n\n### Added\n- x\n\n### Changed\n- y\n\n### Fixed\n- z\n\n'
-    '## [1.4.0] — 2026-11-08\n\n### Added\n- a\n\n'
+    '## MT-V1.4.0 — 2026-11-08\n\n### Added\n- a\n\n'
     '## [1.3.0] — 2026-11-01\n\n### Added\n- b\n')
 
 
 def test_a2_vrai_changelog_de_la_base(tmp_path):
     deps, api, origin, c, br = monte(tmp_path, changelog=CHANGELOG_BASE)
-    assert release.run(deps, br) == 1                      # v2.0.0 : pas de titre
+    assert release.run(deps, br) == 1                      # MT-V2.0.0 : pas de titre
     assert 'Control or step: 3' in sur_origin(origin, br, '.release/FAILED.md')
-    deps, api, origin, c, br = monte(tmp_path / 'b', branche='release/v1.4.0', tag='v1.4.0', changelog=CHANGELOG_BASE)
-    assert release.run(deps, br) == 0                      # v1.4.0 : `## [1.4.0] — 2026-11-08`
-    assert api.releases[101]['tag_name'] == 'v1.4.0'
+    deps, api, origin, c, br = monte(tmp_path / 'b', branche='release/MT-V1.4.0', tag='MT-V1.4.0', changelog=CHANGELOG_BASE)
+    assert release.run(deps, br) == 0                      # MT-V1.4.0 : `## MT-V1.4.0 — 2026-11-08`
+    assert api.releases[101]['tag_name'] == 'MT-V1.4.0'
 
 
 # A3 : textes propres au dépôt, fichiers, téléversement
@@ -644,3 +647,62 @@ def test_fichier_en_morceaux_part001_part002(tmp_path, monkeypatch):
         'dcs_hq.html', 'dcs_mission_tools.html.part001', 'dcs_mission_tools.html.part002']
     assert release.run(deps, br) == 0
     assert deps.api.recus['dcs_mission_tools.html'] == GROS
+
+
+# Lot mt-changelog-version-dev : tags MT-V, CHANGELOG « ## MT-V<x.y.z> », refus d'un numéro de dev
+
+def test_branche_release_v_minuscule_refusee_au_controle_1(tmp_path):
+    deps, api, origin, c, br = monte(tmp_path, branche='release/v2.0.1', tag='v2.0.1')
+    assert release.run(deps, br) == 1
+    assert api.calls == [] and api.writes == []
+    f = sur_origin(origin, br, '.release/FAILED.md')
+    assert 'Control or step: 1' in f and 'release/MT-V<x.y.z>' in f
+
+
+def test_changelog_ancien_format_refuse_au_controle_3(tmp_path):
+    deps, api, origin, c, br = monte(tmp_path, branche='release/MT-V2.0.1', tag='MT-V2.0.1',
+                                     changelog='# Changelog\n\n## Unreleased\n\n## [2.0.1] — 2026-11-30\n')
+    assert release.run(deps, br) == 1
+    assert api.writes == []
+    f = sur_origin(origin, br, '.release/FAILED.md')
+    assert 'Control or step: 3' in f and 'has no line "## MT-V2.0.1 — YYYY-MM-DD"' in f
+
+
+PAGE_DEV = HTML + b'<div class="credits-line" data-dev-build>MT-V2.0.0+1</div>'
+
+
+def test_fichier_avec_numero_de_dev_refuse_au_controle_5(tmp_path):
+    deps, api, origin, c, br = monte(tmp_path, assets={'dcs_mission_tools.html': PAGE_DEV})
+    assert release.run(deps, br) == 1
+    assert api.writes == []
+    f = sur_origin(origin, br, '.release/FAILED.md')
+    assert 'Control or step: 5' in f
+    assert ('asset dcs_mission_tools.html carries a development build number '
+            '(set DEV_BUILD = 0 in build_mission_tools.py and rebuild)') in f
+
+
+def test_fichier_en_morceaux_avec_numero_de_dev_refuse_au_controle_5(tmp_path, monkeypatch):
+    # la chaîne est coupée entre deux morceaux : seul le fichier joint la contient
+    gros = b'<!DOCTYPE html>' + bytes(range(256)) * 4 + b' data-dev-build ' + b'tail'
+    monkeypatch.setattr(sys.modules[__name__], 'GROS', gros)
+    i = gros.index(b'data-dev-build') + 5
+    assert b'data-dev-build' not in gros[:i] and b'data-dev-build' not in gros[i:]
+    deps, api, origin, br, rt = monte_morceaux(tmp_path, monkeypatch, parts=[gros[:i], gros[i:]])
+    assert release.run(deps, br) == 1
+    assert api.writes == []
+    texte = (deps.root / '.release' / 'FAILED.md').read_text(encoding='utf-8')
+    assert 'Control or step: 5' in texte and f'asset {NOM_GROS} carries a development build number' in texte
+    assert list(rt.iterdir()) == []
+
+
+def test_marque_a_cheval_sur_deux_blocs_de_lecture(tmp_path):
+    f = tmp_path / 'x'
+    f.write_bytes(b'a' * ((1 << 20) - 5) + b'data-dev-build' + b'b' * 10)
+    assert release._contient(f, release.MARQUE_DEV)
+    f.write_bytes(b'a' * ((1 << 20) - 5) + b'data-dev-buil' + b'b' * 10)
+    assert not release._contient(f, release.MARQUE_DEV)
+
+
+def test_fichier_sans_numero_de_dev_passe(tmp_path):
+    deps, api, origin, c, br = monte(tmp_path, assets={'dcs_mission_tools.html': HTML + b' MT-V2.0.0 '})
+    assert release.run(deps, br) == 0

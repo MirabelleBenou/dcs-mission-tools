@@ -3,7 +3,7 @@
 
   python3 tools/release.py        lit GITHUB_REPOSITORY, GITHUB_REF_NAME, GITHUB_TOKEN ; code 0 si tout va bien, 1 sinon
 
-Branche release/v<x.y.z> : publication. Branche release/essai-<nom> : les memes controles, rien n'est cree.
+Branche release/MT-V<x.y.z> : publication. Branche release/essai-<nom> : les memes controles, rien n'est cree.
 Un fichier trop gros pour un push arrive en morceaux <nom>.part001, .part002... : ils sont joints hors du depot, le fichier joint est controle puis televerse.
 Sans .release/manifest.json sur la branche : rien n'est fait. Le git et l'API passent par l'objet Deps, que les tests remplacent.
 Le jeton n'est jamais ecrit : tout texte sorti (journal, FAILED.md, CHECK.md) passe par Deps.scrub.
@@ -30,9 +30,10 @@ TAILLE_MAX = 2 * 1024 ** 3
 RELEASE_DIR = '.release'
 CLES_MANIFESTE = ('tag', 'title', 'commit', 'assets')
 CLES_ASSET = ('name', 'size', 'sha256')
-RE_TAG = re.compile(r'v\d+\.\d+\.\d+')
-RE_BRANCHE_PUB = re.compile(r'release/(v\d+\.\d+\.\d+)')
+RE_TAG = re.compile(r'MT-V\d+\.\d+\.\d+')
+RE_BRANCHE_PUB = re.compile(r'release/(MT-V\d+\.\d+\.\d+)')
 RE_BRANCHE_ESSAI = re.compile(r'release/essai-[A-Za-z0-9._-]+')
+MARQUE_DEV = b'data-dev-build'
 RE_COMMIT = re.compile(r'[0-9a-f]{40}')
 RE_SHA = re.compile(r'[0-9a-f]{64}')
 RE_ASSET = re.compile(r'dcs_[a-z0-9_]+\.html')
@@ -157,7 +158,7 @@ def _manifeste(brut, branche):
     elif RE_BRANCHE_ESSAI.fullmatch(branche):
         essai = True
     else:
-        raise Echec('1', f'branch name "{branche}" is neither release/v<x.y.z> nor release/essai-<name>')
+        raise Echec('1', f'branch name "{branche}" is neither release/MT-V<x.y.z> nor release/essai-<name>')
     try:
         m = json.loads(brut)
     except ValueError as e:
@@ -165,7 +166,7 @@ def _manifeste(brut, branche):
     if not isinstance(m, dict) or set(m) != set(CLES_MANIFESTE):
         raise Echec('1', f'manifest.json keys must be exactly {", ".join(CLES_MANIFESTE)}')
     if not isinstance(m['tag'], str) or not RE_TAG.fullmatch(m['tag']):
-        raise Echec('1', 'manifest tag must look like v<x.y.z>')
+        raise Echec('1', 'manifest tag must look like MT-V<x.y.z>')
     if not isinstance(m['title'], str) or not m['title'].strip():
         raise Echec('1', 'manifest title must be a non-empty string')
     if not isinstance(m['commit'], str) or not RE_COMMIT.fullmatch(m['commit']):
@@ -206,12 +207,12 @@ def _controle_changelog(deps, m):
     p = deps.git.run('show', f'{m["commit"]}:CHANGELOG.md', check=False)
     if p.returncode != 0:
         raise Echec('3', 'CHANGELOG.md not found at the commit')
-    version = m['tag'][1:]
-    re_ligne = re.compile(r'## \[' + re.escape(version) + r'\] — \d{4}-\d{2}-\d{2}')
+    tag = m['tag']
+    re_ligne = re.compile(r'## ' + re.escape(tag) + r' — \d{4}-\d{2}-\d{2}')
     for l in p.stdout.splitlines():
         if re_ligne.fullmatch(l):
             return f'CHANGELOG line "{l}" found for {m["tag"]}'
-    raise Echec('3', f'CHANGELOG.md at the commit has no line "## [{version}] — YYYY-MM-DD"')
+    raise Echec('3', f'CHANGELOG.md at the commit has no line "## {tag} — YYYY-MM-DD"')
 
 
 def _controle_tag(deps, m):
@@ -243,6 +244,18 @@ def _sha256(chemin):
         for bloc in iter(lambda: f.read(1 << 20), b''):
             h.update(bloc)
     return h.hexdigest()
+
+
+def _contient(chemin, marque):
+    """Le fichier contient-il `marque` (octets) ? Lecture par blocs, avec recouvrement pour une marque a cheval sur deux blocs."""
+    reste = b''
+    with open(chemin, 'rb') as f:
+        for bloc in iter(lambda: f.read(1 << 20), b''):
+            tampon = reste + bloc
+            if marque in tampon:
+                return True
+            reste = tampon[-(len(marque) - 1):]
+    return False
 
 
 def _morceaux(dossier, nom):
@@ -303,6 +316,8 @@ def _controle_assets(deps, m):
             raise Echec('5', f'asset {n} is 2 GiB or more')
         if _sha256(f) != a['sha256']:
             raise Echec('5', f'asset {n}: SHA-256 differs from the manifest')
+        if _contient(f, MARQUE_DEV):
+            raise Echec('5', f'asset {n} carries a development build number (set DEV_BUILD = 0 in build_mission_tools.py and rebuild)')
     en_trop = sorted(p.name for p in dossier.iterdir() if p.name not in attendus) if dossier.is_dir() else []
     if en_trop:
         raise Echec('5', f'files in {RELEASE_DIR}/assets/ not listed in the manifest: {", ".join(en_trop[:5])}')

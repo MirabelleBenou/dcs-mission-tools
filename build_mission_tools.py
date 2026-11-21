@@ -31,6 +31,7 @@ from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN 
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '2.0.0'
+DEV_BUILD   = 1   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [
@@ -964,7 +965,7 @@ def build_html(module_html_js, tile_uris):
 
         <div id="credits">
           <div class="credits-line">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
-          <div class="credits-line"><span data-i18n="credits.data1">Données des appareils : </span><a href="https://github.com/pydcs/dcs" target="_blank" rel="noopener">pydcs</a><span data-i18n="credits.data2"> (LGPL-3.0-or-later) · vues de face : Goldwolf, DCS Reference Guide, avec son autorisation</span></div>
+          <div class="credits-line"><span data-i18n="credits.data1">Données des appareils : </span><a href="https://github.com/pydcs/dcs" target="_blank" rel="noopener">pydcs</a><span data-i18n="credits.data2"> (LGPL-3.0-or-later) · vues de face : Goldwolf, DCS Reference Guide, avec son autorisation</span></div>{dev_credits_line()}
         </div>
       </div>
     </div>
@@ -1643,8 +1644,24 @@ def build_html(module_html_js, tile_uris):
 </html>'''
 
 
+def check_dev_build():
+    """DEV_BUILD : un entier (pas un booléen) >= 0 ; sinon le build s'arrête avant d'écrire quoi que ce soit."""
+    if isinstance(DEV_BUILD, bool) or not isinstance(DEV_BUILD, int) or DEV_BUILD < 0:
+        print(f'  [ERREUR] DEV_BUILD doit être un entier >= 0 (reçu : {DEV_BUILD!r}) — build arrêté', file=sys.stderr)
+        sys.exit(1)
+
+
+def dev_credits_line():
+    """La ligne du numéro de dev au pied de #credits (vide pour une release : DEV_BUILD = 0)."""
+    if DEV_BUILD > 0:
+        return f'\n          <div class="credits-line" data-dev-build>MT-V{APP_VERSION}+{DEV_BUILD}</div>'
+    return ''
+
+
 def main():
-    print(f'=== build_mission_tools.py — DCS Mission Tools v{APP_VERSION} ===')
+    check_dev_build()
+    version_build = f'{APP_VERSION}+{DEV_BUILD}' if DEV_BUILD > 0 else APP_VERSION
+    print(f'=== build_mission_tools.py — DCS Mission Tools v{version_build} ===')
 
     print('\n[1/4] Contrôle des sources des modules…')
     check_modules_unversioned(MODULES)

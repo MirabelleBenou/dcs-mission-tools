@@ -194,9 +194,9 @@ The module sources are read from `modules/` and the output is written to `dist/d
 
 ## 📦 Publishing a release (maintainers)
 
-Releases are created by the workflow `.github/workflows/release.yml`, not by hand. On `main`, the changes under `[Unreleased]` in the CHANGELOG first get their version heading `## [x.y.z] — YYYY-MM-DD`. Then a branch `release/v<x.y.z>` is pushed: that `main` commit plus files under `.release/` only — `notes.md` (the release text), the files to download under `assets/` (`dcs_mission_tools.html`; a file over 100 MB, the limit of a git push, goes in parts `.part001`, `.part002`…), and last `manifest.json` (tag, title, `main` commit, and the name, size and SHA-256 of each file).
+Releases are created by the workflow `.github/workflows/release.yml`, not by hand. On `main`, `DEV_BUILD` in `build_mission_tools.py` is set to 0 and the page rebuilt, and the changes under `Unreleased` in the CHANGELOG get their heading `## MT-V<x.y.z> — YYYY-MM-DD`. Then a branch `release/MT-V<x.y.z>` is pushed: that `main` commit plus files under `.release/` only — `notes.md` (the release text), the files to download under `assets/` (`dcs_mission_tools.html`; a file over 100 MB, the limit of a git push, goes in parts `.part001`, `.part002`…), and last `manifest.json` (tag, title, `main` commit, and the name, size and SHA-256 of each file).
 
-The workflow checks all of it, creates the release with its files, publishes it as the latest release (which creates the tag on the `main` commit) and deletes the branch. If anything fails, nothing stays published and the branch gets `.release/FAILED.md` with the reason. A branch `release/essai-<name>` runs the same checks without publishing anything and writes `.release/CHECK.md`. A scheduled workflow deletes finished branches after 7 days.
+The workflow checks all of it, creates the release with its files, publishes it as the latest release (which creates the tag on the `main` commit) and deletes the branch. If anything fails, nothing stays published and the branch gets `.release/FAILED.md` with the reason. A branch `release/essai-<name>` runs the same checks without publishing anything and writes `.release/CHECK.md`. A scheduled workflow deletes finished branches after 7 days. A file that still carries a build number is refused.
 
 ## 🗺️ Roadmap
 
