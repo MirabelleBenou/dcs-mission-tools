@@ -9,7 +9,7 @@ Each release is a GitHub release tagged `MT-V<major>.<minor>.<patch>` (up to 2.0
 
 Between two releases, the hosted version shows its build number at the bottom of the home screen — `MT-V2.0.0+3` is the third update since 2.0.0. A released file shows none.
 
-## Unreleased
+## MT-V2.1.0 — 2026-11-21
 
 **Build number on the hosted version**
 - Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+5` for this one; a downloaded release shows none.
