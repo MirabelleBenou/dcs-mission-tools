@@ -12,7 +12,13 @@ Between two releases, the hosted version shows its build number at the bottom of
 ## Unreleased
 
 **Build number on the hosted version**
-- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+1` for this one; a downloaded release shows none.
+- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+2` for this one; a downloaded release shows none.
+
+**Same words in every question**
+- A question that would lose or remove something now backs out with *Keep* in every tool; the Ground Unit Swapper's question about a changes file from another mission backs out with *Don't import*.
+
+**Search hints that say what they search**
+- The Weather Editor's preset search reads *Search…*, without an icon; the Loadout Editor's free search says it looks in group and unit names.
 
 ## [2.0.0] — 2026-11-18
 
