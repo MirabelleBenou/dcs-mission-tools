@@ -728,7 +728,7 @@
               <th class="c-role" data-i18n="table.col.role">Rôle</th>
               <th class="c-country" data-i18n="table.col.country">Pays</th>
               <th class="th-ld" data-i18n="table.col.loadout">Emport</th>
-              <th class="c-mass" data-i18n="table.col.mass" data-i18n-title="table.col.mass.title" title="Estimation : à vide + carburant + emports (canon non compté)">Masse</th>
+              <th class="c-mass" data-i18n="table.col.mass" data-i18n-title="table.col.mass.title" title="Estimation comme l’éditeur de DCS : à vide (équipement compris) + carburant + emports + obus ; les leurres ne pèsent rien">Masse</th>
               <th class="c-livery" data-i18n="table.col.livery">Livrée</th>
             </tr>
           </thead>
@@ -850,8 +850,11 @@ const I18N = {
     'table.col.country':           'Pays',
     'table.col.loadout':           'Emport',
     'table.col.mass':              'Masse',
-    'table.col.mass.title':        'Estimation : à vide + carburant + emports (canon non compté)',
-    'mass.tip':                    'À vide {e} + carburant {f} + emports {s} = {m} {u} · max {max} {u}',
+    'table.col.mass.title':        'Estimation comme l’éditeur de DCS : à vide (équipement compris) + carburant + emports + obus ; les leurres ne pèsent rien',
+    'mass.tip':                    'À vide {e}{eq} + carburant {f} + emports {s}{a}{w} = {m} {u} · max {max} {u}',
+    'mass.tipEq':                  ' (équipement compris)',
+    'mass.tipAmmo':                ' + obus {a}',
+    'mass.tipWdf':                 ' + cuve {w}',
     'mass.tipOver':                ' — au-delà, permis',
     'cmp.takeoff':                 ' · Au décollage, carburant {f} {u} : {y} (max {max} {u})',
     'table.col.livery':            'Livrée',
@@ -1046,8 +1049,11 @@ const I18N = {
     'table.col.country':           'Country',
     'table.col.loadout':           'Loadout',
     'table.col.mass':              'Weight',
-    'table.col.mass.title':        'Estimate: empty + fuel + stores (gun not counted)',
-    'mass.tip':                    'Empty {e} + fuel {f} + stores {s} = {m} {u} · max {max} {u}',
+    'table.col.mass.title':        'Estimate as the DCS editor: empty (equipment incl.) + fuel + stores + rounds; countermeasures weigh nothing',
+    'mass.tip':                    'Empty {e}{eq} + fuel {f} + stores {s}{a}{w} = {m} {u} · max {max} {u}',
+    'mass.tipEq':                  ' (equipment incl.)',
+    'mass.tipAmmo':                ' + rounds {a}',
+    'mass.tipWdf':                 ' + tank {w}',
     'mass.tipOver':                ' — above, allowed',
     'cmp.takeoff':                 ' · Take-off, fuel {f} {u}: {y} (max {max} {u})',
     'table.col.livery':            'Livery',
@@ -3662,179 +3668,179 @@ const AIRCRAFT_LIMITS = {
 /* AIRCRAFT_LIMITS:END */
 
 // ═══════════════════════════════════════════════════════════════
-// MASSES DES APPAREILS — type DCS → masse à vide et masse maximale (kg, arrondies), lues dans DCS World 2.9.31 par
-// Unit.getDescByName (massEmpty, massMax) ; data/aircraft_masses.json du dépôt, fait par tools/gen_aircraft_masses.py.
+// MASSES DES APPAREILS — type DCS → masse à vide, masse maximale, masse du plein d'obus et options d'équipement qui pèsent (kg), lues dans
+// l'éditeur de mission de DCS World ; data/aircraft_masses.json du dépôt, fait par tools/gen_aircraft_masses.py.
 // Copie en ligne : même garde de build que les autres tables.
 // ═══════════════════════════════════════════════════════════════
 /* AIRCRAFT_MASSES:BEGIN */
 const AIRCRAFT_MASSES = {
- "A-10A": {"empty": 11625, "max": 21081},
- "A-10C": {"empty": 11625, "max": 21081},
- "A-10C_2": {"empty": 11625, "max": 21081},
- "A-20G": {"empty": 8010, "max": 13608},
- "A-50": {"empty": 90000, "max": 190000},
- "A6E": {"empty": 12000, "max": 27396},
- "AH-1W": {"empty": 4814, "max": 6690},
- "AH-64A": {"empty": 4881, "max": 9525},
- "AH-64D": {"empty": 5345, "max": 10433},
- "AH-64D_BLK_II": {"empty": 5930, "max": 9190},
- "AJS37": {"empty": 10749, "max": 20000},
- "AV8BNA": {"empty": 7015, "max": 14100},
- "An-26B": {"empty": 15850, "max": 24000},
- "An-30M": {"empty": 15850, "max": 24000},
- "B-1B": {"empty": 82840, "max": 213192},
- "B-52H": {"empty": 83460, "max": 256735},
- "Bf-109K-4": {"empty": 2901, "max": 3400},
- "C-101CC": {"empty": 3635, "max": 6300},
- "C-101EB": {"empty": 3537, "max": 5366},
- "C-130": {"empty": 36400, "max": 79380},
- "C-130J-30": {"empty": 39100, "max": 79379},
- "C-17A": {"empty": 125645, "max": 265350},
- "CH-47D": {"empty": 15329, "max": 22680},
- "CH-47Fbl1": {"empty": 11400, "max": 22680},
- "CH-53E": {"empty": 15407, "max": 31630},
- "CHAP_TigerUHT": {"empty": 6300, "max": 10600},
- "Christen Eagle II": {"empty": 648, "max": 726},
- "E-2C": {"empty": 17090, "max": 24687},
- "E-3A": {"empty": 60000, "max": 148000},
- "F-100D": {"empty": 9361, "max": 17258},
- "F-117A": {"empty": 13380, "max": 23810},
- "F-14A": {"empty": 18951, "max": 33724},
- "F-14A-135-GR": {"empty": 19090, "max": 33724},
- "F-14A-135-GR-Early": {"empty": 19090, "max": 33724},
- "F-14A-95-GR": {"empty": 19090, "max": 33724},
- "F-14B": {"empty": 19976, "max": 33724},
- "F-14BU": {"empty": 19976, "max": 33724},
- "F-15C": {"empty": 13380, "max": 30845},
- "F-15E": {"empty": 17072, "max": 36741},
- "F-15ESE": {"empty": 17661, "max": 36741},
- "F-16A": {"empty": 8853, "max": 19187},
- "F-16A MLU": {"empty": 8853, "max": 19187},
- "F-16C bl.50": {"empty": 8853, "max": 19187},
- "F-16C bl.52d": {"empty": 8853, "max": 19187},
- "F-16C_50": {"empty": 9026, "max": 19187},
- "F-4E": {"empty": 14461, "max": 28055},
- "F-4E-45MC": {"empty": 14742, "max": 28122},
- "F-5E": {"empty": 4831, "max": 11187},
- "F-5E-3": {"empty": 4835, "max": 11187},
- "F-5E-3_FC": {"empty": 4835, "max": 11187},
- "F-86F Sabre": {"empty": 5356, "max": 9349},
- "F-86F_FC": {"empty": 5356, "max": 9349},
- "F/A-18A": {"empty": 10455, "max": 25401},
- "F/A-18C": {"empty": 11631, "max": 23541},
- "F4U-1D": {"empty": 4492, "max": 6804},
- "F4U-1D_CW": {"empty": 4492, "max": 6804},
- "FA-18C_hornet": {"empty": 11382, "max": 23541},
- "FW-190A8": {"empty": 3640, "max": 4840},
- "FW-190D9": {"empty": 3600, "max": 4840},
- "Falcon_Gyrocopter": {"empty": 300, "max": 560},
- "H-6J": {"empty": 35000, "max": 76000},
- "Hawk": {"empty": 3127, "max": 5700},
- "I-16": {"empty": 1614, "max": 2146},
- "IL-76MD": {"empty": 92000, "max": 190000},
- "IL-78M": {"empty": 98000, "max": 210000},
- "J-11A": {"empty": 17500, "max": 33000},
- "JF-17": {"empty": 6586, "max": 12500},
- "KC-135": {"empty": 44663, "max": 146000},
- "KC130": {"empty": 36400, "max": 79380},
- "KC135MPRS": {"empty": 44663, "max": 146000},
- "KJ-2000": {"empty": 90000, "max": 190000},
- "Ka-27": {"empty": 5920, "max": 13000},
- "Ka-50": {"empty": 8030, "max": 11900},
- "Ka-50_3": {"empty": 8030, "max": 11900},
- "L-39C": {"empty": 3478, "max": 4700},
- "L-39ZA": {"empty": 3614, "max": 5600},
- "La-7": {"empty": 2843, "max": 3530},
- "M-2000C": {"empty": 7600, "max": 16500},
- "MB-339A": {"empty": 3210, "max": 5900},
- "MB-339APAN": {"empty": 3210, "max": 5900},
- "MQ-9 Reaper": {"empty": 2223, "max": 4760},
- "Mi-24P": {"empty": 8891, "max": 11500},
- "Mi-24V": {"empty": 8870, "max": 11500},
- "Mi-26": {"empty": 28890, "max": 56000},
- "Mi-28N": {"empty": 8920, "max": 11700},
- "Mi-8MT": {"empty": 8866, "max": 13000},
- "MiG-15bis": {"empty": 3753, "max": 6106},
- "MiG-15bis_FC": {"empty": 3753, "max": 6106},
- "MiG-19P": {"empty": 5252, "max": 8738},
- "MiG-21Bis": {"empty": 6255, "max": 10400},
- "MiG-23MLD": {"empty": 10550, "max": 17800},
- "MiG-25PD": {"empty": 20000, "max": 41200},
- "MiG-25RBT": {"empty": 20000, "max": 41200},
- "MiG-27K": {"empty": 11000, "max": 18900},
- "MiG-29 Fulcrum": {"empty": 10922, "max": 19700},
- "MiG-29A": {"empty": 10922, "max": 19700},
- "MiG-29G": {"empty": 10922, "max": 19700},
- "MiG-29S": {"empty": 11222, "max": 19700},
- "MiG-31": {"empty": 21820, "max": 46200},
- "Mirage 2000-5": {"empty": 7500, "max": 17000},
- "Mirage-F1AD": {"empty": 7887, "max": 16200},
- "Mirage-F1AZ": {"empty": 7887, "max": 16200},
- "Mirage-F1B": {"empty": 8000, "max": 17000},
- "Mirage-F1BD": {"empty": 8000, "max": 17000},
- "Mirage-F1BE": {"empty": 8000, "max": 17000},
- "Mirage-F1BQ": {"empty": 8000, "max": 17000},
- "Mirage-F1C": {"empty": 7887, "max": 16200},
- "Mirage-F1C-200": {"empty": 7887, "max": 16200},
- "Mirage-F1CE": {"empty": 7887, "max": 16200},
- "Mirage-F1CG": {"empty": 7887, "max": 16200},
- "Mirage-F1CH": {"empty": 7887, "max": 16200},
- "Mirage-F1CJ": {"empty": 7887, "max": 16200},
- "Mirage-F1CK": {"empty": 7887, "max": 16200},
- "Mirage-F1CR": {"empty": 7887, "max": 16200},
- "Mirage-F1CT": {"empty": 7887, "max": 16200},
- "Mirage-F1CZ": {"empty": 7887, "max": 16200},
- "Mirage-F1DDA": {"empty": 8000, "max": 17000},
- "Mirage-F1ED": {"empty": 7887, "max": 16200},
- "Mirage-F1EDA": {"empty": 7887, "max": 16200},
- "Mirage-F1EE": {"empty": 7887, "max": 16200},
- "Mirage-F1EH": {"empty": 7887, "max": 16200},
- "Mirage-F1EQ": {"empty": 7887, "max": 16200},
- "Mirage-F1JA": {"empty": 7887, "max": 16200},
- "Mirage-F1M-CE": {"empty": 7887, "max": 16200},
- "Mirage-F1M-EE": {"empty": 7887, "max": 16200},
- "MosquitoFBMkVI": {"empty": 7490, "max": 11000},
- "OH-58D": {"empty": 1560, "max": 2495},
- "OH58D": {"empty": 1902, "max": 2359},
- "P-47D-30": {"empty": 5006, "max": 7112},
- "P-47D-30bl1": {"empty": 5006, "max": 7112},
- "P-47D-40": {"empty": 5006, "max": 7112},
- "P-51D": {"empty": 3549, "max": 4800},
- "P-51D-30-NA": {"empty": 3549, "max": 4800},
- "QF-4E": {"empty": 14742, "max": 28122},
- "RQ-1A Predator": {"empty": 430, "max": 1020},
- "S-3B": {"empty": 12088, "max": 23831},
- "S-3B Tanker": {"empty": 12088, "max": 23831},
- "SA342L": {"empty": 1177, "max": 1800},
- "SA342M": {"empty": 1541, "max": 2085},
- "SA342Minigun": {"empty": 1177, "max": 1800},
- "SA342Mistral": {"empty": 1559, "max": 2100},
- "SH-3W": {"empty": 5865, "max": 9525},
- "SH-60B": {"empty": 7619, "max": 9980},
- "SpitfireLFMkIX": {"empty": 2914, "max": 3400},
- "SpitfireLFMkIXCW": {"empty": 2904, "max": 3400},
- "Su-17M4": {"empty": 10670, "max": 19430},
- "Su-24M": {"empty": 22300, "max": 39700},
- "Su-24MR": {"empty": 22300, "max": 39700},
- "Su-25": {"empty": 10099, "max": 17350},
- "Su-25T": {"empty": 11496, "max": 19500},
- "Su-25TM": {"empty": 11496, "max": 19500},
- "Su-27": {"empty": 17250, "max": 28000},
- "Su-30": {"empty": 17700, "max": 33000},
- "Su-33": {"empty": 19680, "max": 33000},
- "Su-34": {"empty": 22300, "max": 45000},
- "TF-51D": {"empty": 3289, "max": 4800},
- "Tornado GR4": {"empty": 14090, "max": 26490},
- "Tornado IDS": {"empty": 14090, "max": 26490},
- "Tu-142": {"empty": 96000, "max": 185000},
- "Tu-160": {"empty": 117000, "max": 275000},
- "Tu-22M3": {"empty": 50000, "max": 124000},
- "Tu-95MS": {"empty": 96000, "max": 185000},
- "UH-1H": {"empty": 2883, "max": 4310},
- "UH-60A": {"empty": 7799, "max": 9980},
- "WingLoong-I": {"empty": 550, "max": 1150},
- "Yak-40": {"empty": 9030, "max": 14850},
- "Yak-52": {"empty": 1229, "max": 1315}
+ "A-10A": {"ammo": 805, "empty": 11625, "max": 21081},
+ "A-10C": {"ammo": 805, "empty": 11625, "max": 21081},
+ "A-10C_2": {"ammo": 805, "empty": 11625, "max": 21081},
+ "A-20G": {"ammo": 299.829, "empty": 8010, "max": 13608},
+ "A-50": {"ammo": 0, "empty": 90000, "max": 190000},
+ "A6E": {"ammo": 0, "empty": 12000, "max": 27396},
+ "AH-1W": {"ammo": 261.75, "empty": 4814, "max": 6690},
+ "AH-64A": {"ammo": 680.4, "empty": 5345, "max": 9225},
+ "AH-64D": {"ammo": 680.4, "empty": 5345, "max": 9225},
+ "AH-64D_BLK_II": {"ammo": 411.6, "empty": 5930.47, "max": 9189.94},
+ "AJS37": {"ammo": 0, "empty": 10749, "max": 20000},
+ "AV8BNA": {"ammo": 0, "empty": 7015.2598, "max": 14100, "options": [{"def": true, "id": "LoadWater", "kind": "check", "label": "Load Water (500lb)", "weightWhenOn": 226.796}]},
+ "An-26B": {"ammo": 0, "empty": 15850, "max": 24000},
+ "An-30M": {"ammo": 0, "empty": 15850, "max": 24000},
+ "B-1B": {"ammo": 0, "empty": 82840, "max": 213192},
+ "B-52H": {"ammo": 0, "empty": 83460, "max": 256735},
+ "Bf-109K-4": {"ammo": 85.8, "empty": 2900.65, "max": 3400, "options": [{"def": 1, "id": "MW50TankContents", "kind": "list", "label": "MW/Fuel Tank Contents", "values": [{"id": 0, "label": "Empty", "weightDependentOfFuel": 0}, {"id": 1, "label": "MW-50 Mix", "weightDependentOfFuel": 68.67}, {"id": 2, "label": "B-4 Gasoline", "weightDependentOfFuel": 79.2}]}]},
+ "C-101CC": {"ammo": 0, "empty": 3635, "max": 6300, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -80}]},
+ "C-101EB": {"ammo": 0, "empty": 3537, "max": 5366, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -80}]},
+ "C-130": {"ammo": 0, "empty": 36400, "max": 79380},
+ "C-130J-30": {"ammo": 0, "empty": 39099.6, "max": 79379},
+ "C-17A": {"ammo": 0, "empty": 125645, "max": 265350},
+ "CH-47D": {"ammo": 0, "empty": 15329, "max": 22680},
+ "CH-47Fbl1": {"ammo": 0, "empty": 11400, "max": 22680, "options": [{"def": false, "id": "DustProtectionDevices", "kind": "check", "label": "EAPS", "weight": 100.24}, {"def": false, "id": "ExhaustScreen", "kind": "check", "label": "IRSS", "weight": 112.49}]},
+ "CH-53E": {"ammo": 0, "empty": 15407, "max": 31630},
+ "CHAP_TigerUHT": {"ammo": 0, "empty": 6300, "max": 10600},
+ "Christen Eagle II": {"ammo": 0, "empty": 648, "max": 726},
+ "E-2C": {"ammo": 0, "empty": 17090, "max": 24687},
+ "E-3A": {"ammo": 0, "empty": 60000, "max": 148000},
+ "F-100D": {"ammo": 254.4, "empty": 9361.2393, "max": 17258.282},
+ "F-117A": {"ammo": 0, "empty": 13380, "max": 23810},
+ "F-14A": {"ammo": 175.5, "empty": 18951, "max": 33724},
+ "F-14A-135-GR": {"ammo": 235.924, "empty": 19090, "max": 33724},
+ "F-14A-135-GR-Early": {"ammo": 235.924, "empty": 19090, "max": 33724},
+ "F-14A-95-GR": {"ammo": 235.924, "empty": 19090, "max": 33724},
+ "F-14B": {"ammo": 235.924, "empty": 19976, "max": 33724},
+ "F-14BU": {"ammo": 235.924, "empty": 19976, "max": 33724},
+ "F-15C": {"ammo": 244.4, "empty": 13380, "max": 30845},
+ "F-15E": {"ammo": 244.4, "empty": 17072, "max": 36741},
+ "F-15ESE": {"ammo": 132.6, "empty": 17661, "max": 36741, "options": [{"def": false, "id": "needsGCAlign", "kind": "check", "label": "Cold Aircraft needs GC Alignment", "weightWhenOn": -80}, {"def": false, "id": "InitAlertStatus", "kind": "check", "label": "Cold Aircraft is in ALERT status", "weightWhenOn": -80}, {"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -80}]},
+ "F-16A": {"ammo": 132.86, "empty": 8853, "max": 19187},
+ "F-16A MLU": {"ammo": 132.86, "empty": 8853, "max": 19187},
+ "F-16C bl.50": {"ammo": 132.86, "empty": 8853, "max": 19187},
+ "F-16C bl.52d": {"ammo": 132.86, "empty": 8853, "max": 19187},
+ "F-16C_50": {"ammo": 132.6, "empty": 9026, "max": 19187},
+ "F-4E": {"ammo": 166.4, "empty": 14461, "max": 28055},
+ "F-4E-45MC": {"ammo": 223.011, "empty": 14742, "max": 28122},
+ "F-5E": {"ammo": 178.08, "empty": 4831, "max": 11187},
+ "F-5E-3": {"ammo": 178.08, "empty": 4835, "max": 11187},
+ "F-5E-3_FC": {"ammo": 178.08, "empty": 4835, "max": 11187},
+ "F-86F Sabre": {"ammo": 246.6, "empty": 5355.8, "max": 9349},
+ "F-86F_FC": {"ammo": 246.6, "empty": 5355.8, "max": 9349},
+ "F/A-18A": {"ammo": 150.28, "empty": 10455, "max": 25401},
+ "F/A-18C": {"ammo": 150.28, "empty": 11631, "max": 23541},
+ "F4U-1D": {"ammo": 328.8, "empty": 4492, "max": 6804},
+ "F4U-1D_CW": {"ammo": 328.8, "empty": 4492, "max": 6804},
+ "FA-18C_hornet": {"ammo": 150.28, "empty": 11382, "max": 23541},
+ "FW-190A8": {"ammo": 233, "empty": 3640, "max": 4840, "options": [{"def": 0, "id": "FW_MW50TankContents", "kind": "list", "label": "MW/Fuel Tank Contents", "values": [{"id": 0, "label": "Empty", "weightWhenOn": 0}, {"id": 2, "label": "Additional fuel", "weightWhenOn": 89.7}]}]},
+ "FW-190D9": {"ammo": 186.5, "empty": 3600, "max": 4840, "options": [{"def": 1, "id": "FW_MW50TankContents", "kind": "list", "label": "MW/Fuel Tank Contents", "values": [{"id": 0, "label": "Empty", "weightWhenOn": 0}, {"id": 1, "label": "MW-50 Mix", "weightWhenOn": 85}, {"id": 2, "label": "B-4 Gasoline", "weightWhenOn": 85.1}]}]},
+ "Falcon_Gyrocopter": {"ammo": 0, "empty": 300, "max": 560},
+ "H-6J": {"ammo": 0, "empty": 35000, "max": 76000},
+ "Hawk": {"ammo": 0, "empty": 3127, "max": 5700},
+ "I-16": {"ammo": 33.32, "empty": 1614, "max": 2146, "options": [{"def": false, "id": "landingTorch", "kind": "check", "label": "Landing Torch", "weight": 20}]},
+ "IL-76MD": {"ammo": 528, "empty": 92000, "max": 190000},
+ "IL-78M": {"ammo": 0, "empty": 98000, "max": 210000},
+ "J-11A": {"ammo": 147, "empty": 17500, "max": 33000},
+ "JF-17": {"ammo": 79.2, "empty": 6586, "max": 12500, "options": [{"def": false, "id": "AARProbe", "kind": "check", "label": "Remove AAR Probe", "weight": -20}]},
+ "KC-135": {"ammo": 0, "empty": 44663, "max": 146000},
+ "KC130": {"ammo": 0, "empty": 36400, "max": 79380},
+ "KC135MPRS": {"ammo": 0, "empty": 44663, "max": 146000},
+ "KJ-2000": {"ammo": 0, "empty": 90000, "max": 190000},
+ "Ka-27": {"ammo": 0, "empty": 5920, "max": 13000},
+ "Ka-50": {"ammo": 450.8, "empty": 8030, "max": 11900},
+ "Ka-50_3": {"ammo": 450.8, "empty": 8030, "max": 11900, "options": [{"def": true, "id": "ExhaustScreen", "kind": "check", "label": "Exhaust IR suppressors", "weight": 160}]},
+ "L-39C": {"ammo": 0, "empty": 3478, "max": 4700, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -80}]},
+ "L-39ZA": {"ammo": 66, "empty": 3614, "max": 5600, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -80}]},
+ "La-7": {"ammo": 75.82, "empty": 2843, "max": 3530},
+ "M-2000C": {"ammo": 141.75, "empty": 7600, "max": 16500},
+ "MB-339A": {"ammo": 0, "empty": 3210, "max": 5900, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -85}]},
+ "MB-339APAN": {"ammo": 0, "empty": 3210, "max": 5900, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -85}]},
+ "MQ-9 Reaper": {"ammo": 0, "empty": 2223, "max": 4760},
+ "Mi-24P": {"ammo": 207.5, "empty": 8891, "max": 11500, "options": [{"def": true, "id": "ExhaustScreen", "kind": "check", "label": "Exhaust IR suppressors", "weight": 160}]},
+ "Mi-24V": {"ammo": 215.6, "empty": 8870, "max": 11500},
+ "Mi-26": {"ammo": 0, "empty": 28890, "max": 56000},
+ "Mi-28N": {"ammo": 245, "empty": 8920, "max": 11700},
+ "Mi-8MT": {"ammo": 0, "empty": 8866, "max": 13000, "options": [{"def": true, "id": "ExhaustScreen", "kind": "check", "label": "Exhaust IR suppressors", "weight": 160}, {"def": true, "id": "AdditionalArmor", "kind": "check", "label": "Additional Armor", "weight": 419}, {"def": true, "id": "CargoHalfdoor", "kind": "check", "label": "Cargo halfdoor", "weight": 130}]},
+ "MiG-15bis": {"ammo": 120.36, "empty": 3753, "max": 6106},
+ "MiG-15bis_FC": {"ammo": 120.36, "empty": 3753, "max": 6106},
+ "MiG-19P": {"ammo": 130.2, "empty": 5252, "max": 8738, "options": [{"def": false, "id": "MountSIRENA", "kind": "check", "label": "Mount SPO-2 Sirena RWR", "weightWhenOn": -80}]},
+ "MiG-21Bis": {"ammo": 85.28, "empty": 6255, "max": 10400},
+ "MiG-23MLD": {"ammo": 114.4, "empty": 10550, "max": 17800},
+ "MiG-25PD": {"ammo": 0, "empty": 20000, "max": 41200},
+ "MiG-25RBT": {"ammo": 0, "empty": 20000, "max": 41200},
+ "MiG-27K": {"ammo": 313.6, "empty": 11000, "max": 18900},
+ "MiG-29 Fulcrum": {"ammo": 147, "empty": 10922, "max": 19700},
+ "MiG-29A": {"ammo": 147, "empty": 10922, "max": 19700},
+ "MiG-29G": {"ammo": 147, "empty": 10922, "max": 19700},
+ "MiG-29S": {"ammo": 147, "empty": 11222, "max": 19700},
+ "MiG-31": {"ammo": 45.5, "empty": 21820, "max": 46200},
+ "Mirage 2000-5": {"ammo": 141.75, "empty": 7500, "max": 17000},
+ "Mirage-F1AD": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1AZ": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1B": {"ammo": 0, "empty": 8000, "max": 17000, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weight": -80}]},
+ "Mirage-F1BD": {"ammo": 0, "empty": 8000, "max": 17000, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weight": -80}]},
+ "Mirage-F1BE": {"ammo": 0, "empty": 8000, "max": 17000, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weight": -80}]},
+ "Mirage-F1BQ": {"ammo": 0, "empty": 8000, "max": 17000, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weight": -80}]},
+ "Mirage-F1C": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1C-200": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1CE": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1CG": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1CH": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1CJ": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1CK": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1CR": {"ammo": 76.545, "empty": 7887, "max": 16200},
+ "Mirage-F1CT": {"ammo": 76.545, "empty": 7887, "max": 16200},
+ "Mirage-F1CZ": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1DDA": {"ammo": 0, "empty": 8000, "max": 17000, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weight": -80}]},
+ "Mirage-F1ED": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1EDA": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1EE": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1EH": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1EQ": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1JA": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1M-CE": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "Mirage-F1M-EE": {"ammo": 153.09, "empty": 7887, "max": 16200},
+ "MosquitoFBMkVI": {"ammo": 235.8, "empty": 7489.5, "max": 11000, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -90}]},
+ "OH-58D": {"ammo": 0, "empty": 1560, "max": 2495},
+ "OH58D": {"ammo": 1.068, "empty": 1901.5, "max": 2358.68, "options": [{"def": true, "id": "Remove doors", "kind": "check", "label": "Remove Doors", "weightWhenOn": -3.6}, {"def": false, "id": "PDU", "kind": "check", "label": "Install Pilot Display Unit", "weightWhenOn": 5}, {"def": false, "id": "MMS removal", "kind": "check", "label": "Remove Mast Mounted Sight", "weightWhenOn": -122.47}, {"def": false, "id": "ALQ144", "kind": "check", "label": "Install AN/ALQ-144 IRCM", "weightWhenOn": -12.7}]},
+ "P-47D-30": {"ammo": 328.8, "empty": 5006, "max": 7112, "options": [{"def": 1, "id": "WaterTankContents", "kind": "list", "label": "Water Tank Contents", "values": [{"id": 0, "label": "Empty", "weightWhenOn": 0}, {"id": 1, "label": "Water", "weightWhenOn": 114}]}]},
+ "P-47D-30bl1": {"ammo": 328.8, "empty": 5006, "max": 7112, "options": [{"def": 1, "id": "WaterTankContents", "kind": "list", "label": "Water Tank Contents", "values": [{"id": 0, "label": "Empty", "weightWhenOn": 0}, {"id": 1, "label": "Water", "weightWhenOn": 114}]}]},
+ "P-47D-40": {"ammo": 328.8, "empty": 5006, "max": 7112, "options": [{"def": 1, "id": "WaterTankContents", "kind": "list", "label": "Water Tank Contents", "values": [{"id": 0, "label": "Empty", "weightWhenOn": 0}, {"id": 1, "label": "Water", "weightWhenOn": 114}]}]},
+ "P-51D": {"ammo": 284.96, "empty": 3549, "max": 4800},
+ "P-51D-30-NA": {"ammo": 284.96, "empty": 3549, "max": 4800},
+ "QF-4E": {"ammo": 223.011, "empty": 14742, "max": 28122},
+ "RQ-1A Predator": {"ammo": 0, "empty": 430, "max": 1020},
+ "S-3B": {"ammo": 0, "empty": 12088, "max": 23831},
+ "S-3B Tanker": {"ammo": 0, "empty": 12088, "max": 23831},
+ "SA342L": {"ammo": 0, "empty": 1177, "max": 1800},
+ "SA342M": {"ammo": 0, "empty": 1541, "max": 2085.33},
+ "SA342Minigun": {"ammo": 37.32, "empty": 1177, "max": 1800},
+ "SA342Mistral": {"ammo": 0, "empty": 1559, "max": 2100},
+ "SH-3W": {"ammo": 0, "empty": 5865, "max": 9525},
+ "SH-60B": {"ammo": 0, "empty": 7619, "max": 9980},
+ "SpitfireLFMkIX": {"ammo": 114.12, "empty": 2914, "max": 3400},
+ "SpitfireLFMkIXCW": {"ammo": 114.12, "empty": 2904, "max": 3400},
+ "Su-17M4": {"ammo": 65.6, "empty": 10670, "max": 19430},
+ "Su-24M": {"ammo": 87.5, "empty": 19200, "max": 39700},
+ "Su-24MR": {"ammo": 0, "empty": 22300, "max": 39700},
+ "Su-25": {"ammo": 245, "empty": 10099, "max": 17350},
+ "Su-25T": {"ammo": 245, "empty": 11496, "max": 19500},
+ "Su-25TM": {"ammo": 245, "empty": 11496, "max": 19500},
+ "Su-27": {"ammo": 147, "empty": 17250, "max": 33000},
+ "Su-30": {"ammo": 147, "empty": 17700, "max": 30500},
+ "Su-33": {"ammo": 147, "empty": 19680, "max": 33000},
+ "Su-34": {"ammo": 147, "empty": 22300, "max": 45000},
+ "TF-51D": {"ammo": 0, "empty": 3289, "max": 4800},
+ "Tornado GR4": {"ammo": 110.88, "empty": 14090, "max": 26490},
+ "Tornado IDS": {"ammo": 221.76, "empty": 14090, "max": 26490},
+ "Tu-142": {"ammo": 528, "empty": 96000, "max": 185000},
+ "Tu-160": {"ammo": 0, "empty": 117000, "max": 275000},
+ "Tu-22M3": {"ammo": 528, "empty": 50000, "max": 126400},
+ "Tu-95MS": {"ammo": 1056, "empty": 96000, "max": 185000},
+ "UH-1H": {"ammo": 0, "empty": 2883, "max": 4310, "options": [{"def": true, "id": "ExhaustScreen", "kind": "check", "label": "Exhaust IR suppressors", "weight": 20}]},
+ "UH-60A": {"ammo": 0, "empty": 7799, "max": 9980},
+ "WingLoong-I": {"ammo": 0, "empty": 550, "max": 1150},
+ "Yak-40": {"ammo": 0, "empty": 9030, "max": 14850},
+ "Yak-52": {"ammo": 0, "empty": 1229, "max": 1315, "options": [{"def": false, "id": "SoloFlight", "kind": "check", "label": "Solo Flight", "weightWhenOn": -80}]}
 };
 /* AIRCRAFT_MASSES:END */
 
@@ -10922,6 +10928,7 @@ function lxWalkAircraft(ast, struct) {
             const liveryNode = lxGet(un, 'livery_id');
             const payloadNode = lxGet(un, 'payload');
             const csNode = lxGet(un, 'callsign');
+            const addPropNode = lxGet(un, 'AddPropAircraft');
             out.push({
               unitId:     lxScalar(lxGet(un, 'unitId')),
               name:       lxScalar(lxGet(un, 'name')),
@@ -10941,6 +10948,7 @@ function lxWalkAircraft(ast, struct) {
               callsign:   csNode ? (csNode.kind === 'number' ? csNode.value : csNode.kind === 'table' ? astToValue(csNode) : undefined) : undefined,
               callsignPos: (csNode && (csNode.kind === 'number' || csNode.kind === 'table')) ? csNode.pos : null,
               payload:    payloadNode ? astToValue(payloadNode) : undefined,
+              addProp:    addPropNode ? astToValue(addPropNode) : undefined,
               payloadPos: payloadNode ? payloadNode.pos : null,
               payloadTable: !!(payloadNode && payloadNode.kind === 'table'),
               reproducible: !!(payloadNode && payloadNode.kind === 'table' && luaTableReproducible(payloadNode)),
@@ -12545,8 +12553,24 @@ function natCompare(a, b) {
   return String(a == null ? '' : a).localeCompare(String(b == null ? '' : b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
-// Masse estimée d'un appareil : à vide + carburant + emports (canon non compté) ; null : type absent de la table.
-// <CLEAN> et un pylône vide comptent 0 ; un CLSID sans masse connue compte 0 et rend l'estimation incertaine.
+function payloadNum(v) { return (typeof v === 'number' && isFinite(v)) ? v : 0; }
+// La valeur choisie d'une option : { on } pour une case, { value } (l'objet de la liste) pour une liste ; le défaut du jeu si `props` ne donne pas une valeur permise.
+function payloadOptionChoice(o, props) {
+  const has = props && typeof props === 'object' && payloadHas(props, o.id);
+  if (o.kind === 'list') {
+    const vs = Array.isArray(o.values) ? o.values : [];
+    const pick = id => vs.find(v => v.id === id);
+    return { value: (has && pick(props[o.id])) || pick(o.def) || null };
+  }
+  return { on: (has && typeof props[o.id] === 'boolean') ? props[o.id] : o.def === true };
+}
+function payloadGunPct(gun) {
+  const n = typeof gun === 'string' && gun.trim() !== '' ? Number(gun) : gun;
+  return (typeof n === 'number' && isFinite(n)) ? Math.min(100, Math.max(0, n)) : 100;
+}
+
+// Masse estimée d'un appareil, comme l'éditeur de mission de DCS (me_payload.updateTotalWeight) : à vide (équipement compris) + carburant + emports + obus + masse liée au carburant ; null : type absent de la table.
+// <CLEAN> et un pylône vide comptent 0 ; un CLSID sans masse connue compte 0 et rend l'estimation incertaine. Les leurres ne pèsent rien. Rien n'est arrondi.
 function massOfStores(clsids) {
   let kg = 0, unknown = false;
   for (const c of clsids) {
@@ -12557,23 +12581,50 @@ function massOfStores(clsids) {
   }
   return { kg, unknown };
 }
-function unitMass(u) {
-  const m = AIRCRAFT_MASSES[u.type];
+// Le calcul : le type, l'équipement (addProp), le carburant f (kg), le canon (pourcentage ou undefined), la masse des emports st ({ kg, unknown }) ; null : type absent de la table.
+function massCore(type, addProp, f, gun, st) {
+  const m = AIRCRAFT_MASSES[type];
   if (!m) return null;
+  let o = 0, wdf = 0;
+  (Array.isArray(m.options) ? m.options : []).forEach(op => {
+    const c = payloadOptionChoice(op, addProp);
+    if (op.kind === 'list') { if (c.value) { o += payloadNum(c.value.weightWhenOn); wdf += payloadNum(c.value.weightDependentOfFuel); } }
+    else o += c.on ? payloadNum(op.weightWhenOn) : -payloadNum(op.weight);
+  });
+  const lim = AIRCRAFT_LIMITS[type], full = lim && typeof lim.fuel_max === 'number' && lim.fuel_max > 0 ? lim.fuel_max : 0;
+  const share = full > 0 ? Math.min(1, 0.1 + f / full) : 1;
+  const a = payloadNum(m.ammo) * payloadGunPct(gun) / 100;
+  const e = m.empty + o, w = wdf * share;
+  return { kg: e + f + st.kg + a + w, unknown: st.unknown, max: m.max, e, f, s: st.kg, o, a, w,
+    eq: Array.isArray(m.options) && m.options.length > 0, gun: m.ammo > 0 };
+}
+function unitMass(u) {
   const p = curPayload(u);
   const fuel = p && typeof p === 'object' ? Number(p.fuel) : 0;
   const py = p && typeof p === 'object' && p.pylons && typeof p.pylons === 'object' ? p.pylons : {};
   const st = massOfStores(Object.values(py).map(x => x && typeof x === 'object' ? x.CLSID : undefined));
-  const f = isFinite(fuel) ? fuel : 0;
-  return { kg: m.empty + f + st.kg, unknown: st.unknown, max: m.max, e: m.empty, f, s: st.kg };
+  return massCore(u.type, u.addProp, isFinite(fuel) ? fuel : 0, p && typeof p === 'object' ? p.gun : undefined, st);
+}
+// Le texte de l'infobulle de la masse : chaque partie, par massTxt.
+function massTip(m, unknown) {
+  const parts = {
+    e: massTxt(m.e),
+    eq: m.eq ? t('mass.tipEq') : '',
+    f: massTxt(m.f),
+    s: massTxt(m.s) + (unknown ? ' + ?' : ''),
+    a: m.gun ? t('mass.tipAmmo').replace('{a}', massTxt(m.a)) : '',
+    w: m.w > 0 ? t('mass.tipWdf').replace('{w}', massTxt(m.w)) : '',
+    m: massTxt(m.kg), max: massTxt(m.max)
+  };
+  const over = Math.round(m.kg) > m.max;
+  return uTxt(t('mass.tip')).replace(/\{(\w+)\}/g, (x, k) => payloadHas(parts, k) ? parts[k] : x) + (over ? t('mass.tipOver') : '');
 }
 function massCell(u) {
   const m = unitMass(u);
   if (!m) return '<td class="c-mass"><span class="none">' + escHtml(t('livery.none')) + '</span></td>';
   const over = Math.round(m.kg) > m.max;
   const txt = massTxt(m.kg) + ' ' + MASS_UNIT + (m.unknown ? ' + ?' : '');
-  const tip = uTxt(t('mass.tip')).replace('{e}', massTxt(m.e)).replace('{f}', massTxt(m.f)).replace('{s}', massTxt(m.s) + (m.unknown ? ' + ?' : ''))
-    .replace('{m}', massTxt(m.kg)).replace('{max}', massTxt(m.max)) + (over ? t('mass.tipOver') : '');
+  const tip = massTip(m, m.unknown);
   return '<td class="c-mass' + (over ? ' mass-over' : '') + '" title="' + escHtml(tip) + '">' + escHtml(txt) + '</td>';
 }
 
@@ -13109,6 +13160,29 @@ function cmpFuel(type) {
   const lim = AIRCRAFT_LIMITS[type];
   return lim && typeof lim.fuel_max === 'number' ? lim.fuel_max : null;
 }
+// Les appareils cochés que cmpFuel lit
+function cmpReadUnits(type) {
+  const vis = new Set(UI_STATE.filtered.map(x => x.unitId));
+  return cmpChecked(type).filter(u => !skipReason(u, type, vis, 'payload'));
+}
+// Canon de la masse au décollage : la valeur tapée dans Canon si elle est un nombre valide, sinon le plus fort pourcentage de canon des appareils lus par cmpFuel (aucun : 100)
+function cmpGun(type) {
+  const el = document.getElementById('set-gun');
+  if (el && !(el.validity && el.validity.badInput)) {
+    const raw = el.value.trim();
+    const n = Number(raw);
+    if (raw !== '' && isFinite(n)) return payloadGunPct(n);
+  }
+  const us = cmpReadUnits(type);
+  if (!us.length) return 100;
+  return Math.max(...us.map(u => { const p = curPayload(u); return payloadGunPct(p && typeof p === 'object' ? p.gun : undefined); }));
+}
+// La masse au décollage du composeur : la plus forte de celles des appareils lus par cmpFuel, chacun avec son équipement (aucun : options par défaut)
+function cmpMass(type, f, st) {
+  const gun = cmpGun(type), us = cmpReadUnits(type);
+  const list = us.length ? us.map(u => massCore(type, u.addProp, f, gun, st)) : [massCore(type, undefined, f, gun, st)];
+  return list.reduce((b, x) => x.kg > b.kg ? x : b);
+}
 
 function cmpOpen() {
   const type = panelType();
@@ -13351,8 +13425,8 @@ function cmpUpdate() {
   let takeoff = '';
   const am = AIRCRAFT_MASSES[CMP.type], f = cmpFuel(CMP.type);
   if (am && f !== null) {
-    const y = am.empty + f + total;
-    takeoff = '<span class="' + (Math.round(y) > am.max ? 'cmp-over' : '') + '">' + escHtml(uTxt(t('cmp.takeoff'))).replace('{f}', escHtml(massTxt(f))).replace('{y}', escHtml(massTxt(y) + ' ' + MASS_UNIT + (unknown ? ' + ?' : ''))).replace('{max}', escHtml(massTxt(am.max))) + '</span>';
+    const mc = cmpMass(CMP.type, f, st), y = mc.kg;
+    takeoff = '<span class="' + (Math.round(y) > am.max ? 'cmp-over' : '') + '" title="' + escHtml(massTip(mc, unknown)) + '">' + escHtml(uTxt(t('cmp.takeoff'))).replace('{f}', escHtml(massTxt(f))).replace('{y}', escHtml(massTxt(y) + ' ' + MASS_UNIT + (unknown ? ' + ?' : ''))).replace('{max}', escHtml(massTxt(am.max))) + '</span>';
   }
   document.getElementById('cmp-total').innerHTML = escHtml(t('cmp.mass')) + ' <b>' + escHtml(massTxt(total) + ' ' + MASS_UNIT + (unknown ? ' + ?' : '')) + '</b>' + takeoff;
   const ap = document.getElementById('cmp-apply');

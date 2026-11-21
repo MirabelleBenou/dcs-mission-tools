@@ -12,13 +12,17 @@ Between two releases, the hosted version shows its build number at the bottom of
 ## Unreleased
 
 **Build number on the hosted version**
-- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+2` for this one; a downloaded release shows none.
+- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+3` for this one; a downloaded release shows none.
 
 **Same words in every question**
 - A question that would lose or remove something now backs out with *Keep* in every tool; the Ground Unit Swapper's question about a changes file from another mission backs out with *Don't import*.
 
 **Search hints that say what they search**
 - The Weather Editor's preset search reads *Search…*, without an icon; the Loadout Editor's free search says it looks in group and unit names.
+
+**Weight counted like the DCS mission editor**
+- The Loadout Editor's estimated weight now adds the gun rounds, at each aircraft's gun percentage, and the aircraft's equipment as set in the mission — IR exhaust suppressors, extra armour, cargo door, water or MW-50 tanks, solo flight… —, as the DCS mission editor does; countermeasures weigh nothing there either. The weight's tooltip shows each part.
+- Empty and maximum weights now come from the DCS mission editor for every aircraft: the AH-64A, AH-64D, Su-24M, Su-27, Su-30 and Tu-22M3 change slightly.
 
 ## [2.0.0] — 2026-11-18
 

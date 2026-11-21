@@ -1,100 +1,159 @@
 #!/usr/bin/env python3
-"""Génère data/aircraft_masses.json (type DCS -> masse à vide et masse maximale, kg) depuis un relevé du jeu.
+"""Rend data/aircraft_masses.json : pour chaque type de data/aircraft_limits.json présent au relevé de l'éditeur, les masses que l'éditeur de
+mission de DCS World compte pour le poids au décollage, lues dans le relevé de l'éditeur (me_db_api, env gui) :
+  empty  EmptyWeight        — masse à vide, options d'équipement par défaut comprises (kg)
+  max    MaxTakeOffWeight   — masse maximale au décollage (kg)
+  ammo   AmmoWeight         — masse du plein d'obus des canons de l'appareil (kg) ; 0 sans canon
+  options  (seulement pour un type qui en a) — les options d'appareil de l'éditeur qui pèsent, dans l'ordre du jeu :
+           { id, kind: "check" | "list", def, label, weight?, weightWhenOn?, values? }
+           values (liste) : { id, label, weightWhenOn?, weightDependentOfFuel? }
+Source : DCS World, relevé de l'éditeur de mission. Les deux fichiers du relevé se passent en argument : ils ne sont pas dans ce dépôt. Un nombre écrit en texte par le jeu devient
+un nombre ; un entier s'écrit sans décimale, les autres comme le jeu ; clés triées, une ligne par type : le fichier est stable
+(deux passages, même fichier à l'octet). Un type de aircraft_limits.json absent du relevé est omis (une ligne « absent du relevé : <type> » à la console). La sortie s'arrête, sans rien écrire, si une
+valeur n'est pas un nombre ou si une option sort de la forme ci-dessus.
 
-Usage :
-    python3 -I tools/gen_aircraft_masses.py <relevé>
-
-Source : un relevé fait dans DCS World par un script de mission qui appelle Unit.getDescByName(type) pour chaque type de
-data/aircraft_limits.json. Une ligne par type :
-    type;massEmpty;massMax;fuelMassMax
-en kg, flottants du jeu (8866.2001953125) ; `nil` pour une valeur absente ; dernière ligne `FIN;<n>;<n>`, où <n> est le
-nombre de lignes de types. La quatrième colonne (carburant) est lue et ignorée : le carburant vient de aircraft_limits.json.
-
-Règles :
-- empty = massEmpty, max = massMax, arrondis à l'entier le plus proche, une moitié vers le haut (math.floor(x + 0.5)) ;
-- un type dont l'une des deux masses est `nil` est omis (l'éditeur n'a alors pas d'estimation) ;
-- le script s'arrête (message, code de sortie 1, rien d'écrit) si la dernière ligne n'est pas `FIN;<n>;<n>` avec <n> égal au
-  nombre de lignes de types, si une ligne n'a pas quatre champs, si une masse n'est ni un nombre ni `nil`, ou si un type
-  figure deux fois.
-
-Sortie : data/aircraft_masses.json
-    {
-     "<type>": {"empty": <kg>, "max": <kg>},
-     ...
-    }
-une ligne par type, clés triées, fin de ligne \\n après l'accolade fermante. Deux passages sur le même relevé donnent les
-mêmes octets. Bibliothèque standard seulement.
+Usage : python3 tools/gen_aircraft_masses.py <masses_jeu.json> <options_jeu.json> [data/aircraft_masses.json]
 """
 import json
-import math
 import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT = os.path.join(HERE, '..', 'data', 'aircraft_masses.json')
+ROOT = os.path.dirname(HERE)
+KINDS = {'checkbox': 'check', 'comboList': 'list'}
+# Les clés du relevé que la table garde ; toute autre clé de poids, ou de forme, arrête la sortie. `playerOnly` est connue et n'est pas écrite.
+OPT_KEYS = {'control', 'defValue', 'id', 'label', 'playerOnly', 'values', 'weight', 'weightWhenOn'}
+PROP_KEYS = {'control', 'defValue', 'id', 'playerOnly', 'values', 'weight', 'weightWhenOn'}
+OPT_VAL_KEYS = {'dispName', 'id', 'weightWhenOn', 'wdf'}
+PROP_VAL_KEYS = {'id', 'weightWhenOn', 'wdf'}
 
 
 def fail(msg):
-    sys.stderr.write('gen_aircraft_masses: ' + msg + '\n')
-    sys.exit(1)
+    raise SystemExit('[ERREUR] ' + msg)
 
 
-def mass(txt, line_no):
-    """Un nombre (flottant du jeu), ou None pour `nil`."""
-    if txt == 'nil':
-        return None
-    try:
-        v = float(txt)
-    except ValueError:
-        fail('ligne %d : « %s » n\'est ni un nombre ni nil' % (line_no, txt))
-    if math.isnan(v) or math.isinf(v):
-        fail('ligne %d : « %s » n\'est pas un nombre fini' % (line_no, txt))
-    return v
+def num(v, what):
+    """Un nombre du jeu : un nombre, ou un texte qui se lit comme un nombre (le jeu les lit tels). Un entier sans décimale."""
+    if isinstance(v, bool):
+        fail(what + ' : un booléen n\'est pas un nombre')
+    if isinstance(v, str):
+        try:
+            v = float(v.strip())
+        except ValueError:
+            fail('%s : « %s » ne se lit pas comme un nombre' % (what, v))
+    if not isinstance(v, (int, float)) or v != v or v in (float('inf'), float('-inf')):
+        fail(what + ' : pas un nombre')
+    return int(v) if float(v).is_integer() else v
 
 
-def parse(path):
-    with open(path, encoding='utf-8') as f:
-        lines = [l.strip() for l in f.read().splitlines()]
-    while lines and not lines[-1]:
-        lines.pop()
-    if not lines:
-        fail('relevé vide')
-    parts = lines[-1].split(';')
-    types = lines[:-1]
-    if len(parts) != 3 or parts[0] != 'FIN' or parts[1] != parts[2] or not parts[1].isdigit():
-        fail('la dernière ligne n\'est pas FIN;<n>;<n>')
-    if int(parts[1]) != len(types):
-        fail('FIN annonce %s types, le relevé en compte %d' % (parts[1], len(types)))
-    out, seen = {}, set()
-    for i, l in enumerate(types, 1):
-        f = l.split(';')
-        if len(f) != 4:
-            fail('ligne %d : %d champs au lieu de 4' % (i, len(f)))
-        t = f[0]
-        if not t:
-            fail('ligne %d : type vide' % i)
-        if t in seen:
-            fail('ligne %d : le type %s figure deux fois' % (i, t))
-        seen.add(t)
-        e, m = mass(f[1], i), mass(f[2], i)
-        fuel = f[3]
-        if fuel != 'nil':
-            mass(fuel, i)
-        if e is None or m is None:
+def ordered(d, what):
+    """Les entrées d'une table Lua exportée ({"1": …, "2": …}) dans l'ordre numérique de leurs clés."""
+    if not isinstance(d, dict) or not all(k.isdigit() for k in d):
+        fail(what + ' : table numérotée attendue')
+    return [d[k] for k in sorted(d, key=int)]
+
+
+def build(masses, opts, types):
+    out, texts, absent = {}, [], []
+    for ty in types:
+        if ty not in masses or not isinstance(masses[ty], dict):
+            absent.append(ty)
             continue
-        out[t] = {'empty': int(math.floor(e + 0.5)), 'max': int(math.floor(m + 0.5))}
-    return out
+        m = masses[ty]
+        for k in ('EmptyWeight', 'MaxTakeOffWeight', 'AmmoWeight'):
+            if k not in m:
+                fail('%s : %s absent du relevé' % (ty, k))
+            if isinstance(m[k], str):
+                texts.append((ty, k, m[k]))
+        e = {'empty': num(m['EmptyWeight'], ty + ' EmptyWeight'), 'max': num(m['MaxTakeOffWeight'], ty + ' MaxTakeOffWeight'),
+             'ammo': num(m['AmmoWeight'], ty + ' AmmoWeight')}
+        props = ordered(m.get('props', {}), ty + ' props')
+        olist = ordered(opts.get(ty, {}), ty + ' options')
+        if len(props) != len(olist):
+            fail('%s : %d options avec masse au relevé des masses, %d au relevé des libellés' % (ty, len(props), len(olist)))
+        res = []
+        for p, o in zip(props, olist):
+            where = '%s option %s' % (ty, p.get('id'))
+            if p.get('id') != o.get('id'):
+                fail('%s : id différent entre les deux relevés (%r, %r)' % (where, p.get('id'), o.get('id')))
+            if p.get('control') != o.get('control') or p.get('control') not in KINDS:
+                fail('%s : contrôle %r hors de P1 (check, list)' % (where, p.get('control')))
+            if set(p) - PROP_KEYS or set(o) - OPT_KEYS:
+                fail('%s : clé hors de P1 : %s' % (where, sorted((set(p) - PROP_KEYS) | (set(o) - OPT_KEYS))))
+            if not isinstance(o.get('label'), str) or o['label'] == '':
+                fail(where + ' : libellé absent')
+            kind = KINDS[p['control']]
+            d = p.get('defValue')
+            if kind == 'check':
+                if not isinstance(d, bool) or d != o.get('defValue'):
+                    fail(where + ' : défaut d\'une case non booléen ou différent entre les relevés')
+                if 'values' in p or 'values' in o:
+                    fail(where + ' : une case avec des valeurs')
+            else:
+                d = num(d, where + ' defValue')
+            r = {'id': p['id'], 'kind': kind, 'def': d, 'label': o['label']}
+            for k in ('weight', 'weightWhenOn'):
+                if k in p:
+                    r[k] = num(p[k], where + ' ' + k)
+                    if k in o and num(o[k], where) != r[k]:
+                        fail(where + ' : ' + k + ' différent entre les relevés')
+            if kind == 'list':
+                pv, ov = ordered(p.get('values'), where + ' values'), ordered(o.get('values'), where + ' values')
+                if len(pv) != len(ov) or not pv:
+                    fail(where + ' : valeurs de liste différentes entre les relevés')
+                vals = []
+                for a, b in zip(pv, ov):
+                    if set(a) - PROP_VAL_KEYS or set(b) - OPT_VAL_KEYS:
+                        fail('%s : clé de valeur hors de P1 : %s' % (where, sorted((set(a) - PROP_VAL_KEYS) | (set(b) - OPT_VAL_KEYS))))
+                    if a.get('id') != b.get('id') or not isinstance(b.get('dispName'), str):
+                        fail(where + ' : valeur de liste sans libellé ou d\'id différent')
+                    v = {'id': num(a['id'], where + ' value id'), 'label': b['dispName']}
+                    if 'weightWhenOn' in a:
+                        v['weightWhenOn'] = num(a['weightWhenOn'], where)
+                    if 'wdf' in a:
+                        v['weightDependentOfFuel'] = num(a['wdf'], where)
+                    vals.append(v)
+                if d not in [v['id'] for v in vals]:
+                    fail(where + ' : le défaut n\'est pas une valeur de la liste')
+                r['values'] = vals
+            elif 'weight' not in r and 'weightWhenOn' not in r:
+                fail(where + ' : une case sans masse')
+            res.append(r)
+        if res:
+            e['options'] = res
+        out[ty] = e
+    unused = [t for t in opts if t in types and t not in out]
+    if unused:
+        fail('options sans type : %s' % unused)
+    return out, texts, absent
 
 
-def main():
-    if len(sys.argv) != 2:
-        fail('usage : python3 -I tools/gen_aircraft_masses.py <relevé>')
-    d = parse(sys.argv[1])
-    body = ',\n'.join(' ' + json.dumps(t) + ': ' + json.dumps(d[t]) for t in sorted(d))
-    with open(OUT, 'w', encoding='utf-8', newline='\n') as f:
-        f.write('{\n' + body + '\n}\n')
-    print('%d types écrits dans data/aircraft_masses.json' % len(d))
+def dumps(table):
+    lines = ['%s: %s' % (json.dumps(t, ensure_ascii=False), json.dumps(table[t], ensure_ascii=False, sort_keys=True, separators=(', ', ': ')))
+             for t in sorted(table)]
+    return '{\n ' + ',\n '.join(lines) + '\n}\n'
+
+
+def main(masses_path, opts_path, out_path=None):
+    out_path = out_path or os.path.join(ROOT, 'data', 'aircraft_masses.json')
+    with open(os.path.join(ROOT, 'data', 'aircraft_limits.json'), encoding='utf-8') as f:
+        types = sorted(json.load(f))
+    with open(masses_path, encoding='utf-8') as f:
+        masses = json.load(f)
+    with open(opts_path, encoding='utf-8') as f:
+        opts = json.load(f)
+    table, texts, absent = build(masses, opts, types)
+    with open(out_path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(dumps(table))
+    for ty in absent:
+        print('absent du relevé : ' + ty)
+    for ty, k, v in texts:
+        print('texte lu comme nombre : %s %s « %s »' % (ty, k, v))
+    n = sum(1 for e in table.values() if 'options' in e)
+    print('%d types, %d avec des options, %d avec un canon' % (len(table), n, sum(1 for e in table.values() if e['ammo'] > 0)))
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) not in (3, 4):
+        raise SystemExit(__doc__)
+    main(*sys.argv[1:])

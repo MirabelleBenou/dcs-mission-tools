@@ -86,7 +86,7 @@ The Loadout Editor **applies a loadout that already exists in the mission** — 
 - **Fuel, flares, chaff and gun in bulk** — an empty field changes nothing; each field shows the current value of the checked aircraft and the type's limit, and a value above the limit is refused
 - **Liveries** — applied to aircraft of any country; the summary warns when the DCS Mission Editor does not offer the livery for that country
 - **Compose a loadout** — station by station on a front view of the aircraft (45 types), following the station rules of the DCS World mission editor (54 types): a clashing weapon is greyed out, a missing companion is named
-- **Estimated weight** — empty weight, fuel and stores for 167 aircraft types, in kg or lbs
+- **Estimated weight** — empty weight with the aircraft's equipment, fuel, stores and gun rounds, counted as the DCS mission editor does, for 167 aircraft types, in kg or lbs
 - **Change a group's country** — within its side or to the other side; the callsign follows the new country and the summary warns about links to the former side
 - **Written back safely** — each payload is replaced whole, then re-read and verified before the download is offered
 - **Bilingual FR / EN**, choice remembered

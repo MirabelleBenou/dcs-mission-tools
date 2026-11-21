@@ -35,18 +35,19 @@ Table `DCS aircraft type -> limits`, sorted by key, used by the **Loadout Editor
 
 ## aircraft_masses.json
 
-Table `DCS aircraft type -> empty and maximum weight`, sorted by key, used by the **Loadout Editor** for the weight estimate of each aircraft (empty weight + fuel + stores, gun not counted). A type missing from the table has no estimate.
+Table `DCS aircraft type -> weights`, sorted by key, one line per type, used by the **Loadout Editor** for the weight estimate of each aircraft, counted as the DCS mission editor does: empty weight with the aircraft's equipment, fuel, stores and gun rounds. A type missing from the table has no estimate.
 
-- **Fields**: `empty` and `max` (kg, integers): the empty weight and the recommended maximum weight.
-- **Source**: the aircraft descriptions of DCS World 2.9.31, read on 15 November 2026 by a mission script that calls `Unit.getDescByName` for each type of `aircraft_limits.json` (`massEmpty`, `massMax`); 167 of the 170 types have both weights, the B-17G, C-47 and Ju-88A4 have none and stay out of the table.
+- **Fields**: `empty` (`EmptyWeight`: the empty weight, the default equipment options included, kg), `max` (`MaxTakeOffWeight`: the maximum take-off weight, kg), `ammo` (`AmmoWeight`: the weight of the full rounds of all the aircraft's guns, kg; 0 for an aircraft without a gun) and, only for a type that has any, `options`: the equipment options of the DCS mission editor (`AddPropAircraft`) that weigh, in the game's order, each `{ id, kind: "check" | "list", def, label, weight?, weightWhenOn?, values? }`; `values` are `{ id, label, weightWhenOn?, weightDependentOfFuel? }`. A number the game writes as text is a number here; an integer has no decimals.
+- **Source**: DCS World, survey of the mission editor (`me_db_api`), 167 of the 170 types of `aircraft_limits.json`; the B-17G, C-47 and Ju-88A4 are not in the survey and stay out of the table.
+- **Rule**: the weight is counted like `me_payload.updateTotalWeight` of the mission editor: empty + fuel + stores + rounds + fuel-dependent weight, where empty is `empty` plus the options (a checked box adds its `weightWhenOn`, an unchecked one removes its `weight`, a list adds the `weightWhenOn` of the chosen value), rounds are `ammo` times the gun percentage, and the fuel-dependent weight is the sum of `weightDependentOfFuel` of the chosen values times `min(1, 0.1 + fuel / full tank)`. Countermeasures weigh nothing.
 - **Licence**: none added; these are values.
 - **Regenerate**:
 
   ```
-  python3 -I tools/gen_aircraft_masses.py <log>
+  python3 tools/gen_aircraft_masses.py <masses_jeu.json> <options_jeu.json> [data/aircraft_masses.json]
   ```
 
-  The log has one line `type;massEmpty;massMax;fuelMassMax` per type (`nil` when there is no value) and ends with a line `FIN;<n>;<n>`, `<n>` being the number of type lines. Weights are rounded to the nearest kilogram. Running it again on the same log rewrites the same bytes.
+  Both files are the survey. A type of `aircraft_limits.json` that is not in the survey is left out (one line `absent du relevé : <type>` on the console). Running it again on the same survey rewrites the same bytes.
 - **Copy inside the module**: `modules/dcs_loadout_editor.html` carries the same table between the markers `/* AIRCRAFT_MASSES:BEGIN */` and `/* AIRCRAFT_MASSES:END */`. `build_mission_tools.py` stops the build if that copy differs from `aircraft_masses.json`.
 
 ## aircraft_pylons.json
