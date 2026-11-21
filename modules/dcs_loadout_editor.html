@@ -990,6 +990,7 @@ const I18N = {
     'reason.hidden':               'masqué par les filtres',
     'reason.duplicate':            'identifiant en double',
     'reason.noEquipment':          'sans équipement écrit',
+    'reason.eqNotRepro':           'équipement non reproductible',
     'toast.sep':                   ' : ',
     'toast.duplicates.one':        '{n} appareil à identifiant en double : non modifiable',
     'toast.duplicates.other':      '{n} appareils à identifiant en double : non modifiables',
@@ -1197,6 +1198,7 @@ const I18N = {
     'reason.hidden':               'hidden by filters',
     'reason.duplicate':            'duplicate unit id',
     'reason.noEquipment':          'no equipment in the file',
+    'reason.eqNotRepro':           'equipment not reproducible',
     'toast.sep':                   ': ',
     'toast.duplicates.one':        '{n} aircraft with a duplicate unit id: cannot be modified',
     'toast.duplicates.other':      '{n} aircraft with a duplicate unit id: cannot be modified',
@@ -12003,7 +12005,12 @@ function touchEdit(u, mutate) {
   if (e.country !== undefined && e.country.id === u.countryId) { delete e.country; delete e.callsign; }
   if (e.country === undefined) delete e.callsign;
   if (e.addProp !== undefined) {
-    for (const k of Object.keys(e.addProp)) if (u.addProp && payloadHas(u.addProp, k) && deepEqValues(e.addProp[k], u.addProp[k])) delete e.addProp[k];
+    for (const k of Object.keys(e.addProp)) {
+      if (u.addProp && payloadHas(u.addProp, k)) { if (deepEqValues(e.addProp[k], u.addProp[k])) delete e.addProp[k]; continue; }
+      // clé absente du fichier : la valeur que le jeu lui donne par défaut n'est pas une modification
+      const o = eqOptions(u.type).find(x => x.id === k);
+      if (o && eqValueOf(o, undefined) === e.addProp[k]) delete e.addProp[k];
+    }
     if (Object.keys(e.addProp).length === 0) delete e.addProp;
   }
   if (Object.keys(e).length === 0) UI_STATE.edits.delete(u.unitId);
@@ -12059,13 +12066,18 @@ function afterEdit() {
 }
 
 // Motif pour lequel un appareil coché ne prend pas une modification (null : il la prend).
-// kind : 'payload' (emport, réglages), 'equipment' (l'équipement : le .miz doit avoir la table AddPropAircraft), 'livery' ou 'country' (le groupe entier : un identifiant en double dans le groupe l'écarte).
+// kind : 'payload' (emport, réglages), 'equipment' (l'équipement : le .miz doit avoir la table AddPropAircraft ; 'equipmentView' : sans l'examen de reproductibilité, pour la valeur montrée), 'livery' ou 'country' (le groupe entier : un identifiant en double dans le groupe l'écarte).
 function skipReason(u, type, visSet, kind) {
   if (u.type !== type) return 'type';
   if (!visSet.has(u.unitId)) return 'hidden';
   if (UI_STATE.dupIds.has(u.unitId)) return 'duplicate';
   if (kind === 'country') return groupHasDup(u) ? 'duplicate' : null;
-  if (kind === 'equipment') return u.addPropPos === null ? 'noEquipment' : null;
+  if (kind === 'equipment' || kind === 'equipmentView') {
+    if (u.addPropPos === null) return 'noEquipment';
+    // une option touchée qui ne peut s'écrire que par la réécriture de la table, alors que la table n'est pas reproductible : écarté ici, jamais en échec à l'enregistrement
+    if (kind === 'equipment' && !u.addPropRepro && eqUnwritable(u)) return 'eqNotRepro';
+    return null;
+  }
   if (kind === 'payload') {
     if (u.payloadPos === null || !u.payloadTable) return 'noPayload';
     if (!u.reproducible) return 'notRepro';
@@ -12207,7 +12219,16 @@ function eqValueOf(o, props) {
 // Les appareils cochés dont l'équipement se règle : du type, visibles, sans doublon, avec une table AddPropAircraft
 function eqTargets(type) {
   const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
-  return UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, 'equipment'));
+  return UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, 'equipmentView'));
+}
+// Une option touchée, que l'appareil n'a pas déjà, dont la clé manque à sa table ou n'y porte pas un booléen ni un nombre : elle ne s'écrit qu'en réécrivant la table
+function eqUnwritable(u) {
+  const cur = curAddProp(u);
+  return eqOptions(u.type).some(o => {
+    if (!EQ_TOUCH.has(o.id) || eqValueOf(o, cur) === EQ_TOUCH.get(o.id)) return false;
+    const sl = u.addPropSlots ? u.addPropSlots.get(o.id) : undefined;
+    return !(sl && (sl.kind === 'bool' || sl.kind === 'number'));
+  });
 }
 // La valeur montrée d'une option : { mixed, value } — celle des appareils retenus s'ils sont pareils, « mixte » sinon, le défaut du jeu sans appareil
 function eqShown(o, targets) {
