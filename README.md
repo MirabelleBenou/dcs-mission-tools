@@ -22,6 +22,7 @@ Mission Tools is designed to be used **where you actually fly** — on a tablet 
 
 - **Touch-first UI** — touch-friendly controls (every button, list and field at least 44 px to the finger), drag-and-drop the `.miz`, no tiny desktop-only controls
 - **Responsive layout** — adapts from desktop down to phone
+- **Phone layout** — under 600 px wide, a one-line header, folded filters, a one-row bottom bar and lists shown as cards; a tablet or an unfolded phone keeps the full layout
 - **Rotation-safe** — keeps working when you flip the tablet between landscape and portrait
 - **No install** — open a link or a single file in the mobile browser; works offline once loaded
 - **Edit on the go** — drop a `.miz`, edit, and save a new one straight from the device

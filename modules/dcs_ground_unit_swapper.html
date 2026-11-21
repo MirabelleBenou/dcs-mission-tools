@@ -657,7 +657,7 @@
       #units-table tbody td:nth-child(1) { display: flex; grid-column: 1; align-items: center; justify-content: center; }
       #units-table tbody td.td-unit { display: block; grid-column: 2; padding: 4px 0; color: var(--text); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
       .u-grp { display: inline; margin-left: 2px; color: var(--text-dim); font-size: 12px; }
-      .u-grp::before { content: '· '; }
+      .u-grp::before { content: '·'; margin-left: 4px; }
       .u-sum { display: block; margin-top: 2px; color: var(--text-2); font-size: 13px; }
       .u-sum .chg { color: var(--accent); }
       #units-table tbody tr.mph-open td.mph-float { display: block; position: fixed; z-index: 960; box-sizing: border-box; }
@@ -4538,7 +4538,7 @@ function tbmScrolled(e) {
   #modifications-bar > .mtb-menu-wrap:not(.mph-more), #modifications-bar > #btn-save-note { display: none; }
   #modifications-bar > .mph-more { display: inline-block; flex: 0 0 auto; }
   #modifications-bar > #btn-save { flex: 0 0 auto; margin-left: auto; min-height: 44px; white-space: nowrap; }
-  .mph-more-btn { min-width: 44px; min-height: 44px; padding: 0 12px; font-size: 20px; line-height: 1; }
+  .mph-more-btn { box-sizing: border-box; width: 44px; min-width: 44px; min-height: 44px; padding: 0; font-size: 20px; line-height: 1; text-align: center; }
   .mph-more-btn::after { content: none; }
   .mph-more .mtb-menu { min-width: 260px; }
   .mph-more .mtb-menu > hr { flex: 0 0 auto; margin: 0; border: 0; border-top: 1px solid var(--border); }
@@ -4679,6 +4679,7 @@ function tbmScrolled(e) {
     if (!el) return;
     const span = document.createElement('span');
     span.className = 'mph-n';
+    el.appendChild(document.createTextNode(' '));   /* « Filtres (n) » se lit aussi dans textContent */
     el.appendChild(span);
     counters.push({ span, count });
     refresh();

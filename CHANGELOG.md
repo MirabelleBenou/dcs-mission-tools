@@ -12,7 +12,7 @@ Between two releases, the hosted version shows its build number at the bottom of
 ## Unreleased
 
 **Build number on the hosted version**
-- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+4` for this one; a downloaded release shows none.
+- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+5` for this one; a downloaded release shows none.
 
 **Same words in every question**
 - A question that would lose or remove something now backs out with *Keep* in every tool; the Ground Unit Swapper's question about a changes file from another mission backs out with *Don't import*.
@@ -27,6 +27,11 @@ Between two releases, the hosted version shows its build number at the bottom of
 **Aircraft equipment in the Loadout Editor**
 - *Settings* now set the aircraft's equipment — the DCS mission editor options that weigh, such as IR exhaust suppressors, extra armour, the cargo door or the MW-50 tank — for the checked aircraft, like the other settings: only what you change is written, and a box marked *mixed* means the checked aircraft differ. The weight follows at once.
 - The *Gun* field no longer shows for an aircraft without a gun.
+
+**A layout made for the phone**
+- Under 600 px wide — a phone, or a folding phone closed — every tool gets a one-line header, a one-row bottom bar where *⋯* holds *Load another .miz*, import and export and *Undo all*, and filters folded behind a *Filters (n)* button that counts the active ones.
+- The Ground Unit Swapper and the Loadout Editor show their lists as cards; in the Ground Unit Swapper, tapping a unit opens a panel at the bottom to change its type and skill. The home screen lists the four tools on one screen.
+- A tablet, an unfolded phone or a computer keeps the layout as it was; turning or unfolding the device switches layout without losing anything.
 
 ## [2.0.0] — 2026-11-18
 

@@ -963,6 +963,7 @@ def build_html(module_html_js, tile_uris):
       #landing {{ padding: 20px 14px calc(20px + var(--wf-bar-h)); }}
       .landing-inner {{ gap: 20px; }}
       #credits {{ margin-top: 4px; }}
+      #credits a {{ display: inline-block; min-width: 44px; min-height: 44px; line-height: 44px; text-align: center; }}
       /* Accueil compact : chaque outil (et chaque carte de la feuille de route) est une ligne — la vignette à gauche (76 px), puis le
          sigle et le nom, et la description sur deux lignes au plus ; l'indice de lancement ne s'affiche pas. */
       #cards-grid, #ghost-grid {{ grid-template-columns: 1fr; gap: 8px; }}
