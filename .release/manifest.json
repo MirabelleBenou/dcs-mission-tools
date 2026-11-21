@@ -1,0 +1,12 @@
+{
+  "tag": "MT-V2.1.0",
+  "title": "DCS Mission Tools 2.1.0",
+  "commit": "a0028b82ca12c0901e41cc3199bc10e9cea9079d",
+  "assets": [
+    {
+      "name": "dcs_mission_tools.html",
+      "size": 5087685,
+      "sha256": "89caba72690ea5613bf94257f21381a2cf530dabd668dd5c56979970d11155e3"
+    }
+  ]
+}
