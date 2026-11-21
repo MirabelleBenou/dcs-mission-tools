@@ -633,6 +633,7 @@
     @media (max-width: 600px) {
       #filters-bar { padding: 6px 10px; }
       .filter-group { flex: 1 1 140px; }
+      #filters-bar .filter-group--chips { flex: 1 1 100%; }
       .filter-group select, .filter-group .tbm-trigger, .filter-group input[type="text"] { width: 100%; min-width: 0; max-width: none; }
       .filter-group .filter-wide.tbm-trigger { width: 100%; max-width: none; }
       #bulk-bar { padding: 6px 10px; }
@@ -642,8 +643,7 @@
       #mph-chips > .display-count [data-i18n="table.showing"], #mph-chips > .display-count [data-i18n="table.units"] { display: none; }
       #bulk-fold [data-i18n="bulk.fold"] { display: none; }
       #bulk-fold .mph-short { display: inline; }
-      #table-info-bar { padding: 0 10px; border-bottom: 0; }
-      #table-info-bar:has(> .toggle-modified:not([style*="none"])) { border-bottom: 1px solid var(--border); }
+      #table-info-bar { padding: 0 10px; gap: 4px 12px; }
       .toggle-modified { min-height: 44px; }
       #table-container { overflow-x: hidden; }
       #units-table, #units-table thead, #units-table tbody { display: block; }
@@ -4502,7 +4502,7 @@ function tbmScrolled(e) {
   const byId = id => document.getElementById(id);
   const MPH_CSS = `
 /* hors téléphone : ce que le bloc ajoute ne s'affiche pas */
-#mph-chips, .mph-more, .mph-n { display: none; }
+#mph-chips, .mph-more, .mph-n, .mph-checkall { display: none; }
 @media (max-width: 600px) {
   /* ── en-tête : une ligne, 56 px au plus ── */
   #app-header { flex-wrap: nowrap; align-items: center; gap: 8px; padding: 4px 8px; min-height: 0; }
@@ -4543,6 +4543,9 @@ function tbmScrolled(e) {
   .mph-more .mtb-menu { min-width: 260px; }
   .mph-more .mtb-menu > hr { flex: 0 0 auto; margin: 0; border: 0; border-top: 1px solid var(--border); }
 
+  /* ── « Tout cocher » : la case de l'en-tête du tableau (caché sous 600 px) passe en tête de la barre d'information, avec son libellé ── */
+  .mph-checkall { display: flex; flex: 0 0 auto; align-items: center; min-height: 44px; padding-right: 12px; color: var(--text-dim); font-size: 13px; cursor: pointer; }
+
   /* ── cases à cocher : 44 × 44, la case dessinée au centre ── */
   #main-ui input[type="checkbox"] { -webkit-appearance: none; appearance: none; box-sizing: border-box; display: inline-grid; place-content: center;
     flex: none; width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin: 0; padding: 0; background: transparent; border: 0; cursor: pointer; }
@@ -4553,6 +4556,7 @@ function tbmScrolled(e) {
   #main-ui input[type="checkbox"]:disabled { opacity: .4; cursor: default; }
 }
 `;
+  let checkAllNode = null;   /* « Tout cocher » : { chk, bar, label, mark } */
   const items = [];          /* la rangée, dans l'ordre : { el, own, mark, title } */
   const counters = [];       /* les « (n) » : { span, count } */
   const menuNodes = [];      /* ce qui est posé dans ⋯ : { el, mark, addedRole } */
@@ -4711,6 +4715,36 @@ function tbmScrolled(e) {
     placeRow();
     return b;
   }
+  /* « Tout cocher » : sous 600 px l'en-tête du tableau est caché ; sa case (la même, mêmes écouteurs, même état indéterminé) se pose
+     en tête de la barre d'information, dans un libellé touchable ; elle est remise dans l'en-tête au-dessus de 600 px. */
+  function placeCheckAll() {
+    const c = checkAllNode;
+    if (!c) return;
+    if (mq.matches && !c.mark) {
+      c.mark = document.createComment('mph');
+      c.chk.parentNode.insertBefore(c.mark, c.chk);
+      const lab = document.createElement('label');
+      lab.className = 'mph-checkall';
+      lab.id = 'mph-checkall';
+      const span = document.createElement('span');
+      span.setAttribute('data-i18n', c.key);
+      span.textContent = t(c.key);
+      lab.appendChild(c.chk);
+      lab.appendChild(span);
+      c.bar.insertBefore(lab, c.bar.firstChild);
+      c.label = lab;
+    } else if (!mq.matches && c.mark) {
+      c.mark.parentNode.insertBefore(c.chk, c.mark);
+      c.mark.remove();
+      c.mark = null;
+      if (c.label) { c.label.remove(); c.label = null; }
+    }
+  }
+  function checkAll(chk, bar, key) {
+    if (!chk || !bar || checkAllNode) return;
+    checkAllNode = { chk, bar, key: key || 'table.checkAll', label: null, mark: null };
+    placeCheckAll();
+  }
   function refresh() {
     counters.forEach(c => {
       let n = 0;
@@ -4728,6 +4762,7 @@ function tbmScrolled(e) {
 
   function place() {
     placeRow();
+    placeCheckAll();
     if (mq.matches) dockMenu(); else undockMenu();
     listeners.forEach(fn => { try { fn(mq.matches); } catch (e) { console.error(e); } });
   }
@@ -4747,6 +4782,7 @@ function tbmScrolled(e) {
     row: ensureRow,
     chip: chip,
     dock: dock,
+    checkAll: checkAll,
     count: countIn,
     countOn: countOn,
     refresh: refresh,
@@ -4769,6 +4805,13 @@ initListes({
 // Les trois éléments de la base sont posés dans la rangée sous 600 px et rendus à leur place au-dessus ; le volet reprend les
 // cellules « nouveau type » et « skill » de la carte ouverte (position fixe, sur le volet) : leurs listes et leurs ↺ sont ceux de la base.
 let phoneOpenId = null, phoneSheet = null, phoneScrim = null;
+// Les cellules de la carte se retrouvent par leur contenu, pas par leur rang : le type actuel (.td-type), le nouveau type (celle qui
+// porte son combobox), le skill (celle qui porte son <select>).
+function phoneCell(tr, kind) {
+  if (kind === 'current') return tr.querySelector('td.td-type');
+  const inner = kind === 'type' ? tr.querySelector('.combobox-cell') : tr.querySelector('select.skill-sel');
+  return inner ? inner.closest('td') : null;
+}
 function phoneUnplace(tr) {
   tr.classList.remove('mph-open');
   tr.querySelectorAll('td.mph-float').forEach(td => { td.classList.remove('mph-float'); td.style.top = td.style.left = td.style.width = ''; });
@@ -4776,24 +4819,31 @@ function phoneUnplace(tr) {
 function phonePlace(tr) {
   document.querySelectorAll('#units-tbody tr.mph-open').forEach(phoneUnplace);
   tr.classList.add('mph-open');
-  [[6, 'type'], [7, 'skill']].forEach(function(p) {
-    const td = tr.children[p[0]];
+  ['type', 'skill'].forEach(function(kind) {
+    const td = phoneCell(tr, kind);
     if (!td) return;
-    const r = phoneSheet.querySelector('[data-slot="' + p[1] + '"]').getBoundingClientRect();
+    const r = phoneSheet.querySelector('[data-slot="' + kind + '"]').getBoundingClientRect();
     td.classList.add('mph-float');
     td.style.top = r.top + 'px'; td.style.left = r.left + 'px'; td.style.width = r.width + 'px';
   });
 }
 function phoneCloseSheet() {
+  const id = phoneOpenId;
   document.querySelectorAll('#units-tbody tr.mph-open').forEach(phoneUnplace);
   phoneOpenId = null;
   document.body.classList.remove('mph-sheet-open');
+  // Le focus revient à la carte d'où le volet s'est ouvert (sa case, qui est dans la carte).
+  if (id !== null && mph.phone.matches) {
+    const tr = document.querySelector('#units-tbody tr[data-unit-id="' + id + '"]');
+    const back = tr && tr.querySelector('.row-chk');
+    if (back) { try { back.focus({ preventScroll: true }); } catch (e) {} }
+  }
 }
 function phoneOpenSheet(tr) {
   phoneOpenId = tr.getAttribute('data-unit-id');
   const unit = UI_STATE.unitsById.get(parseInt(phoneOpenId, 10));
   phoneSheet.querySelector('.mph-sh-title').textContent = unit ? unit.name : '';
-  phoneSheet.querySelector('.mph-sh-sub').textContent = (unit ? unit.groupName : '') + ' · ' + tr.children[5].textContent.replace(/\s+/g, ' ').trim();
+  phoneSheet.querySelector('.mph-sh-sub').textContent = (unit ? unit.groupName : '') + ' · ' + (phoneCell(tr, 'current') || tr).textContent.replace(/\s+/g, ' ').trim();
   document.body.classList.add('mph-sheet-open');
   phonePlace(tr);
   phoneSheet.querySelector('.mph-sh-close').focus({ preventScroll: true });
@@ -4809,6 +4859,7 @@ function phoneSheetSync() {
   const fold = $('filters-fold');
   mph.dock(fold);
   mph.dock($('bulk-fold'));
+  mph.checkAll($('chk-all'), $('table-info-bar'), 'table.checkAll');
   mph.dock(document.querySelector('#table-info-bar .display-count'), { title: true });
   mph.countOn(fold, function() { return countActiveFilters() + (UI_STATE.showModifiedOnly ? 1 : 0); });
 
@@ -4817,7 +4868,6 @@ function phoneSheetSync() {
   phoneSheet = document.createElement('div');
   phoneSheet.id = 'mph-sheet';
   phoneSheet.setAttribute('role', 'dialog');
-  phoneSheet.setAttribute('aria-modal', 'true');
   phoneSheet.setAttribute('aria-labelledby', 'mph-sheet-title');
   phoneSheet.innerHTML =
     '<div class="mph-sh-head"><div class="mph-sh-title" id="mph-sheet-title"></div>' +

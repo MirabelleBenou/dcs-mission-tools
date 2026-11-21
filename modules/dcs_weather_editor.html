@@ -3210,7 +3210,7 @@ function tbmScrolled(e) {
   const byId = id => document.getElementById(id);
   const MPH_CSS = `
 /* hors téléphone : ce que le bloc ajoute ne s'affiche pas */
-#mph-chips, .mph-more, .mph-n { display: none; }
+#mph-chips, .mph-more, .mph-n, .mph-checkall { display: none; }
 @media (max-width: 600px) {
   /* ── en-tête : une ligne, 56 px au plus ── */
   #app-header { flex-wrap: nowrap; align-items: center; gap: 8px; padding: 4px 8px; min-height: 0; }
@@ -3251,6 +3251,9 @@ function tbmScrolled(e) {
   .mph-more .mtb-menu { min-width: 260px; }
   .mph-more .mtb-menu > hr { flex: 0 0 auto; margin: 0; border: 0; border-top: 1px solid var(--border); }
 
+  /* ── « Tout cocher » : la case de l'en-tête du tableau (caché sous 600 px) passe en tête de la barre d'information, avec son libellé ── */
+  .mph-checkall { display: flex; flex: 0 0 auto; align-items: center; min-height: 44px; padding-right: 12px; color: var(--text-dim); font-size: 13px; cursor: pointer; }
+
   /* ── cases à cocher : 44 × 44, la case dessinée au centre ── */
   #main-ui input[type="checkbox"] { -webkit-appearance: none; appearance: none; box-sizing: border-box; display: inline-grid; place-content: center;
     flex: none; width: 44px; height: 44px; min-width: 44px; min-height: 44px; margin: 0; padding: 0; background: transparent; border: 0; cursor: pointer; }
@@ -3261,6 +3264,7 @@ function tbmScrolled(e) {
   #main-ui input[type="checkbox"]:disabled { opacity: .4; cursor: default; }
 }
 `;
+  let checkAllNode = null;   /* « Tout cocher » : { chk, bar, label, mark } */
   const items = [];          /* la rangée, dans l'ordre : { el, own, mark, title } */
   const counters = [];       /* les « (n) » : { span, count } */
   const menuNodes = [];      /* ce qui est posé dans ⋯ : { el, mark, addedRole } */
@@ -3419,6 +3423,36 @@ function tbmScrolled(e) {
     placeRow();
     return b;
   }
+  /* « Tout cocher » : sous 600 px l'en-tête du tableau est caché ; sa case (la même, mêmes écouteurs, même état indéterminé) se pose
+     en tête de la barre d'information, dans un libellé touchable ; elle est remise dans l'en-tête au-dessus de 600 px. */
+  function placeCheckAll() {
+    const c = checkAllNode;
+    if (!c) return;
+    if (mq.matches && !c.mark) {
+      c.mark = document.createComment('mph');
+      c.chk.parentNode.insertBefore(c.mark, c.chk);
+      const lab = document.createElement('label');
+      lab.className = 'mph-checkall';
+      lab.id = 'mph-checkall';
+      const span = document.createElement('span');
+      span.setAttribute('data-i18n', c.key);
+      span.textContent = t(c.key);
+      lab.appendChild(c.chk);
+      lab.appendChild(span);
+      c.bar.insertBefore(lab, c.bar.firstChild);
+      c.label = lab;
+    } else if (!mq.matches && c.mark) {
+      c.mark.parentNode.insertBefore(c.chk, c.mark);
+      c.mark.remove();
+      c.mark = null;
+      if (c.label) { c.label.remove(); c.label = null; }
+    }
+  }
+  function checkAll(chk, bar, key) {
+    if (!chk || !bar || checkAllNode) return;
+    checkAllNode = { chk, bar, key: key || 'table.checkAll', label: null, mark: null };
+    placeCheckAll();
+  }
   function refresh() {
     counters.forEach(c => {
       let n = 0;
@@ -3436,6 +3470,7 @@ function tbmScrolled(e) {
 
   function place() {
     placeRow();
+    placeCheckAll();
     if (mq.matches) dockMenu(); else undockMenu();
     listeners.forEach(fn => { try { fn(mq.matches); } catch (e) { console.error(e); } });
   }
@@ -3455,6 +3490,7 @@ function tbmScrolled(e) {
     row: ensureRow,
     chip: chip,
     dock: dock,
+    checkAll: checkAll,
     count: countIn,
     countOn: countOn,
     refresh: refresh,
