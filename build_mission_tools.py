@@ -26,12 +26,13 @@ import sys
 from radio_block import build_block
 from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
 from messages_block import build_block as build_messages_block, BLOCK_BEGIN as MESSAGES_BEGIN, BLOCK_END as MESSAGES_END
+from mobile_block import build_block as build_mobile_block, BLOCK_BEGIN as MOBILE_BEGIN, BLOCK_END as MOBILE_END
 from parser_block import build_block as build_parser_block, BLOCK_BEGIN as PARSER_BEGIN, BLOCK_END as PARSER_END
 from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN as SHELL_ONLY_BEGIN, BLOCK_END as SHELL_ONLY_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '2.0.0'
-DEV_BUILD   = 4   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
+DEV_BUILD   = 5   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [
@@ -260,6 +261,45 @@ def check_messages_block():
             print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] Bloc des messages identique à messages_block.py ({mod["src"]})')
+
+
+# Définitions interdites hors du bloc du téléphone : function mph…, const|let|var|class MPH…/mph…, affectation à MPH…/mph…
+MOBILE_DEF_RE = re.compile(
+    r'\bfunction\s*\*?\s*(?:mph|MPH)\w*'
+    r'|\b(?:const|let|var|class)\s+(?:MPH|mph)\w*'
+    r'|(?<![.\w-])(?:window\.)?(?:MPH|mph)\w*\s*=(?![=>])')
+
+
+def check_mobile_text(text, label):
+    """Le bloc du téléphone (mobile_block.build_block()) doit figurer exactement une fois, tel quel, dans `text`, et
+    rien de mph…/MPH… ne doit être défini hors de ses marqueurs. Rend le message d'erreur, ou None."""
+    block = build_mobile_block()
+    if text.count(block) != 1:
+        return (f'Le bloc du téléphone de {label} diffère de mobile_block.py '
+                f'(attendu : une fois, à l\'identique)')
+    if text.count(MOBILE_BEGIN) != 1 or text.count(MOBILE_END) != 1:
+        return f'Un marqueur du bloc du téléphone figure plusieurs fois dans {label}'
+    redef = MOBILE_DEF_RE.search(text.replace(block, '', 1))
+    if redef:
+        return f'{label} définit « {redef.group(0).strip()} » hors des marqueurs du bloc du téléphone'
+    return None
+
+
+def check_mobile_block():
+    """Garde d'identité : le bloc du téléphone doit figurer exactement une fois, tel quel, dans chacun des quatre modules.
+    Sinon le build s'arrête avant toute écriture."""
+    for mod in MODULES:
+        try:
+            with open(os.path.join(SCRIPT_DIR, mod['src']), 'r', encoding='utf-8') as fh:
+                html = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        err = check_mobile_text(html, mod['src'])
+        if err:
+            print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        print(f'  [OK] Bloc du téléphone identique à mobile_block.py ({mod["src"]})')
 
 
 # Définitions interdites hors du bloc : function retokenizeSafety, const|let|var retokenizeSafety, affectation à retokenizeSafety
@@ -923,6 +963,15 @@ def build_html(module_html_js, tile_uris):
       #landing {{ padding: 20px 14px calc(20px + var(--wf-bar-h)); }}
       .landing-inner {{ gap: 20px; }}
       #credits {{ margin-top: 4px; }}
+      /* Accueil compact : chaque outil (et chaque carte de la feuille de route) est une ligne — la vignette à gauche (76 px), puis le
+         sigle et le nom, et la description sur deux lignes au plus ; l'indice de lancement ne s'affiche pas. */
+      #cards-grid, #ghost-grid {{ grid-template-columns: 1fr; gap: 8px; }}
+      .module-card {{ flex-direction: row; align-items: stretch; min-height: 76px; }}
+      .module-card .card-tile {{ flex: 0 0 76px; width: 76px; height: auto; min-height: 76px; border-bottom: 0; border-right: 1px solid var(--border); }}
+      .module-card .card-body {{ min-width: 0; justify-content: center; gap: 4px; padding: 10px 12px; }}
+      .module-card .card-name {{ font-size: 15px; }}
+      .module-card .card-descriptor {{ display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 12px; line-height: 1.35; }}
+      .module-card .card-launch-hint {{ display: none; }}
     }}
     @media (hover: none) {{
       .module-card:hover {{ transform: none; }}
@@ -1669,6 +1718,7 @@ def main():
     check_radio_block()
     check_listes_block()
     check_messages_block()
+    check_mobile_block()
     check_parser_block()
     check_shell_only_block()
 
