@@ -12,7 +12,7 @@ Between two releases, the hosted version shows its build number at the bottom of
 ## Unreleased
 
 **Build number on the hosted version**
-- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+3` for this one; a downloaded release shows none.
+- Between two releases, the bottom of the home screen shows the build number, `MT-V2.0.0+4` for this one; a downloaded release shows none.
 
 **Same words in every question**
 - A question that would lose or remove something now backs out with *Keep* in every tool; the Ground Unit Swapper's question about a changes file from another mission backs out with *Don't import*.
@@ -23,6 +23,10 @@ Between two releases, the hosted version shows its build number at the bottom of
 **Weight counted like the DCS mission editor**
 - The Loadout Editor's estimated weight now adds the gun rounds, at each aircraft's gun percentage, and the aircraft's equipment as set in the mission — IR exhaust suppressors, extra armour, cargo door, water or MW-50 tanks, solo flight… —, as the DCS mission editor does; countermeasures weigh nothing there either. The weight's tooltip shows each part.
 - Empty and maximum weights now come from the DCS mission editor for every aircraft: the AH-64A, AH-64D, Su-24M, Su-27, Su-30 and Tu-22M3 change slightly.
+
+**Aircraft equipment in the Loadout Editor**
+- *Settings* now set the aircraft's equipment — the DCS mission editor options that weigh, such as IR exhaust suppressors, extra armour, the cargo door or the MW-50 tank — for the checked aircraft, like the other settings: only what you change is written, and a box marked *mixed* means the checked aircraft differ. The weight follows at once.
+- The *Gun* field no longer shows for an aircraft without a gun.
 
 ## [2.0.0] — 2026-11-18
 

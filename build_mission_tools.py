@@ -31,7 +31,7 @@ from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN 
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '2.0.0'
-DEV_BUILD   = 3   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
+DEV_BUILD   = 4   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 MODULES = [

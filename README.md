@@ -118,7 +118,7 @@ The Loadout Editor **applies a loadout that already exists in the mission** — 
 
 ![weather-editor](docs/screenshots/weather_editor.jpg)
 
-**Loadout Editor** — loadouts by letter, estimated weight, settings and livery applied to the selection in one click
+**Loadout Editor** — loadouts by letter, estimated weight, settings, equipment and livery applied to the selection in one click
 
 ![loadout-editor](docs/screenshots/loadout_editor.jpg)
 

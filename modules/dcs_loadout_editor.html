@@ -397,6 +397,18 @@
     }
     .set-field input:focus { outline: none; border-color: var(--accent); }
     .set-hint { font-size: 11px; color: var(--text-dim); }
+    .set-grid .set-field[hidden] { display: none; }
+    .set-equip { display: flex; flex-direction: column; gap: 6px; margin: 2px 0 0; padding-top: 10px; border-top: 1px solid var(--border); }
+    .set-equip[hidden] { display: none; }
+    .set-equip-t { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
+    .set-equip .eq-chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); min-height: 32px; cursor: pointer; }
+    .set-equip .eq-chk input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; flex: none; }
+    .set-equip .eq-l { min-width: 0; overflow-wrap: anywhere; }
+    .set-equip .eq-w { color: var(--text-dim); font-size: 12px; white-space: nowrap; }
+    .set-equip .eq-mix { color: var(--accent); font-size: 11px; }
+    .set-equip .set-field label { overflow-wrap: anywhere; }
+    .set-equip .tbm-trigger { width: 100%; min-width: 0; min-height: 34px; }
+    @media (pointer: coarse), (max-width: 768px) { .set-equip .tbm-trigger { min-height: 44px; } }
     .set-note { display: flex; flex-direction: column; gap: 1px; font-size: 11px; line-height: 1.35; color: var(--text-dim); }
     .set-slider { display: flex; align-items: center; gap: 8px; }
     .set-field .set-slider input[type="range"] {
@@ -759,7 +771,8 @@
             <div class="set-field"><label for="set-chaff" data-i18n="panel.chaff">Paillettes</label><input type="number" id="set-chaff" min="0" step="1" inputmode="numeric"><div class="set-note"><span id="max-chaff"></span></div></div>
             <div class="set-field"><label for="set-gun"><span data-i18n="panel.gun">Canon</span> (%)</label><input type="number" id="set-gun" min="0" max="100" step="1" inputmode="numeric"><div class="set-slider"><input type="range" id="set-gun-pct" min="0" max="100" step="1" value="0"><span class="set-pct" id="set-gun-pct-val">—</span></div><div class="set-note"><span id="max-gun"></span></div></div>
           </div>
-          <div class="set-hint" data-i18n="panel.settings.hint">Les valeurs affichées sont celles des appareils cochés ; seul un champ modifié s'applique.</div>
+          <div class="set-equip" id="set-equip" hidden></div>
+          <div class="set-hint" id="set-hint" data-i18n="panel.settings.hint">Les valeurs affichées sont celles des appareils cochés ; seul un champ modifié s'applique.</div>
         </div>
       </details>
       <details class="panel-sec" open>
@@ -893,6 +906,10 @@ const I18N = {
     'panel.chaff':                 'Paillettes',
     'panel.gun':                   'Canon',
     'panel.settings.hint':         'Les valeurs affichées sont celles des appareils cochés ; seul un champ modifié s\'applique.',
+    'eq.title':                    'Équipement · options de l’éditeur de DCS',
+    'eq.full':                     'au plein',
+    'eq.mixed':                    'mixte',
+    'eq.hint':                     'Une case barrée, « mixte » : les appareils cochés diffèrent ; elle ne change que si on la touche.',
     'set.gunPct':                  'Canon en %',
     'set.fuelMax':                 'max {n} {u}',
     'set.gunRange':                '0 – 100 %',
@@ -972,12 +989,16 @@ const I18N = {
     'reason.notRepro':             'emport non reproductible',
     'reason.hidden':               'masqué par les filtres',
     'reason.duplicate':            'identifiant en double',
+    'reason.noEquipment':          'sans équipement écrit',
     'toast.sep':                   ' : ',
     'toast.duplicates.one':        '{n} appareil à identifiant en double : non modifiable',
     'toast.duplicates.other':      '{n} appareils à identifiant en double : non modifiables',
     'toast.savedReopen':           'Fichier enregistré ; rouvrez-le pour continuer',
     'table.notRepro':              'Emport non reproductible : ni emport ni réglage possible',
-    'bar.none':                    'Choisissez un emport, des réglages ou une livrée',
+    'bar.none':                    'Choisissez un emport, des réglages, l’équipement ou une livrée',
+    'bar.eq.on':                   '{l} : oui',
+    'bar.eq.off':                  '{l} : non',
+    'bar.eq.val':                  '{l} : {v}',
     'bar.head.one':                'À appliquer · {n} coché de ce type',
     'bar.head.other':              'À appliquer · {n} cochés de ce type',
     'bar.k.loadout':               'Emport',
@@ -1092,6 +1113,10 @@ const I18N = {
     'panel.chaff':                 'Chaff',
     'panel.gun':                   'Gun',
     'panel.settings.hint':         'Values shown are those of the selected aircraft; only a changed field is applied.',
+    'eq.title':                    'Equipment · DCS editor options',
+    'eq.full':                     'when full',
+    'eq.mixed':                    'mixed',
+    'eq.hint':                     'A dashed box, “mixed”: the checked aircraft differ; it changes only if you touch it.',
     'set.gunPct':                  'Gun in %',
     'set.fuelMax':                 'max {n} {u}',
     'set.gunRange':                '0 – 100 %',
@@ -1171,12 +1196,16 @@ const I18N = {
     'reason.notRepro':             'payload not reproducible',
     'reason.hidden':               'hidden by filters',
     'reason.duplicate':            'duplicate unit id',
+    'reason.noEquipment':          'no equipment in the file',
     'toast.sep':                   ': ',
     'toast.duplicates.one':        '{n} aircraft with a duplicate unit id: cannot be modified',
     'toast.duplicates.other':      '{n} aircraft with a duplicate unit id: cannot be modified',
     'toast.savedReopen':           'File saved; reopen it to continue',
     'table.notRepro':              'Payload not reproducible: no loadout or setting can be applied',
-    'bar.none':                    'Choose a loadout, settings or a livery',
+    'bar.none':                    'Choose a loadout, settings, equipment or a livery',
+    'bar.eq.on':                   '{l}: yes',
+    'bar.eq.off':                  '{l}: no',
+    'bar.eq.val':                  '{l}: {v}',
     'bar.head.one':                'To apply · {n} selected of this type',
     'bar.head.other':              'To apply · {n} selected of this type',
     'bar.k.loadout':               'Loadout',
@@ -10860,6 +10889,13 @@ function lxGet(tableNode, key) {
   return undefined;
 }
 
+// La position de chaque valeur d'une table AddPropAircraft : Map(clé → { pos, kind }) ; la dernière entrée d'une clé répétée l'emporte (comme astToValue).
+function lxAddPropSlots(node) {
+  const slots = new Map();
+  for (const e of node.entries) if (e.key && e.value) slots.set(String(e.key.value), { pos: e.value.pos, kind: e.value.kind });
+  return slots;
+}
+
 function lxScalar(node) {
   if (!node) return undefined;
   if (node.kind === 'number' || node.kind === 'string' || node.kind === 'bool' || node.kind === 'ident') return node.value;
@@ -10949,6 +10985,9 @@ function lxWalkAircraft(ast, struct) {
               callsignPos: (csNode && (csNode.kind === 'number' || csNode.kind === 'table')) ? csNode.pos : null,
               payload:    payloadNode ? astToValue(payloadNode) : undefined,
               addProp:    addPropNode ? astToValue(addPropNode) : undefined,
+              addPropPos: (addPropNode && addPropNode.kind === 'table') ? addPropNode.pos : null,
+              addPropSlots: (addPropNode && addPropNode.kind === 'table') ? lxAddPropSlots(addPropNode) : null,
+              addPropRepro: !!(addPropNode && addPropNode.kind === 'table' && luaTableReproducible(addPropNode)),
               payloadPos: payloadNode ? payloadNode.pos : null,
               payloadTable: !!(payloadNode && payloadNode.kind === 'table'),
               reproducible: !!(payloadNode && payloadNode.kind === 'table' && luaTableReproducible(payloadNode)),
@@ -11417,6 +11456,11 @@ function curPayload(u) {
 function curLivery(u) {
   const e = UI_STATE.edits.get(u.unitId);
   return (e && e.livery !== undefined) ? e.livery : u.livery;
+}
+// L'équipement en vigueur : AddPropAircraft du fichier, les options modifiées par-dessus.
+function curAddProp(u) {
+  const e = UI_STATE.edits.get(u.unitId);
+  return (e && e.addProp !== undefined) ? Object.assign({}, u.addProp, e.addProp) : u.addProp;
 }
 
 // Le pays et l'indicatif d'un appareil, pris en compte ceux en attente (partout : livrées, barre, tableau).
@@ -11958,6 +12002,10 @@ function touchEdit(u, mutate) {
   if (e.livery !== undefined && e.livery === u.livery) delete e.livery;
   if (e.country !== undefined && e.country.id === u.countryId) { delete e.country; delete e.callsign; }
   if (e.country === undefined) delete e.callsign;
+  if (e.addProp !== undefined) {
+    for (const k of Object.keys(e.addProp)) if (u.addProp && payloadHas(u.addProp, k) && deepEqValues(e.addProp[k], u.addProp[k])) delete e.addProp[k];
+    if (Object.keys(e.addProp).length === 0) delete e.addProp;
+  }
   if (Object.keys(e).length === 0) UI_STATE.edits.delete(u.unitId);
   else UI_STATE.edits.set(u.unitId, e);
   UI_STATE.rev++;
@@ -11965,6 +12013,8 @@ function touchEdit(u, mutate) {
 
 function setPayload(u, value) { touchEdit(u, e => { e.payload = value; }); }
 function setLivery(u, value)  { touchEdit(u, e => { e.livery = value; }); }
+// Les options d'équipement modifiées d'un appareil (values : { id d'option : valeur }), par-dessus celles déjà en attente.
+function setAddProp(u, values) { touchEdit(u, e => { e.addProp = Object.assign({}, e.addProp, values); }); }
 // Le pays d'un appareil (to : { id, name, camp }) et, s'il change, son indicatif (une valeur identique à celle du fichier ne s'écrit pas).
 function setCountry(u, to, callsign) {
   touchEdit(u, e => {
@@ -12009,12 +12059,13 @@ function afterEdit() {
 }
 
 // Motif pour lequel un appareil coché ne prend pas une modification (null : il la prend).
-// kind : 'payload' (emport, réglages), 'livery' ou 'country' (le groupe entier : un identifiant en double dans le groupe l'écarte).
+// kind : 'payload' (emport, réglages), 'equipment' (l'équipement : le .miz doit avoir la table AddPropAircraft), 'livery' ou 'country' (le groupe entier : un identifiant en double dans le groupe l'écarte).
 function skipReason(u, type, visSet, kind) {
   if (u.type !== type) return 'type';
   if (!visSet.has(u.unitId)) return 'hidden';
   if (UI_STATE.dupIds.has(u.unitId)) return 'duplicate';
   if (kind === 'country') return groupHasDup(u) ? 'duplicate' : null;
+  if (kind === 'equipment') return u.addPropPos === null ? 'noEquipment' : null;
   if (kind === 'payload') {
     if (u.payloadPos === null || !u.payloadTable) return 'noPayload';
     if (!u.reproducible) return 'notRepro';
@@ -12105,8 +12156,18 @@ function settingRef(type, key) {
 // Champs de Réglages modifiés par l'utilisateur (saisie ou curseur) : ils gardent leur valeur quand les coches changent
 const SET_KEYS = ['fuel', 'flare', 'chaff', 'gun'];
 const SET_TOUCH = new Set();
+// Les options d'équipement touchées : { id d'option → valeur (booléen pour une case, id de valeur pour une liste) }, défaites avec SET_TOUCH
+const EQ_TOUCH = new Map();
+function clearSetTouch() { SET_TOUCH.clear(); EQ_TOUCH.clear(); }
+// Le champ Canon n'existe pas pour un type de la table dont le canon ne porte aucun obus (comme l'éditeur de DCS)
+function gunHidden(type) {
+  return type !== null && payloadHas(AIRCRAFT_MASSES, type) && AIRCRAFT_MASSES[type].ammo === 0;
+}
 // Les champs non touchés portent la valeur actuelle des cochés (une seule), ou restent vides avec la plage en grisé
 function fillSettings(type) {
+  const noGun = gunHidden(type);
+  document.getElementById('set-gun').closest('.set-field').hidden = noGun;
+  if (noGun) SET_TOUCH.delete('gun');
   for (const key of SET_KEYS) {
     const el = document.getElementById('set-' + key);
     const touched = SET_TOUCH.has(key);
@@ -12116,8 +12177,100 @@ function fillSettings(type) {
     if (!touched) el.value = r.lo !== Infinity && r.lo === r.hi ? fmtNum(sh(r.lo)) : '';
   }
   syncFuelSlider(); syncGunSlider();
+  renderEquipment(type);
 }
-function resetSettings() { SET_TOUCH.clear(); fillSettings(panelType()); }
+function resetSettings() { clearSetTouch(); fillSettings(panelType()); }
+
+// ── Équipement : les options de l'éditeur de DCS (AIRCRAFT_MASSES[type].options), réglées pour les appareils cochés ─────────────────────
+const EQ_FR = {
+  ExhaustScreen: 'Écran IR des tuyères', AdditionalArmor: 'Blindage additionnel', CargoHalfdoor: 'Demi-porte cargo', DustProtectionDevices: 'Filtres à sable (EAPS)',
+  'Remove doors': 'Portes retirées', PDU: 'Afficheur pilote (PDU)', 'MMS removal': 'Viseur de mât retiré (MMS)', ALQ144: 'Brouilleur IR AN/ALQ-144', LoadWater: 'Eau embarquée (500 lb)',
+  MW50TankContents: 'Réservoir MW / carburant', FW_MW50TankContents: 'Réservoir MW / carburant', WaterTankContents: 'Réservoir d’eau', SoloFlight: 'Vol solo',
+  needsGCAlign: 'Avion froid : alignement GC requis', InitAlertStatus: 'Avion froid en alerte', landingTorch: 'Phare d’atterrissage', AARProbe: 'Perche de ravitaillement retirée',
+  MountSIRENA: 'Détecteur SPO-2 Sirena monté'
+};
+const EQ_VAL_FR = { Empty: 'Vide', 'MW-50 Mix': 'Mélange MW-50', 'B-4 Gasoline': 'Essence B-4', 'Additional fuel': 'Carburant supplémentaire', Water: 'Eau' };
+function eqLabel(o) { return CURRENT_LANG === 'fr' && payloadHas(EQ_FR, o.id) ? EQ_FR[o.id] : o.label; }
+function eqValLabel(v) { return CURRENT_LANG === 'fr' && payloadHas(EQ_VAL_FR, v.label) ? EQ_VAL_FR[v.label] : v.label; }
+function eqMass(kg) { return (kg < 0 ? '−' : '') + massTxt(Math.abs(kg)); }       // signée : « −80 kg »
+
+// Les options d'un type (aucune : type absent de la table, ou sans option)
+function eqOptions(type) {
+  const m = type !== null && payloadHas(AIRCRAFT_MASSES, type) ? AIRCRAFT_MASSES[type] : null;
+  return m && Array.isArray(m.options) ? m.options : [];
+}
+// La valeur d'une option dans `props` : booléen pour une case, id de la valeur pour une liste (null : aucune valeur permise)
+function eqValueOf(o, props) {
+  const c = payloadOptionChoice(o, props);
+  return o.kind === 'list' ? (c.value ? c.value.id : null) : c.on;
+}
+// Les appareils cochés dont l'équipement se règle : du type, visibles, sans doublon, avec une table AddPropAircraft
+function eqTargets(type) {
+  const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
+  return UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && !skipReason(u, type, visSet, 'equipment'));
+}
+// La valeur montrée d'une option : { mixed, value } — celle des appareils retenus s'ils sont pareils, « mixte » sinon, le défaut du jeu sans appareil
+function eqShown(o, targets) {
+  if (EQ_TOUCH.has(o.id)) return { mixed: false, value: EQ_TOUCH.get(o.id) };
+  if (!targets.length) return { mixed: false, value: eqValueOf(o, undefined) };
+  const first = eqValueOf(o, curAddProp(targets[0]));
+  return targets.some(u => eqValueOf(o, curAddProp(u)) !== first) ? { mixed: true, value: first } : { mixed: false, value: first };
+}
+// Le texte d'une valeur de liste : « Mélange MW-50 · 69 kg au plein »
+function eqChoiceText(v) {
+  const fuel = v.weightDependentOfFuel !== undefined;
+  return eqValLabel(v) + ' · ' + eqMass(fuel ? v.weightDependentOfFuel : (v.weightWhenOn || 0)) + ' ' + MASS_UNIT + (fuel ? ' ' + t('eq.full') : '');
+}
+function renderEquipment(type) {
+  const box = document.getElementById('set-equip'), hint = document.getElementById('set-hint');
+  const opts = eqOptions(type);
+  if (!opts.length) {
+    box.hidden = true; box.innerHTML = '';
+    hint.textContent = t('panel.settings.hint');
+    return;
+  }
+  const targets = eqTargets(type);
+  let h = '<div class="set-equip-t">' + escHtml(t('eq.title')) + '</div>';
+  opts.forEach((o, i) => {
+    const sh = eqShown(o, targets);
+    if (o.kind === 'check') {
+      h += '<label class="eq-chk"><input type="checkbox" data-eq="' + escHtml(o.id) + '"' + (sh.mixed ? ' data-mixed="1"' : sh.value ? ' checked' : '') + '>' +
+        '<span class="eq-l">' + escHtml(eqLabel(o)) + '</span><span class="eq-w">' + escHtml('· ' + eqMass((o.weight || 0) + (o.weightWhenOn || 0)) + ' ' + MASS_UNIT) + '</span>' +
+        (sh.mixed ? '<span class="eq-mix">' + escHtml(t('eq.mixed')) + '</span>' : '') + '</label>';
+    } else {
+      const vs = Array.isArray(o.values) ? o.values : [];
+      h += '<div class="set-field"><label for="eq-sel-' + i + '">' + escHtml(eqLabel(o)) + '</label>' +
+        '<select id="eq-sel-' + i + '" data-eq="' + escHtml(o.id) + '" aria-label="' + escHtml(eqLabel(o)) + '">' +
+        (sh.mixed ? '<option value="mixed" selected>' + escHtml('— ' + t('eq.mixed') + ' —') + '</option>' : '') +
+        vs.map(v => '<option value="' + escHtml(String(v.id)) + '"' + (!sh.mixed && v.id === sh.value ? ' selected' : '') + '>' + escHtml(eqChoiceText(v)) + '</option>').join('') +
+        '</select></div>';
+    }
+  });
+  box.innerHTML = h;
+  box.querySelectorAll('input[data-mixed]').forEach(c => { c.indeterminate = true; });
+  box.hidden = false;
+  hint.textContent = t('panel.settings.hint') + ' ' + t('eq.hint');
+}
+// Un geste sur une case ou une liste : l'option est touchée (elle garde sa valeur quand les coches changent) ; une case « mixte » devient cochée ou décochée.
+function eqTouched(el) {
+  const type = panelType(), id = el.getAttribute('data-eq');
+  if (type === null) return;
+  const o = eqOptions(type).find(x => x.id === id);
+  if (!o) return;
+  if (o.kind === 'check') {
+    EQ_TOUCH.set(id, el.checked);
+    el.indeterminate = false; el.removeAttribute('data-mixed');
+    const mix = el.parentNode.querySelector('.eq-mix');
+    if (mix) mix.remove();
+  } else {
+    const v = Number(el.value);
+    if (!isFinite(v)) return;
+    EQ_TOUCH.set(id, v);
+    const mixed = el.querySelector('option[value="mixed"]');
+    if (mixed) mixed.remove();
+  }
+  renderActionBar(type);
+}
 
 // Le curseur du carburant suit le champ en kg : round(kg / fuel_max × 100), borné à 0–100 ; champ vide : 0 et « — »
 function syncFuelSlider() {
@@ -12196,6 +12349,7 @@ function readSettings() {
   const out = {}, typed = {};
   const bad = label => t('toast.badValue').replace('{field}', label).replace(/^\S+\s/, '');
   for (const d of defs) {
+    if (d.key === 'gun' && gunHidden(panelType())) continue;   // champ masqué : ni lu ni appliqué
     if (!SET_TOUCH.has(d.key)) continue;   // champ non touché : valeur de référence, ne compte pas
     const el = document.getElementById(d.id);
     if (el.validity && el.validity.badInput) return { out, typed, error: bad(d.label) };   // saisie illisible : le champ « vide » n'est pas vide
@@ -12216,7 +12370,7 @@ function fmtSetting(v) {
   return cmpNum(Number(i)) + (d !== undefined ? (CURRENT_LANG === 'fr' ? ',' : '.') + d : '');
 }
 
-// Ce que « Appliquer à la sélection » ferait, par part : { loadout, settings, livery } (null : part non choisie).
+// Ce que « Appliquer à la sélection » ferait, par part : { loadout, settings, equipment, livery } (null : part non choisie).
 // Chaque part porte ses appareils modifiés (targets) ; settings porte aussi une erreur éventuelle.
 // Ce que le changement de pays ferait : les groupes des appareils cochés (visibles, du type) qui ne sont pas déjà du pays `toId`, tous
 // leurs appareils, et les indicatifs réécrits (attribués groupe après groupe, ceux du camp pris en compte, en attente compris).
@@ -12299,7 +12453,7 @@ function applyPlan(type) {
   const ch = UI_STATE.choice;
   const visSet = new Set(UI_STATE.filtered.map(x => x.unitId));
   const checked = UI_STATE.aircraft.filter(u => UI_STATE.selected.has(u.unitId) && u.type === type && visSet.has(u.unitId));
-  const plan = { type, visSet, checked, loadout: null, settings: null, livery: null, country: null };
+  const plan = { type, visSet, checked, loadout: null, settings: null, equipment: null, livery: null, country: null };
   const def = ch.loadout ? getLoadouts(type).list.find(d => d.letter === ch.loadout) : null;
   if (def) plan.loadout = { def, targets: loadoutTargets(type, def), eligible: checked.some(u => !skipReason(u, type, visSet, 'payload')) };
   const rs = readSettings();
@@ -12321,24 +12475,33 @@ function applyPlan(type) {
     });
     plan.settings = { values: rs.out, shown: rs.typed, error, targets, eligible: el.length > 0 };
   }
+  // L'équipement : les options touchées qui diffèrent de l'équipement en vigueur d'au moins un appareil retenu (sans appareil retenu, elles restent)
+  const eqElig = checked.filter(u => !skipReason(u, type, visSet, 'equipment'));
+  const eqItems = eqOptions(type).filter(o => EQ_TOUCH.has(o.id)).map(o => ({ o, v: EQ_TOUCH.get(o.id) }))
+    .filter(it => !eqElig.length || eqElig.some(u => eqValueOf(it.o, curAddProp(u)) !== it.v));
+  if (eqItems.length) {
+    const values = {};
+    for (const it of eqItems) values[it.o.id] = it.v;
+    plan.equipment = { values, items: eqItems, targets: eqElig.filter(u => eqItems.some(it => eqValueOf(it.o, curAddProp(u)) !== it.v)), eligible: eqElig.length > 0 };
+  }
   const lv = ch.livery ? getLiveries(type).find(e => e.key === ch.livery) : null;
   if (lv) plan.livery = { entry: lv, targets: liveryTargets(type, lv), eligible: checked.some(u => !skipReason(u, type, visSet, 'livery')) };
   if (ch.country != null) plan.country = countryPlan(type, ch.country, checked, visSet);
   const all = new Set();
-  for (const k of ['loadout', 'settings', 'livery']) if (plan[k]) plan[k].targets.forEach(u => all.add(u.unitId));
+  for (const k of ['loadout', 'settings', 'equipment', 'livery']) if (plan[k]) plan[k].targets.forEach(u => all.add(u.unitId));
   if (plan.country) plan.country.allUnits.forEach(id => all.add(id));
   plan.total = all.size;
   return plan;
 }
 
-// Applique d'un coup les parts choisies, dans l'ordre emport, réglages, livrée, par les mêmes règles d'éligibilité ;
+// Applique d'un coup les parts choisies, dans l'ordre emport, réglages, équipement, livrée, par les mêmes règles d'éligibilité ;
 // un seul afterEdit, un seul toast ; puis les choix se vident.
 function applyToSelection() {
   const type = panelType();
   if (type === null) return;
   const plan = applyPlan(type);
   if (plan.settings && plan.settings.error) return;
-  if (!plan.loadout && !plan.settings && !plan.livery && !plan.country) return;
+  if (!plan.loadout && !plan.settings && !plan.equipment && !plan.livery && !plan.country) return;
   const visSet = plan.visSet;
   let modified = 0;
   const ignored = {};
@@ -12361,6 +12524,13 @@ function applyToSelection() {
       for (const [k, v] of Object.entries(plan.settings.values)) next[k] = v;
       if (deepEqValues(curPayload(u), next)) return false;
       setPayload(u, next);
+      return true;
+    });
+    if (plan.equipment) part('equipment', () => {
+      const cur = curAddProp(u), diff = {};
+      for (const it of plan.equipment.items) if (eqValueOf(it.o, cur) !== it.v) diff[it.o.id] = it.v;
+      if (Object.keys(diff).length === 0) return false;
+      setAddProp(u, diff);
       return true;
     });
     if (plan.livery) part('livery', () => {
@@ -12502,7 +12672,7 @@ function resetFilterControls() {
   document.getElementById('filter-role').value = '';
   document.getElementById('filter-search').value = '';
   document.getElementById('toggle-modified').checked = false;
-  SET_TOUCH.clear();
+  clearSetTouch();
   SET_KEYS.forEach(k => { const el = document.getElementById('set-' + k); el.value = ''; el.placeholder = ''; });
   syncFuelSlider(); syncGunSlider();
 }
@@ -12603,7 +12773,7 @@ function unitMass(u) {
   const fuel = p && typeof p === 'object' ? Number(p.fuel) : 0;
   const py = p && typeof p === 'object' && p.pylons && typeof p.pylons === 'object' ? p.pylons : {};
   const st = massOfStores(Object.values(py).map(x => x && typeof x === 'object' ? x.CLSID : undefined));
-  return massCore(u.type, u.addProp, isFinite(fuel) ? fuel : 0, p && typeof p === 'object' ? p.gun : undefined, st);
+  return massCore(u.type, curAddProp(u), isFinite(fuel) ? fuel : 0, p && typeof p === 'object' ? p.gun : undefined, st);
 }
 // Le texte de l'infobulle de la masse : chaque partie, par massTxt.
 function massTip(m, unknown) {
@@ -12725,7 +12895,7 @@ function renderPanel() {
   // Choix : valable pour le type du panneau seulement
   if (UI_STATE.choice.type !== type) {
     UI_STATE.choice = { type, loadout: null, livery: null, country: null };
-    SET_TOUCH.clear();
+    clearSetTouch();
   }
 
   // Emports : une carte par emport, désigné par ses pylônes (nom de l'arme)
@@ -12832,13 +13002,20 @@ function renderActionBar(type) {
       ? '<span class="n">' + escHtml(def.letter) + '</span> → ' + escHtml(tn('panel.count', targets.length)) + (cur ? escHtml(t('bar.cur').replace('{cur}', cur)) : '')
       : escHtml(t('bar.loadoutSame').replace('{l}', def.letter)), targets.length ? '' : 'off']);
   }
-  if (plan.settings) {
-    const s = plan.settings;
-    if (s.error) rows.push([t('bar.k.settings'), escHtml(s.error), 'warn']);
+  if (plan.settings || plan.equipment) {
+    const s = plan.settings, q = plan.equipment;
+    if (s && s.error) rows.push([t('bar.k.settings'), escHtml(s.error), 'warn']);
     else {
-      const txt = ['fuel', 'flare', 'chaff', 'gun'].filter(k => s.values[k] !== undefined)
-        .map(k => uTxt(t('bar.set.' + k)).replace('{v}', fmtSetting(k === 'fuel' && s.shown && s.shown.fuel !== undefined ? s.shown.fuel : s.values[k]))).join(' · ');
-      rows.push([t('bar.k.settings'), escHtml(txt) + (s.targets.length ? ' → ' + escHtml(tn('panel.count', s.targets.length)) : ' → ' + escHtml(tn('panel.count', 0))), s.targets.length ? '' : 'off']);
+      const parts = s ? ['fuel', 'flare', 'chaff', 'gun'].filter(k => s.values[k] !== undefined)
+        .map(k => uTxt(t('bar.set.' + k)).replace('{v}', fmtSetting(k === 'fuel' && s.shown && s.shown.fuel !== undefined ? s.shown.fuel : s.values[k]))) : [];
+      if (q) for (const it of q.items) {
+        const l = eqLabel(it.o);
+        parts.push(it.o.kind === 'list' ? t('bar.eq.val').replace('{l}', l).replace('{v}', eqValLabel(it.o.values.find(v => v.id === it.v)))
+          : t(it.v ? 'bar.eq.on' : 'bar.eq.off').replace('{l}', l));
+      }
+      const hit = new Set();
+      for (const part of [s, q]) if (part) part.targets.forEach(u => hit.add(u.unitId));
+      rows.push([t('bar.k.settings'), escHtml(parts.join(' · ')) + (hit.size ? ' → ' + escHtml(tn('panel.count', hit.size)) : ' → ' + escHtml(tn('panel.count', 0))), hit.size ? '' : 'off']);
     }
   }
   if (plan.livery) {
@@ -13180,7 +13357,7 @@ function cmpGun(type) {
 // La masse au décollage du composeur : la plus forte de celles des appareils lus par cmpFuel, chacun avec son équipement (aucun : options par défaut)
 function cmpMass(type, f, st) {
   const gun = cmpGun(type), us = cmpReadUnits(type);
-  const list = us.length ? us.map(u => massCore(type, u.addProp, f, gun, st)) : [massCore(type, undefined, f, gun, st)];
+  const list = us.length ? us.map(u => massCore(type, curAddProp(u), f, gun, st)) : [massCore(type, undefined, f, gun, st)];
   return list.reduce((b, x) => x.kg > b.kg ? x : b);
 }
 
@@ -13597,6 +13774,7 @@ SET_KEYS.forEach(k => document.getElementById('set-' + k).addEventListener('inpu
   const ty = panelType();
   if (ty !== null) renderActionBar(ty);
 }));
+document.getElementById('set-equip').addEventListener('change', e => { if (e.target.matches('[data-eq]')) eqTouched(e.target); });
 document.getElementById('set-fuel').addEventListener('input', syncFuelSlider);
 // Le sélecteur d'unité est dans le <summary> : un clic dessus ne replie pas la section
 document.getElementById('unit-sw').addEventListener('click', e => {
@@ -13980,11 +14158,30 @@ function lxCheckPatches(patches) {
   }
 }
 
-// Un patch par valeur : le payload est remplacé en entier, la livrée par son texte ; un pays changé déplace son groupe entier
-// (voir lxCountryPatches), indicatifs réécrits compris.
+// Les patches de l'équipement d'un appareil (touched : { id d'option : valeur }) : si chaque clé est déjà dans la table avec une valeur
+// booléenne ou numérique, seule cette valeur est remplacée ; sinon (une clé absente, ou d'une autre sorte) la table entière est réécrite.
+function lxAddPropPatches(src, u, touched) {
+  if (!u.addPropPos || !u.addPropSlots) throw new Error('AddPropAircraft sans position : ' + u.name);
+  const keys = Object.keys(touched);
+  const slot = k => u.addPropSlots.get(k);
+  if (keys.every(k => { const sl = slot(k); return sl && (sl.kind === 'bool' || sl.kind === 'number'); })) {
+    return keys.map(k => {
+      const str = serializeLua(touched[k]);
+      if (str === null) throw new Error('AddPropAircraft non sérialisable : ' + u.name + ' / ' + k);
+      return { pos: slot(k).pos, newValueStr: str };
+    });
+  }
+  if (!u.addPropRepro) throw new Error('AddPropAircraft non reproductible : ' + u.name);
+  const str = serializeLua(Object.assign({}, u.addProp, touched), lxIndentAt(src, u.addPropPos.start.offset));
+  if (str === null) throw new Error('AddPropAircraft non sérialisable : ' + u.name);
+  return [{ pos: u.addPropPos, newValueStr: str }];
+}
+
+// Un patch par valeur : le payload est remplacé en entier, la livrée par son texte, une option d'équipement par sa valeur (ou la table
+// AddPropAircraft entière si une clé y manque) ; un pays changé déplace son groupe entier (voir lxCountryPatches), indicatifs réécrits compris.
 function collectPatches(src) {
   const patches = [];
-  const wanted = { payload: new Map(), livery: new Map(), country: new Map(), camps: new Map(), entries: [], lists: [] };
+  const wanted = { payload: new Map(), livery: new Map(), addProp: new Map(), country: new Map(), camps: new Map(), entries: [], lists: [] };
   for (const [id, ed] of UI_STATE.edits) {
     const u = UI_STATE.byId.get(id);
     if (!u) throw new Error('unitId ' + id + ' introuvable');
@@ -14000,6 +14197,10 @@ function collectPatches(src) {
       patches.push({ pos: u.liveryPos, newValueStr: serializeLua(String(ed.livery)) });
       wanted.livery.set(id, String(ed.livery));
     }
+    if (ed.addProp !== undefined) {
+      for (const p of lxAddPropPatches(src, u, ed.addProp)) patches.push(p);
+      wanted.addProp.set(id, Object.assign({}, u.addProp, ed.addProp));
+    }
   }
   const moves = lxCollectMoves();
   if (moves.length) lxCountryPatches(src, moves, patches, wanted);
@@ -14010,7 +14211,7 @@ function collectPatches(src) {
 }
 
 // Relit le texte écrit : chaque appareil est retrouvé (par unitId et rang dans son groupe) dans le pays, la catégorie, avec l'indicatif,
-// l'emport et la livrée voulus ; un appareil non modifié est resté tel quel ; un groupe qui change de pays reste entier ; les tables
+// l'emport, la livrée et l'équipement voulus ; un appareil non modifié est resté tel quel ; un groupe qui change de pays reste entier ; les tables
 // touchées ont leurs clés 1…m. Retourne { error } ou { ast, aircraft }.
 function verifyWrite(patchedSrc, wanted) {
   const { tokens, errors } = DCS_TOKENIZER.tokenize(patchedSrc);
@@ -14047,6 +14248,9 @@ function verifyWrite(patchedSrc, wanted) {
     const wantL = wanted.livery.has(u.unitId) ? wanted.livery.get(u.unitId) : u.livery;
     if (!deepEqValues(wantP, u2.payload)) return { error: 'payload ' + u.name + ' (' + u.unitId + ')' };
     if (wantL !== u2.livery) return { error: 'livery_id ' + u.name + ' (' + u.unitId + ')' };
+    // l'équipement : les options touchées ont leur valeur, les autres clés de la table gardent la leur
+    const wantA = wanted.addProp.has(u.unitId) ? wanted.addProp.get(u.unitId) : u.addProp;
+    if (!deepEqValues(wantA, u2.addProp)) return { error: 'AddPropAircraft ' + u.name + ' (' + u.unitId + ')' };
     if (!gkMap.has(u.gk)) { gkMap.set(u.gk, u2.gk); if (gkBack.has(u2.gk)) return { error: 'groupes confondus : ' + u.groupName }; gkBack.set(u2.gk, u.gk); }
     else if (gkMap.get(u.gk) !== u2.gk) return { error: 'groupe coupé : ' + u.groupName };
   }
