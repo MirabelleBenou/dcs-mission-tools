@@ -1229,7 +1229,7 @@ def build_html(module_html_js, tile_uris, brand_uris):
       }}
     }}
 
-    /* ── Insigne de l'accueil : celui de Mission Tools, ou l'emblème de l'escadre posé par la Ready Room ──
+    /* ── Insigne de l'accueil : celui de Mission Tools, ou l'emblème d'une escadre fourni par la config wing_config_v1 ──
        Lecture unique de wing_config_v1 au démarrage ; aucune écriture, aucun écouteur storage. */
     var emblemAltFallback = false;
     function refreshEmblemAlt() {{
