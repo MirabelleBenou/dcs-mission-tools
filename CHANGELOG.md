@@ -7,7 +7,16 @@ Each release is a GitHub release tagged `MT-V<major>.<minor>.<patch>` (up to 2.0
 - **minor**: a new tool, screen or function, or a change visible everywhere;
 - **patch**: fixes.
 
-Between two releases, the hosted version shows its build number at the bottom of the home screen — `MT-V2.0.0+3` is the third update since 2.0.0. A released file shows none.
+The version shows once, at the bottom of the home screen: a released file shows its release number (`MT-V2.1.0`); between two releases, the hosted version shows its build number — `MT-V2.1.0+3` is the third update since 2.1.0.
+
+## Unreleased
+
+**The Squadron Ready Room family insignia**
+- The home screen shows the Mission Tools insignia above the suite line; served by the Ready Room, it shows your wing's emblem instead.
+- The browser tab carries the family's icon, and a *Squadron Ready Room family* line sits above the credits.
+
+**One version number, at the bottom of the home screen**
+- The version no longer shows in the top bar or in the suite line: it shows once, at the bottom of the home screen — `MT-V2.1.0+1` for this one, the release number alone in a release.
 
 ## MT-V2.1.0 — 2026-11-21
 

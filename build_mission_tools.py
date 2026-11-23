@@ -32,8 +32,16 @@ from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN 
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '2.1.0'
-DEV_BUILD   = 0   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
+DEV_BUILD   = 1   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
 OUT_FILE    = 'dist/dcs_mission_tools.html'
+
+# Pièces de la marque « Squadron Ready Room family » (copies telles quelles des fichiers maîtres), intégrées en données.
+BRAND_DIR = 'assets/brand'
+BRAND_FILES = (
+    ('insignia',  'insigne-mission-tools.svg', 'image/svg+xml'),
+    ('picto',     'pictogramme.svg',           'image/svg+xml'),
+    ('favicon',   'favicon.ico',               'image/x-icon'),
+)
 
 MODULES = [
     {'id': 'cp', 'src': 'modules/dcs_comm_plan_editor.html',   'tile': 'tiles/cp.webp'},
@@ -415,6 +423,25 @@ def build_module_html_js(modules):
     return '\n'.join(lines)
 
 
+def build_brand_uris():
+    """Les trois pièces de la marque en URL data: ; une pièce absente ou illisible arrête le build (code 1), avant toute écriture."""
+    uris = {}
+    for key, name, mime in BRAND_FILES:
+        rel = f'{BRAND_DIR}/{name}'
+        try:
+            with open(os.path.join(SCRIPT_DIR, rel), 'rb') as fh:
+                raw = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Pièce de la marque illisible : {rel} ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        if not raw:
+            print(f'  [ERREUR] Pièce de la marque vide : {rel} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        uris[key] = f'data:{mime};base64,{base64.b64encode(raw).decode("ascii")}'
+        print(f'  [OK] Marque {name} — {len(raw)} octets')
+    return uris
+
+
 def build_tile_uris(modules):
     uris = {}
     for mod in modules:
@@ -428,7 +455,11 @@ def build_tile_uris(modules):
     return uris
 
 
-def build_html(module_html_js, tile_uris):
+def build_html(module_html_js, tile_uris, brand_uris):
+
+    brand_insignia = brand_uris['insignia']
+    brand_picto = brand_uris['picto']
+    brand_favicon = brand_uris['favicon']
 
     tile_cp = tile_uris.get('cp', '')
     tile_gu = tile_uris.get('gu', '')
@@ -443,6 +474,8 @@ def build_html(module_html_js, tile_uris):
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DCS Mission Tools</title>
+  <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href="{brand_favicon}">
+  <link rel="icon" type="image/svg+xml" href="{brand_picto}">
   <style>
     /* ── Palette Mission Suite (DESIGN_DCS_Mission_Suite.md §2) ── */
     :root {{
@@ -525,19 +558,15 @@ def build_html(module_html_js, tile_uris):
       font-weight: 700;
       color: var(--mt-accent);
       letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }}
+    .header-picto {{ flex: 0 0 auto; }}
     .header-title {{
       font-size: 14px;
       font-weight: 600;
       color: var(--text);
-    }}
-    .header-version {{
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-dim);
-      background: var(--surface-2);
-      padding: 2px 6px;
-      border-radius: 3px;
     }}
     .header-right {{
       margin-left: auto;
@@ -632,6 +661,14 @@ def build_html(module_html_js, tile_uris):
       gap: 28px;
     }}
 
+    #landing-insignia {{
+      display: block;
+      margin: 0 auto 18px;
+      width: 128px;
+      height: 128px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,.5));
+    }}
     .landing-tagline {{
       text-align: center;
       color: #BFBFBF;
@@ -649,6 +686,15 @@ def build_html(module_html_js, tile_uris):
       overflow-wrap: anywhere;
     }}
     #credits a {{ color: inherit; text-decoration: underline; }}
+    #credits .credits-signature {{
+      text-align: center;
+      font: 500 12px var(--font-ui);
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: #C9A64A;
+      margin: 0 0 10px;
+    }}
+    #credits .credits-signature img {{ vertical-align: -4px; margin-right: 8px; }}
     #credits .credits-line + .credits-line {{ margin-top: 6px; }}
     .section-title {{
       font-family: var(--font-mono);
@@ -962,6 +1008,7 @@ def build_html(module_html_js, tile_uris):
     @media (max-width: 600px) {{
       #landing {{ padding: 20px 14px calc(20px + var(--wf-bar-h)); }}
       .landing-inner {{ gap: 20px; }}
+      #landing-insignia {{ width: 96px; height: 96px; }}
       #credits {{ margin-top: 4px; }}
       #credits a {{ display: inline-block; min-width: 44px; min-height: 44px; line-height: 44px; text-align: center; }}
       /* Accueil compact : chaque outil (et chaque carte de la feuille de route) est une ligne — la vignette à gauche (76 px), puis le
@@ -984,9 +1031,8 @@ def build_html(module_html_js, tile_uris):
 
   <!-- HEADER -->
   <header id="app-header">
-    <div class="header-logo">M·T</div>
+    <div class="header-logo"><img class="header-picto" src="{brand_picto}" alt="" width="26" height="26">M·T</div>
     <div class="header-title">DCS Mission Tools</div>
-    <div class="header-version">v{APP_VERSION}</div>
     <div class="header-right">
       <button id="btn-lang" onclick="toggleLang()" title="Switch language / Changer de langue" aria-label="Changer la langue">
         <!-- drapeau injecté par JS -->
@@ -999,7 +1045,8 @@ def build_html(module_html_js, tile_uris):
 
     <div id="landing">
       <div class="landing-inner">
-        <div class="landing-tagline" data-i18n="tagline">DCS World · Mission Suite · v{APP_VERSION}</div>
+        <img id="landing-insignia" data-source="mt" src="{brand_insignia}" alt="Mission Tools" width="128" height="128">
+        <div class="landing-tagline" data-i18n="tagline">DCS World · Mission Suite</div>
 
         <div>
           <div class="section-title" data-i18n="sectionModules">Outils disponibles</div>
@@ -1014,8 +1061,9 @@ def build_html(module_html_js, tile_uris):
         </div>
 
         <div id="credits">
+          <div class="credits-signature"><img src="{brand_picto}" alt="" width="18" height="18">Squadron Ready Room family</div>
           <div class="credits-line">Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing — <a href="https://github.com/MirabelleBenou/dcs-mission-tools" target="_blank" rel="noopener">github.com/MirabelleBenou/dcs-mission-tools</a> · <a href="https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE" target="_blank" rel="noopener">AGPL-3.0-or-later</a></div>
-          <div class="credits-line"><span data-i18n="credits.data1">Données des appareils : </span><a href="https://github.com/pydcs/dcs" target="_blank" rel="noopener">pydcs</a><span data-i18n="credits.data2"> (LGPL-3.0-or-later) · vues de face : Goldwolf, DCS Reference Guide, avec son autorisation</span></div>{dev_credits_line()}
+          <div class="credits-line"><span data-i18n="credits.data1">Données des appareils : </span><a href="https://github.com/pydcs/dcs" target="_blank" rel="noopener">pydcs</a><span data-i18n="credits.data2"> (LGPL-3.0-or-later) · vues de face : Goldwolf, DCS Reference Guide, avec son autorisation</span></div>{version_credits_line()}
         </div>
       </div>
     </div>
@@ -1058,7 +1106,8 @@ def build_html(module_html_js, tile_uris):
     /* ── i18n FR/EN ────────────────────────────────────────── */
     const I18N = {{
       fr: {{
-        tagline:        'DCS World · Mission Suite · v{APP_VERSION}',
+        tagline:        'DCS World · Mission Suite',
+        landingEmblemAlt: 'Emblème de l\\'escadre',
         sectionModules: 'Outils disponibles',
         sectionRoadmap: 'Roadmap',
         back:           'Mission Tools',
@@ -1096,7 +1145,8 @@ def build_html(module_html_js, tile_uris):
         'lang.aria': "Changer la langue",
       }},
       en: {{
-        tagline:        'DCS World · Mission Suite · v{APP_VERSION}',
+        tagline:        'DCS World · Mission Suite',
+        landingEmblemAlt: 'Wing emblem',
         sectionModules: 'Available tools',
         sectionRoadmap: 'Roadmap',
         back:           'Mission Tools',
@@ -1179,6 +1229,39 @@ def build_html(module_html_js, tile_uris):
       }}
     }}
 
+    /* ── Insigne de l'accueil : celui de Mission Tools, ou l'emblème de l'escadre posé par la Ready Room ──
+       Lecture unique de wing_config_v1 au démarrage ; aucune écriture, aucun écouteur storage. */
+    var emblemAltFallback = false;
+    function refreshEmblemAlt() {{
+      var img = document.getElementById('landing-insignia');
+      if (img && emblemAltFallback && img.getAttribute('data-source') === 'wing') img.alt = t('landingEmblemAlt');
+    }}
+    function initEmblem() {{
+      var img = document.getElementById('landing-insignia');
+      if (!img) return;
+      try {{
+        var raw = localStorage.getItem('wing_config_v1');
+        if (typeof raw !== 'string') return;
+        var cfg = JSON.parse(raw);
+        var wing = cfg && typeof cfg === 'object' ? cfg.wing : null;
+        var logo = wing && typeof wing === 'object' ? wing.logo : null;
+        if (typeof logo !== 'string' || !/^data:image\\/(png|jpeg|webp|gif|svg\\+xml)[;,]/.test(logo)) return;
+        var mtSrc = img.getAttribute('src');
+        var mtAlt = img.getAttribute('alt');
+        img.addEventListener('error', function() {{
+          emblemAltFallback = false;
+          img.setAttribute('data-source', 'mt');
+          img.setAttribute('src', mtSrc);
+          img.alt = mtAlt;
+        }}, {{ once: true }});
+        img.setAttribute('data-source', 'wing');
+        if (typeof wing.fullName === 'string' && wing.fullName !== '') img.alt = wing.fullName;
+        else if (typeof wing.shortName === 'string' && wing.shortName !== '') img.alt = wing.shortName;
+        else {{ emblemAltFallback = true; img.alt = t('landingEmblemAlt'); }}
+        img.setAttribute('src', logo);
+      }} catch(e) {{}}
+    }}
+
     function applyI18nStatic() {{
       document.querySelectorAll('[data-i18n]').forEach(function(el) {{
         const key = el.getAttribute('data-i18n');
@@ -1186,6 +1269,7 @@ def build_html(module_html_js, tile_uris):
         if (val !== key) el.textContent = val;
       }});
       document.documentElement.lang = CURRENT_LANG;
+      refreshEmblemAlt();
       const langBtn = document.getElementById('btn-lang');
       if (langBtn) langBtn.setAttribute('aria-label', t('lang.aria'));
       /* wf-filename : texte "aucun" si pas de fichier */
@@ -1679,6 +1763,7 @@ def build_html(module_html_js, tile_uris):
         }}
       }} catch(e) {{}}
       initLang();
+      initEmblem();
       applyI18nStatic();
       updateFlagButton();
       renderCards();
@@ -1701,17 +1786,20 @@ def check_dev_build():
         sys.exit(1)
 
 
-def dev_credits_line():
-    """La ligne du numéro de dev au pied de #credits (vide pour une release : DEV_BUILD = 0)."""
+def version_credits_line():
+    """La ligne de la version, dernier enfant de #credits, seul endroit où la version s'affiche :
+    MT-V<APP_VERSION> (data-version) pour une release (DEV_BUILD = 0), MT-V<APP_VERSION>+<DEV_BUILD>
+    (data-version data-dev-build) entre deux releases."""
     if DEV_BUILD > 0:
-        return f'\n          <div class="credits-line" data-dev-build>MT-V{APP_VERSION}+{DEV_BUILD}</div>'
-    return ''
+        return f'\n          <div class="credits-line" data-version data-dev-build>MT-V{APP_VERSION}+{DEV_BUILD}</div>'
+    return f'\n          <div class="credits-line" data-version>MT-V{APP_VERSION}</div>'
 
 
 def main():
     check_dev_build()
     version_build = f'{APP_VERSION}+{DEV_BUILD}' if DEV_BUILD > 0 else APP_VERSION
     print(f'=== build_mission_tools.py — DCS Mission Tools v{version_build} ===')
+    brand_uris = build_brand_uris()
 
     print('\n[1/4] Contrôle des sources des modules…')
     check_modules_unversioned(MODULES)
@@ -1730,7 +1818,7 @@ def main():
     tile_uris = build_tile_uris(MODULES)
 
     print(f'\n[4/4] Génération {OUT_FILE}…')
-    html = build_html(module_html_js, tile_uris)
+    html = build_html(module_html_js, tile_uris, brand_uris)
     err = check_messages_text(html.replace(module_html_js, '', 1), 'le shell construit')
     if err:
         print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)

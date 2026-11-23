@@ -1,3 +1,5 @@
+![DCS Mission Tools — part of the Squadron Ready Room family](assets/brand/banniere-mission-tools.png)
+
 # DCS Mission Tools
 
 ![Intro-image](docs/screenshots/landing.jpg)
@@ -180,6 +182,7 @@ The module sources are read from `modules/` and the output is written to `dist/d
 │   ├── dcs_weather_editor.html
 │   └── dcs_loadout_editor.html
 ├── tiles/                     # landing tiles (512² WebP): cp, gu, wx, le
+├── assets/brand/             # Squadron Ready Room insignia, tab icon, README banner and GitHub preview (copies of the family's master files)
 ├── data/                      # aircraft and weapon tables (pydcs, LGPL-3.0-or-later; DCS World), front views, their licences
 ├── tools/                     # gen_*.py and read_payload_rules.py regenerate data/; release.py and menage_branches.py run the workflows
 ├── tests/                     # round-trip bench and tests
@@ -220,6 +223,8 @@ For code contributions: fork, branch, study the build script to understand the a
 [GNU AGPL-3.0-or-later](https://github.com/MirabelleBenou/dcs-mission-tools/blob/main/LICENSE) — free to use, modify and share, commercial use included (a paid service too), **provided the source code of your version is published under the same licence**, hosted services included (section 13). Every interface must keep the credit line “Based on Mission Tools by MirabelleBenou and the 4th VEAW virtual wing” (an additional term under section 7(b), see `LICENSE`). Releases up to v1.3.0 remain under the MIT licence. Exceptions: the front-view drawings (by Goldwolf, `data/views/LICENSE.md`) and the pydcs-derived tables (LGPL-3.0-or-later, `data/COPYING.LESSER`).
 
 Roboto Mono is embedded under the Apache License 2.0 (Google Fonts).
+
+Squadron Ready Room insignia: original artwork of the project; lettering from Oswald (SIL Open Font License 1.1), converted to outlines. The font licence is in `assets/brand/OFL-Oswald.txt`.
 
 ## 🙏 Acknowledgments
 
