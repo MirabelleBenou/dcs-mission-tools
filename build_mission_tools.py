@@ -32,8 +32,8 @@ from parser_block import build_block as build_parser_block, BLOCK_BEGIN as PARSE
 from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN as SHELL_ONLY_BEGIN, BLOCK_END as SHELL_ONLY_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
-APP_VERSION = '2.1.0'
-DEV_BUILD   = 2   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
+APP_VERSION = '2.2.0'
+DEV_BUILD   = 0   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 # Pièces de la marque « Squadron Ready Room family » (copies telles quelles des fichiers maîtres), intégrées en données.
