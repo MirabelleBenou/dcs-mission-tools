@@ -7,10 +7,12 @@ illisible : build_block() lève une exception claire (le build la rend en [ERREU
 À son exécution, le bloc pose une seule fois (idempotent : rien de plus s'il a déjà posé) :
   - une feuille de style à lui (<style data-mtb-brand>) ;
   - l'en-tête : le pictogramme (<img class="mtb-picto">, 22 × 22) en premier enfant de #app-header .header-logo, avant le sigle,
-    qui garde sa police, sa taille et sa couleur ;
+    qui garde sa police, sa taille et sa couleur ; .header-logo passe en display: inline-flex, centré, écart 8 px (la seule règle
+    du bloc qui touche un élément qui n'est pas à lui) ;
   - l'écran vide : la ligne de signature (<div class="mtb-signature">, pictogramme de 18 × 18 et « Squadron Ready Room family »,
     nom de marque identique en FR et en EN, sans clé i18n) juste avant le premier .credits du document.
-Un élément absent (pas de .header-logo, pas de .credits) : le bloc ne pose que ce qu'il peut, sans erreur.
+Un élément absent (pas de .header-logo, pas de .credits) : le bloc ne pose que ce qu'il peut, sans erreur ; aucune exception ne sort du bloc (la pose est dans un try/catch : il partage son <script> avec l'outil).
+Un .drop-box suivi de la signature (Weather Editor, dont le bouton est dans le cadre) reçoit 20 px au-dessus, comme les autres outils.
 Aucun point d'entrée public.
 Le bloc est identique à l'octet dans les quatre modules : build_mission_tools.py le garde (build en code 1 sinon).
 
@@ -33,6 +35,7 @@ _JS = r"""
 .mtb-picto { flex: 0 0 auto; }
 .mtb-signature { text-align: center; font: 500 12px var(--font-ui); letter-spacing: 2.5px; text-transform: uppercase; color: #C9A64A; margin: 0 0 10px; }
 .mtb-signature img { vertical-align: -4px; margin-right: 8px; }
+.drop-box + .mtb-signature { margin-top: 20px; }
 `;
   function mark() {
     if (!document.querySelector('style[data-mtb-brand]')) {
@@ -65,7 +68,8 @@ _JS = r"""
       credits.parentNode.insertBefore(sig, credits);
     }
   }
-  if (document.body) mark(); else document.addEventListener('DOMContentLoaded', mark);
+  function safe() { try { mark(); } catch (e) {} }
+  if (document.body) safe(); else document.addEventListener('DOMContentLoaded', safe);
 })();
 """
 

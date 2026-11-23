@@ -15601,6 +15601,7 @@ function tbmScrolled(e) {
 .mtb-picto { flex: 0 0 auto; }
 .mtb-signature { text-align: center; font: 500 12px var(--font-ui); letter-spacing: 2.5px; text-transform: uppercase; color: #C9A64A; margin: 0 0 10px; }
 .mtb-signature img { vertical-align: -4px; margin-right: 8px; }
+.drop-box + .mtb-signature { margin-top: 20px; }
 `;
   function mark() {
     if (!document.querySelector('style[data-mtb-brand]')) {
@@ -15633,7 +15634,8 @@ function tbmScrolled(e) {
       credits.parentNode.insertBefore(sig, credits);
     }
   }
-  if (document.body) mark(); else document.addEventListener('DOMContentLoaded', mark);
+  function safe() { try { mark(); } catch (e) {} }
+  if (document.body) safe(); else document.addEventListener('DOMContentLoaded', safe);
 })();
 /* ===== FIN DE LA MARQUE ===== */
 
