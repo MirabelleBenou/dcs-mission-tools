@@ -4792,6 +4792,51 @@ function tbmScrolled(e) {
 })();
 /* ===== FIN DU TELEPHONE ===== */
 
+/* ===== MARQUE (INSIGNE DE LA FAMILLE) ===== */
+/* Marque : le pictogramme de la famille avant le sigle de l'en-tête, la ligne de signature au-dessus des crédits de l'écran vide. */
+(function () {
+  const SRC = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNjAgMzYwIiB3aWR0aD0iMzYwIiBoZWlnaHQ9IjM2MCI+CjxjaXJjbGUgY3g9IjE4MCIgY3k9IjE4MCIgcj0iMTc4IiBmaWxsPSIjQzlBNjRBIi8+CjxjaXJjbGUgY3g9IjE4MCIgY3k9IjE4MCIgcj0iMTUyIiBmaWxsPSIjMjYzODVGIi8+CjxnIGZpbGw9IiNDOUE2NEEiPjxwYXRoIGQ9Ik0xMzQuMCwxNjkuMCBRODYuNywxNDMuNiAzOS41LDE3MS4zIFE4Ni43LDE4OS4yIDEzNC4wLDE5OS40IFoiLz48cGF0aCBkPSJNMTM0LjAsMTk1LjAgUTEwMS4xLDE4My44IDY4LjIsMjE0LjYgUTEwMS4xLDIxOS44IDEzNC4wLDIxOS4wIFoiLz48cGF0aCBkPSJNMjI2LjAsMTY5LjAgUTI3My4zLDE0My42IDMyMC41LDE3MS4zIFEyNzMuMywxODkuMiAyMjYuMCwxOTkuNCBaIi8+PHBhdGggZD0iTTIyNi4wLDE5NS4wIFEyNTguOSwxODMuOCAyOTEuOCwyMTQuNiBRMjU4LjksMjE5LjggMjI2LjAsMjE5LjAgWiIvPjwvZz4KPHBhdGggZD0iTTE4MC4wMCw5Ni4wMCBMMTk4LjgxLDE1MC4xMSBMMjU2LjA4LDE1MS4yOCBMMjEwLjQzLDE4NS44OSBMMjI3LjAyLDI0MC43MiBMMTgwLjAwLDIwOC4wMCBMMTMyLjk4LDI0MC43MiBMMTQ5LjU3LDE4NS44OSBMMTAzLjkyLDE1MS4yOCBMMTYxLjE5LDE1MC4xMSBaIiBmaWxsPSIjQzlBNjRBIiBzdHJva2U9IiMyNjM4NUYiIHN0cm9rZS13aWR0aD0iMTAiIHBhaW50LW9yZGVyPSJzdHJva2UiLz4KPC9zdmc+Cg==';
+  const CSS = `
+#app-header .header-logo { display: inline-flex; align-items: center; gap: 8px; }
+.mtb-picto { flex: 0 0 auto; }
+.mtb-signature { text-align: center; font: 500 12px var(--font-ui); letter-spacing: 2.5px; text-transform: uppercase; color: #C9A64A; margin: 0 0 10px; }
+.mtb-signature img { vertical-align: -4px; margin-right: 8px; }
+`;
+  function mark() {
+    if (!document.querySelector('style[data-mtb-brand]')) {
+      const st = document.createElement('style');
+      st.setAttribute('data-mtb-brand', '');
+      st.textContent = CSS;
+      document.head.appendChild(st);
+    }
+    const logo = document.querySelector('#app-header .header-logo');
+    if (logo && !logo.querySelector(':scope > .mtb-picto')) {
+      const img = document.createElement('img');
+      img.className = 'mtb-picto';
+      img.src = SRC;
+      img.alt = '';
+      img.width = 22;
+      img.height = 22;
+      logo.insertBefore(img, logo.firstChild);
+    }
+    const credits = document.querySelector('.credits');
+    if (credits && credits.parentNode && !document.querySelector('.mtb-signature')) {
+      const sig = document.createElement('div');
+      sig.className = 'mtb-signature';
+      const img = document.createElement('img');
+      img.src = SRC;
+      img.alt = '';
+      img.width = 18;
+      img.height = 18;
+      sig.appendChild(img);
+      sig.appendChild(document.createTextNode('Squadron Ready Room family'));
+      credits.parentNode.insertBefore(sig, credits);
+    }
+  }
+  if (document.body) mark(); else document.addEventListener('DOMContentLoaded', mark);
+})();
+/* ===== FIN DE LA MARQUE ===== */
+
 // Listes déroulantes au thème de l'interface : tout <select> de l'outil passe par le bloc ci-dessus.
 initListes({
   label: function(sel) {

@@ -27,12 +27,13 @@ from radio_block import build_block
 from listes_block import build_block as build_listes_block, BLOCK_BEGIN as LISTES_BEGIN, BLOCK_END as LISTES_END
 from messages_block import build_block as build_messages_block, BLOCK_BEGIN as MESSAGES_BEGIN, BLOCK_END as MESSAGES_END
 from mobile_block import build_block as build_mobile_block, BLOCK_BEGIN as MOBILE_BEGIN, BLOCK_END as MOBILE_END
+from brand_block import build_block as build_brand_block, BLOCK_BEGIN as BRAND_BEGIN, BLOCK_END as BRAND_END
 from parser_block import build_block as build_parser_block, BLOCK_BEGIN as PARSER_BEGIN, BLOCK_END as PARSER_END
 from shell_only_block import build_block as build_shell_only_block, BLOCK_BEGIN as SHELL_ONLY_BEGIN, BLOCK_END as SHELL_ONLY_END
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 APP_VERSION = '2.1.0'
-DEV_BUILD   = 1   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
+DEV_BUILD   = 2   # rang de ce build depuis la release APP_VERSION ; remis à 0 pour faire une release
 OUT_FILE    = 'dist/dcs_mission_tools.html'
 
 # Pièces de la marque « Squadron Ready Room family » (copies telles quelles des fichiers maîtres), intégrées en données.
@@ -308,6 +309,36 @@ def check_mobile_block():
             print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
             sys.exit(1)
         print(f'  [OK] Bloc du téléphone identique à mobile_block.py ({mod["src"]})')
+
+
+def check_brand_text(text, label):
+    """Le bloc de la marque (brand_block.build_block()) doit figurer exactement une fois, tel quel, dans `text`.
+    Rend le message d'erreur, ou None."""
+    try:
+        block = build_brand_block()
+    except Exception as exc:
+        return f'Le bloc de la marque ne se construit pas ({exc})'
+    if text.count(block) != 1 or text.count(BRAND_BEGIN) != 1 or text.count(BRAND_END) != 1:
+        return (f'Le bloc de la marque de {label} diffère de brand_block.py '
+                f'(attendu : une fois, à l\'identique)')
+    return None
+
+
+def check_brand_block():
+    """Garde d'identité : le bloc de la marque doit figurer exactement une fois, tel quel, dans chacun des quatre modules.
+    Sinon le build s'arrête avant toute écriture."""
+    for mod in MODULES:
+        try:
+            with open(os.path.join(SCRIPT_DIR, mod['src']), 'r', encoding='utf-8') as fh:
+                html = fh.read()
+        except OSError as exc:
+            print(f'  [ERREUR] Module illisible ({exc}) — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        err = check_brand_text(html, mod['src'])
+        if err:
+            print(f'  [ERREUR] {err} — build arrêté', file=sys.stderr)
+            sys.exit(1)
+        print(f'  [OK] Bloc de la marque identique à brand_block.py ({mod["src"]})')
 
 
 # Définitions interdites hors du bloc : function retokenizeSafety, const|let|var retokenizeSafety, affectation à retokenizeSafety
@@ -1808,6 +1839,7 @@ def main():
     check_listes_block()
     check_messages_block()
     check_mobile_block()
+    check_brand_block()
     check_parser_block()
     check_shell_only_block()
 

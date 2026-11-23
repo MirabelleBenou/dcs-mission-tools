@@ -175,14 +175,14 @@ The module sources are read from `modules/` and the output is written to `dist/d
 ```
 .
 ├── build_mission_tools.py     # shell + bundler (embeds modules + tiles), with the build guards
-├── *_block.py                 # shared blocks copied byte-for-byte into each tool (parser, messages, lists, radio, standalone guard)
+├── *_block.py                 # shared blocks copied byte-for-byte into each tool (parser, messages, lists, radio, phone, brand, standalone guard)
 ├── modules/                   # the four tools, bundled by the build (source of truth)
 │   ├── dcs_comm_plan_editor.html
 │   ├── dcs_ground_unit_swapper.html
 │   ├── dcs_weather_editor.html
 │   └── dcs_loadout_editor.html
 ├── tiles/                     # landing tiles (512² WebP): cp, gu, wx, le
-├── assets/brand/             # Squadron Ready Room insignia, tab icon, README banner and GitHub preview (copies of the family's master files)
+├── assets/brand/              # Squadron Ready Room insignia, tab icon, README banner and GitHub preview (copies of the family's master files)
 ├── data/                      # aircraft and weapon tables (pydcs, LGPL-3.0-or-later; DCS World), front views, their licences
 ├── tools/                     # gen_*.py and read_payload_rules.py regenerate data/; release.py and menage_branches.py run the workflows
 ├── tests/                     # round-trip bench and tests
